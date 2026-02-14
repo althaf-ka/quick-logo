@@ -1,5 +1,5 @@
 {
-  "name": "with-tailwind",
+  "name": "quick-logo",
   "private": true,
   "scripts": {
     "build": "turbo run build",
