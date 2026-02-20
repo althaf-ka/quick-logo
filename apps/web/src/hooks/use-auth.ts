@@ -41,7 +41,7 @@ export function useGoogleLogin() {
     mutationFn: async ({ redirect }: { redirect?: string } = {}) => {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: redirect || `${window.location.origin}/create`,
+        callbackURL: redirect || `${window.location.origin}/generate`,
       });
     },
     onError: (error) => {

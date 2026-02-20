@@ -5,8 +5,10 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 3 * 60 * 1000,
       refetchOnWindowFocus: true,
-      retry: (failureCount, error: any) => {
-        if (error?.status === 401) return false;
+      retry: (failureCount: number, error: unknown) => {
+        if (error && typeof error === "object" && "status" in error) {
+          if (error.status === 401) return false;
+        }
         return failureCount < 2;
       },
     },

@@ -25,7 +25,7 @@ function RegisterPage() {
   const { redirect } = Route.useSearch();
 
   const handleSignup = () => {
-    loginWithGoogle({ redirect: redirect || "/create" });
+    loginWithGoogle({ redirect: redirect || "/generate" });
   };
 
   return (

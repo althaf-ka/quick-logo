@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_authenticated/create")({
+export const Route = createFileRoute("/_authenticated/generate")({
   component: CreatePage,
 });
 

@@ -2,13 +2,13 @@
   "$schema": "https://ui.shadcn.com/schema.json",
   "aliases": {
     "components": "@/components",
-    "hooks": "@/hooks",
+    "hooks": "@quicklogo/ui/hooks",
     "lib": "@/lib",
     "ui": "@quicklogo/ui/components",
     "utils": "@quicklogo/ui/lib/utils"
   },
   "iconLibrary": "phosphor",
-  "rsc": true,
+  "rsc": false,
   "style": "base-lyra",
   "tailwind": {
     "baseColor": "neutral",

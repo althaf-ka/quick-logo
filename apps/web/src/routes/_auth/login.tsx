@@ -26,7 +26,7 @@ function LoginPage() {
   const { redirect } = Route.useSearch();
 
   const handleLogin = () => {
-    login({ redirect: redirect || "/create" });
+    login({ redirect: redirect || "/generate" });
   };
 
   return (

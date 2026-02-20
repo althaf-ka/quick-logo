@@ -8,8 +8,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:migrate:local": "wrangler d1 migrations apply quicklogo --local --config wrangler.jsonc",
-    "db:migrate:prod": "wrangler d1 migrations apply quicklogo --remote --config wrangler.jsonc"
+    "db:migrate:local": "wrangler d1 migrations apply quicklogo-db --local --config wrangler.jsonc",
+    "db:migrate:prod": "wrangler d1 migrations apply quicklogo-db --remote --config wrangler.jsonc"
   },
   "dependencies": {
     "@quicklogo/auth": "workspace:*",

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_auth")({
     });
 
     if (session) {
-      throw redirect({ to: "/create" });
+      throw redirect({ to: "/generate" });
     }
   },
 

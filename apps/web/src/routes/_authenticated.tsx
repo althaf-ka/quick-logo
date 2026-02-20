@@ -1,5 +1,13 @@
 import { AUTH_KEYS } from "@/hooks/use-auth";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useLocation } from "@tanstack/react-router";
+import { TooltipProvider } from "@quicklogo/ui/components/tooltip";
+import { AppSidebar } from "../components/sidebar/app-sidebar";
+import {
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset,
+} from "@quicklogo/ui/components/sidebar";
+import { Separator } from "@quicklogo/ui/components/separator";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
@@ -25,6 +33,32 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
+const PAGE_TITLES: Record<string, string> = {
+  "/generate": "Generate Logo",
+  "/projects": "My Projects",
+  "/settings": "Settings",
+};
+
 function AuthenticatedLayout() {
-  return <Outlet />;
+  const { pathname } = useLocation();
+  const title = Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? "Dashboard";
+
+  return (
+    <TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1 size-8 cursor-pointer" />
+            <Separator orientation="vertical" className="h-4" />
+            <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
+          </header>
+
+          <main className="flex-1 p-6">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  );
 }

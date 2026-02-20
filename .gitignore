@@ -38,4 +38,5 @@ dist/
 #tanstack router
 .tanstack
 
-.vscode
+
+.vscode/

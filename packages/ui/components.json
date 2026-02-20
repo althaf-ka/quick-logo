@@ -8,7 +8,7 @@
     "utils": "@quicklogo/ui/lib/utils"
   },
   "iconLibrary": "phosphor",
-  "rsc": true,
+  "rsc": false,
   "style": "base-lyra",
   "tailwind": {
     "baseColor": "neutral",
