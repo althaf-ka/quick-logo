@@ -2,18 +2,33 @@ import { FeatureCarousel } from "@/components/auth/feature-carousel";
 import { GoogleIcon } from "@/components/icons";
 import { Button } from "@quicklogo/ui/components/button";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useGoogleLogin } from "@/hooks/use-auth";
+import z from "zod";
+import { Spinner } from "@quicklogo/ui/components/spinner";
 
 export const Route = createFileRoute("/_auth/login")({
-  component: LoginPage,
   head: () => ({
     meta: [
       { title: "Login | QuickLogo" },
       { name: "description", content: "Securely login to your account." },
     ],
   }),
+
+  validateSearch: z.object({
+    redirect: z.string().optional().catch(""),
+  }),
+
+  component: LoginPage,
 });
 
 function LoginPage() {
+  const { mutate: login, isPending } = useGoogleLogin();
+  const { redirect } = Route.useSearch();
+
+  const handleLogin = () => {
+    login({ redirect: redirect || "/create" });
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-[360px] flex-col items-center">
       <FeatureCarousel />
@@ -21,11 +36,17 @@ function LoginPage() {
       <div className="w-full space-y-6">
         <Button
           variant="outline"
-          className="border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground h-12 w-full cursor-pointer rounded-none border text-[15px] font-medium shadow-sm transition-all duration-200 hover:shadow-md"
-          onClick={() => console.log("Google Login")}
+          className="border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground h-12 w-full cursor-pointer rounded-none border text-[15px] font-medium shadow-sm transition-all duration-200 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handleLogin}
+          disabled={isPending}
         >
-          <GoogleIcon />
-          Continue with Google
+          {isPending ? (
+            <Spinner className="mr-2" aria-hidden="true" />
+          ) : (
+            <GoogleIcon className="mr-2" />
+          )}
+
+          {isPending ? "Authenticating..." : "Continue with Google"}
         </Button>
 
         <div className="text-center">

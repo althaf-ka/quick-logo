@@ -1,17 +1,30 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-// src/routes/_authenticated.tsx
+import { AUTH_KEYS } from "@/hooks/use-auth";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ location }) => {
-    if (false) {
+  beforeLoad: async ({ context, location }) => {
+    const session = await context.queryClient.ensureQueryData({
+      queryKey: AUTH_KEYS.session,
+      queryFn: async () => {
+        const { authClient } = await import("@/lib/auth");
+        const result = await authClient.getSession();
+        return result.data;
+      },
+    });
+
+    if (!session) {
       throw redirect({
         to: "/login",
         search: {
-          // Use the current location to power a redirect after login
-          // (Do not use `router.state.resolvedLocation` as it can
-          // potentially lag behind the actual current location)
           redirect: location.href,
         },
       });
     }
   },
+
+  component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+  return <Outlet />;
+}

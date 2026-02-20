@@ -1,3 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+catalog:
+  hono: "^4.11.9"

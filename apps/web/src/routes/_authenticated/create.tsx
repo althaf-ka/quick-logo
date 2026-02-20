@@ -1,15 +1,21 @@
+import { useAuth } from "@/hooks/use-auth";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/create")({
-  component: RouteComponent,
+  component: CreatePage,
 });
 
-function RouteComponent() {
+function CreatePage() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div>
-      <div className="bg-yellow-400">
-        <h1>THIS IS CREATE ROUTE</h1>
-      </div>
+      <h1>Welcome, {user?.name}!</h1>
+      <p>Email: {user?.email}</p>
     </div>
   );
 }

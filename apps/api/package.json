@@ -1,0 +1,23 @@
+{
+  "name": "@quicklogo/api",
+  "type": "module",
+  "exports": {
+    "./route-types": "./src/route-types.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:migrate:local": "wrangler d1 migrations apply quicklogo --local --config wrangler.jsonc",
+    "db:migrate:prod": "wrangler d1 migrations apply quicklogo --remote --config wrangler.jsonc"
+  },
+  "dependencies": {
+    "@quicklogo/auth": "workspace:*",
+    "@quicklogo/db": "workspace:*",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260219.0",
+    "wrangler": "^4.66.0"
+  }
+}

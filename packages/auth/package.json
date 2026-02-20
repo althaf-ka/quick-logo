@@ -1,0 +1,26 @@
+{
+  "name": "@quicklogo/auth",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
+    },
+    "./client": {
+      "types": "./src/client.ts",
+      "default": "./src/client.ts"
+    }
+  },
+  "dependencies": {
+    "@quicklogo/db": "workspace:*",
+    "better-auth": "^1.4.18"
+  },
+  "devDependencies": {
+    "@quicklogo/typescript-config": "workspace:*"
+  }
+}

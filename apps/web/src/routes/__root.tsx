@@ -1,8 +1,18 @@
 import * as React from "react";
-import { Outlet, createRootRoute, HeadContent } from "@tanstack/react-router";
+import {
+  Outlet,
+  HeadContent,
+  createRootRouteWithContext,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import type { QueryClient } from "@tanstack/react-query";
+import { LogoLoader } from "@quicklogo/ui/custom";
 
-export const Route = createRootRoute({
+interface RouterContext {
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -10,6 +20,7 @@ export const Route = createRootRoute({
       { title: "QuickLogo" },
     ],
   }),
+  pendingComponent: () => <LogoLoader />,
   component: RootComponent,
 });
 

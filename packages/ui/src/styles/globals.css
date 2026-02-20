@@ -117,6 +117,30 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@theme {
+  --animate-wave: wave 1.2s ease-in-out infinite;
+  --animate-progress: progress 1.5s ease-in-out infinite;
+
+  @keyframes wave {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  @keyframes progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
