@@ -1,6 +1,7 @@
 import { AUTH_KEYS } from "@/hooks/use-auth";
 import { createFileRoute, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { TooltipProvider } from "@quicklogo/ui/components/tooltip";
+import { cn } from "@quicklogo/ui/lib/utils";
 import { AppSidebar } from "../components/sidebar/app-sidebar";
 import {
   SidebarProvider,
@@ -41,22 +42,31 @@ const PAGE_TITLES: Record<string, string> = {
 
 function AuthenticatedLayout() {
   const { pathname } = useLocation();
-  const title = Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? "Dashboard";
+  const title =
+    Object.entries(PAGE_TITLES).find(([path]) =>
+      pathname.startsWith(path)
+    )?.[1] ?? "Dashboard";
+  const isFullBleed = pathname.startsWith("/generate");
 
   return (
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="h-dvh overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1 size-8 cursor-pointer" />
             <Separator orientation="vertical" className="h-4" />
             <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
           </header>
 
-          <main className="flex-1 p-6">
+          <div
+            className={cn(
+              "flex-1",
+              isFullBleed ? "flex flex-col overflow-hidden" : "overflow-y-auto p-6"
+            )}
+          >
             <Outlet />
-          </main>
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

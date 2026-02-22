@@ -1,21 +1,76 @@
-import { useAuth } from "@/hooks/use-auth";
 import { createFileRoute } from "@tanstack/react-router";
+import { useGenerateForm } from "@/hooks/use-generate-form";
+import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
+import { GenerationDisplay } from "@/components/generate/generation-display";
+import { GenerationSidebar } from "@/components/generate/generation-sidebar";
+import { MobileControlsSheet } from "@/components/generate/mobile-controls-sheet";
+import { PromptInput } from "@/components/global/prompt-input";
 
 export const Route = createFileRoute("/_authenticated/generate")({
-  component: CreatePage,
+  component: GeneratePage,
 });
 
-function CreatePage() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+function GeneratePage() {
+  const isMobile = useIsMobile();
+  const {
+    prompt,
+    setPrompt,
+    config,
+    updateConfig,
+    handleReferenceImage,
+    status,
+    results,
+    error,
+    creditCost,
+    handleGenerate,
+    handleRetry,
+    mobileConfigOpen,
+    setMobileConfigOpen,
+  } = useGenerateForm();
 
   return (
-    <div>
-      <h1>Welcome, {user?.name}!</h1>
-      <p>Email: {user?.email}</p>
+    <div className="flex h-full">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <GenerationDisplay
+          status={status}
+          results={results}
+          imageCount={config.imageCount}
+          error={error}
+          onRetry={handleRetry}
+          onSuggestionClick={setPrompt}
+        />
+
+        <PromptInput
+          value={prompt}
+          onChange={setPrompt}
+          onSubmit={handleGenerate}
+          isLoading={status === "generating"}
+          credits={creditCost}
+          showMagicPrompt
+          magicPrompt={config.magicPrompt}
+          onMagicPromptChange={(val) => updateConfig("magicPrompt", val)}
+          showConfigTrigger={isMobile}
+          onConfigTrigger={() => setMobileConfigOpen(true)}
+        />
+      </div>
+
+      {!isMobile && (
+        <GenerationSidebar
+          config={config}
+          onConfigChange={updateConfig}
+          onReferenceImageChange={handleReferenceImage}
+        />
+      )}
+
+      {isMobile && (
+        <MobileControlsSheet
+          open={mobileConfigOpen}
+          onOpenChange={setMobileConfigOpen}
+          config={config}
+          onConfigChange={updateConfig}
+          onReferenceImageChange={handleReferenceImage}
+        />
+      )}
     </div>
   );
 }
