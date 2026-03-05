@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "worker",
+  "main": "src/index.ts",
+  "dev": {
+    "port": 8788,
+  },
+  "compatibility_date": "2026-02-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "quicklogo-db",
+      "database_id": "20f887cb-35bc-45e6-a65a-1335facefa7e",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "image-generation",
+        "max_batch_size": 5,
+        "max_retries": 2,
+        "dead_letter_queue": "image-generation-dlq",
+      },
+    ],
+  },
+  "ai": {
+    "binding": "AI",
+  },
+}

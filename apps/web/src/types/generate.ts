@@ -2,22 +2,51 @@
 
 export type ImageCount = 1 | 2 | 4;
 export type BackgroundType = "transparent" | "white" | "custom";
-export type GenerationStatus = "idle" | "generating" | "done" | "error";
+export type GenerationStatus =
+  | "idle"
+  | "generating"
+  | "polling"
+  | "done"
+  | "error";
 
 export interface GenerateConfig {
   model: string;
   style: string;
   imageCount: ImageCount;
-  colorPalette: string; // "auto" | preset id | "custom"
+  colorPalette: string;
   customColors: string[];
   negativePrompt: string;
   background: BackgroundType;
   customBgColor: string;
   referenceImage: File | null;
-  referenceImagePreview: string | null; // data URL for preview
+  referenceImagePreview: string | null;
   referenceStrength: number;
-  seed: number | null;
   magicPrompt: boolean;
+}
+
+// ── DB-aligned types ────────────────────────────────────────────────────
+
+export interface GeneratedImage {
+  id: string;
+  projectId: string;
+  parentId: string | null;
+  prompt: string;
+  enhancedPrompt: string | null;
+  model: string;
+  imageUrl: string | null;
+  status: "pending" | "processing" | "completed" | "failed";
+  errorMessage: string | null;
+  creditsUsed: number;
+  createdAt: Date;
+}
+
+export interface GenerationProject {
+  id: string;
+  name: string;
+  latestThumbnail: string | null;
+  createdAt: Date;
+  expiresAt: Date;
+  images: GeneratedImage[];
 }
 
 export interface GeneratedLogo {
@@ -28,45 +57,7 @@ export interface GeneratedLogo {
   createdAt: Date;
 }
 
-// ── Models ──────────────────────────────────────────────────────────────
-
-export interface ModelOption {
-  id: string;
-  name: string;
-  description: string;
-  credits: number;
-  icon: "lightning" | "brain" | "crown";
-  features: string[];
-}
-
-export const MODELS: ModelOption[] = [
-  {
-    id: "quick-v1",
-    name: "Quick v1",
-    description: "Fast generation, good for drafts",
-    credits: 2,
-    icon: "lightning",
-    features: ["Fast", "Simple logos"],
-  },
-  {
-    id: "quick-hd",
-    name: "Quick HD",
-    description: "Higher resolution, detailed output",
-    credits: 5,
-    icon: "brain",
-    features: ["HD output", "Better details"],
-  },
-  {
-    id: "quick-pro",
-    name: "Quick Pro",
-    description: "Best quality, production-ready",
-    credits: 8,
-    icon: "crown",
-    features: ["Best quality", "Complex designs", "Production-ready"],
-  },
-];
-
-// ── Styles ──────────────────────────────────────────────────────────────
+// ── Styles (UI-only, not stored in DB) ──────────────────────────────────
 
 export interface StyleOption {
   id: string;
@@ -85,7 +76,7 @@ export const STYLES: StyleOption[] = [
   { id: "vintage", name: "Vintage", description: "Retro, hand-crafted" },
 ];
 
-// ── Color Palettes ──────────────────────────────────────────────────────
+// ── Color Palettes (UI-only) ────────────────────────────────────────────
 
 export interface ColorPaletteOption {
   id: string;
@@ -95,30 +86,32 @@ export interface ColorPaletteOption {
 
 export const COLOR_PALETTES: ColorPaletteOption[] = [
   { id: "auto", name: "Auto", colors: [] },
-  { id: "corporate", name: "Corporate", colors: ["#1a365d", "#2b6cb0", "#63b3ed", "#e2e8f0"] },
-  { id: "warm", name: "Warm", colors: ["#c53030", "#ed8936", "#ecc94b", "#f7fafc"] },
-  { id: "nature", name: "Nature", colors: ["#276749", "#48bb78", "#9ae6b4", "#f0fff4"] },
-  { id: "neon", name: "Neon", colors: ["#6b21a8", "#d946ef", "#06b6d4", "#0f172a"] },
-  { id: "mono", name: "Monochrome", colors: ["#000000", "#374151", "#9ca3af", "#ffffff"] },
+  {
+    id: "corporate",
+    name: "Corporate",
+    colors: ["#1a365d", "#2b6cb0", "#63b3ed", "#e2e8f0"],
+  },
+  {
+    id: "warm",
+    name: "Warm",
+    colors: ["#c53030", "#ed8936", "#ecc94b", "#f7fafc"],
+  },
+  {
+    id: "nature",
+    name: "Nature",
+    colors: ["#276749", "#48bb78", "#9ae6b4", "#f0fff4"],
+  },
+  {
+    id: "neon",
+    name: "Neon",
+    colors: ["#6b21a8", "#d946ef", "#06b6d4", "#0f172a"],
+  },
+  {
+    id: "mono",
+    name: "Monochrome",
+    colors: ["#000000", "#374151", "#9ca3af", "#ffffff"],
+  },
   { id: "custom", name: "Custom", colors: [] },
 ];
-
-// ── Defaults ────────────────────────────────────────────────────────────
-
-export const DEFAULT_CONFIG: GenerateConfig = {
-  model: "quick-v1",
-  style: "minimal",
-  imageCount: 4,
-  colorPalette: "auto",
-  customColors: [],
-  negativePrompt: "",
-  background: "transparent",
-  customBgColor: "#ffffff",
-  referenceImage: null,
-  referenceImagePreview: null,
-  referenceStrength: 50,
-  seed: null,
-  magicPrompt: true,
-};
 
 export const MAX_COLORS = 5;

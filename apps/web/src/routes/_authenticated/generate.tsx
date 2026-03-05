@@ -24,6 +24,7 @@ function GeneratePage() {
     creditCost,
     handleGenerate,
     handleRetry,
+    isGenerating,
     mobileConfigOpen,
     setMobileConfigOpen,
   } = useGenerateForm();
@@ -44,7 +45,7 @@ function GeneratePage() {
           value={prompt}
           onChange={setPrompt}
           onSubmit={handleGenerate}
-          isLoading={status === "generating"}
+          isLoading={isGenerating}
           credits={creditCost}
           showMagicPrompt
           magicPrompt={config.magicPrompt}

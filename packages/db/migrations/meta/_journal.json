@@ -8,6 +8,20 @@
       "when": 1771497059780,
       "tag": "0000_brown_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772445862508,
+      "tag": "0001_silky_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772448302189,
+      "tag": "0002_tearful_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

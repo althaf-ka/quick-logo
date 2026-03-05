@@ -11,7 +11,15 @@
       "migrations_dir": "../../packages/db/migrations",
     },
   ],
-  "compatibility_flags": ["nodejs_als"],
+  "compatibility_flags": ["nodejs_compat"],
+  "queues": {
+    "producers": [
+      {
+        "binding": "GENERATION_QUEUE",
+        "queue": "image-generation",
+      },
+    ],
+  },
   // "vars": {
   //   "MY_VAR": "my-variable"
   // },

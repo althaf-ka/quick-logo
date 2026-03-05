@@ -1,0 +1,20 @@
+{
+  "name": "@quicklogo/shared",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@quicklogo/eslint-config": "workspace:*",
+    "@quicklogo/typescript-config": "workspace:*",
+    "typescript": "^5.5.0"
+  }
+}

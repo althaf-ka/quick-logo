@@ -1,0 +1,35 @@
+{
+  "name": "@quicklogo/ai-providers",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    "./models": {
+      "types": "./models.ts",
+      "default": "./models.ts"
+    },
+    "./providers": {
+      "types": "./src/providers/index.ts",
+      "default": "./src/providers/index.ts"
+    },
+    "./prompt": {
+      "types": "./src/prompt/index.ts",
+      "default": "./src/prompt/index.ts"
+    },
+    "./types": {
+      "types": "./src/types.ts",
+      "default": "./src/types.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260301.1",
+    "@quicklogo/eslint-config": "workspace:*",
+    "@quicklogo/shared": "workspace:*",
+    "@quicklogo/typescript-config": "workspace:*",
+    "@types/node": "^25.3.3",
+    "typescript": "~5.9.3"
+  }
+}

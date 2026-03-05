@@ -1,0 +1,139 @@
+import { Buffer } from "node:buffer";
+import type { AIProvider, GenerationParams, GenerationResult } from "../types";
+
+export class WorkersAIProvider implements AIProvider {
+  readonly name = "workers-ai";
+
+  constructor(
+    private ai: Ai,
+    private inputType: "json" | "multipart",
+  ) {}
+
+  async generate(params: GenerationParams): Promise<GenerationResult> {
+    const start = Date.now();
+
+    try {
+      const raw =
+        this.inputType === "multipart"
+          ? await this.runMultipart(params)
+          : await this.runJson(params);
+
+      const imageData = await this.toUint8Array(raw);
+      const format = this.detectFormat(imageData);
+
+      return {
+        success: true,
+        imageData,
+        format,
+        metadata: { model: params.backendModel, duration: Date.now() - start },
+      };
+    } catch (error) {
+      console.error(`[workers-ai] Generation failed:`, error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Workers AI generation failed",
+        metadata: { model: params.backendModel, duration: Date.now() - start },
+      };
+    }
+  }
+
+  private async runJson(params: GenerationParams) {
+    const input: Record<string, unknown> = {
+      prompt: params.prompt,
+      num_steps: params.steps ?? 20,
+      width: params.width ?? 1024,
+      height: params.height ?? 1024,
+    };
+
+    if (params.negativePrompt) input.negative_prompt = params.negativePrompt;
+    if (params.guidance != null) input.guidance = params.guidance;
+
+    if (params.referenceImage) {
+      const buffer = await this.fetchImage(params.referenceImage);
+      input.image = [...new Uint8Array(buffer)];
+      input.strength = 1 - (params.referenceStrength ?? 50) / 100;
+    }
+
+    return this.ai.run(params.backendModel as Parameters<Ai["run"]>[0], input);
+  }
+
+  private async runMultipart(params: GenerationParams) {
+    const form = new FormData();
+
+    form.append("prompt", params.prompt);
+    form.append("width", String(params.width ?? 1024));
+    form.append("height", String(params.height ?? 1024));
+
+    if (params.negativePrompt)
+      form.append("negative_prompt", params.negativePrompt);
+    if (params.steps != null) form.append("num_steps", String(params.steps));
+    if (params.guidance != null)
+      form.append("guidance", String(params.guidance));
+
+    if (params.referenceImage) {
+      const buffer = await this.fetchImage(params.referenceImage);
+      form.append(
+        "input_image_0",
+        new Blob([buffer], { type: "image/webp" }),
+        "reference.webp",
+      );
+    }
+
+    const envelope = new Response(form);
+
+    return this.ai.run(params.backendModel as Parameters<Ai["run"]>[0], {
+      // @ts-expect-error — multipart not yet typed in workers-types
+      multipart: {
+        body: envelope.body!,
+        contentType: envelope.headers.get("content-type")!,
+      },
+    });
+  }
+
+  private async fetchImage(url: string): Promise<ArrayBuffer> {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Reference image fetch failed (${res.status})`);
+    }
+    return res.arrayBuffer();
+  }
+
+  private async toUint8Array(response: unknown): Promise<Uint8Array> {
+    if (
+      typeof response === "object" &&
+      response !== null &&
+      "image" in response &&
+      typeof (response as { image: unknown }).image === "string"
+    ) {
+      return new Uint8Array(
+        Buffer.from((response as { image: string }).image, "base64"),
+      );
+    }
+    if (response instanceof ReadableStream) {
+      return new Uint8Array(await new Response(response).arrayBuffer());
+    }
+    if (response instanceof ArrayBuffer) {
+      return new Uint8Array(response);
+    }
+    if (response instanceof Uint8Array) {
+      return response;
+    }
+    throw new Error(`Unexpected Workers AI response type: ${typeof response}`);
+  }
+
+  private detectFormat(bytes: Uint8Array): "png" | "jpeg" | "webp" {
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e) {
+      return "png";
+    }
+    if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+      return "jpeg";
+    }
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57) {
+      return "webp";
+    }
+    return "png";
+  }
+}

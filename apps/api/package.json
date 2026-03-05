@@ -5,19 +5,25 @@
     "./route-types": "./src/route-types.ts"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --config wrangler.jsonc --config ../worker/wrangler.jsonc",
+    "dev:api": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:migrate:local": "wrangler d1 migrations apply quicklogo-db --local --config wrangler.jsonc",
     "db:migrate:prod": "wrangler d1 migrations apply quicklogo-db --remote --config wrangler.jsonc"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
+    "@paralleldrive/cuid2": "^3.3.0",
+    "@quicklogo/ai-providers": "workspace:*",
     "@quicklogo/auth": "workspace:*",
     "@quicklogo/db": "workspace:*",
+    "@quicklogo/shared": "workspace:*",
+    "@quicklogo/storage": "workspace:*",
     "hono": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260219.0",
+    "@cloudflare/workers-types": "^4.20260301.1",
     "wrangler": "^4.66.0"
   }
 }

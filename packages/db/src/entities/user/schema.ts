@@ -16,6 +16,7 @@ export const users = sqliteTable("user", {
     .notNull()
     .default("user"),
   banned: integer("banned", { mode: "boolean" }).notNull().default(false),
+  credits: integer("credits").notNull().default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

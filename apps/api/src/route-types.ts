@@ -12,3 +12,6 @@
 
 export type { AuthType } from "./routes/auth";
 export type { UserType } from "./routes/user";
+export type { UploadType } from "./routes/upload";
+export type { GenerateType } from "./routes/generate";
+export type { BatchesType } from "./routes/batches";

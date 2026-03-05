@@ -40,15 +40,15 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="flex size-16 items-center justify-center bg-primary/10">
-        <SparkleIcon weight="duotone" className="size-8 text-primary" />
+      <div className="bg-primary/10 flex size-16 items-center justify-center">
+        <SparkleIcon weight="duotone" className="text-primary size-8" />
       </div>
 
       <div className="space-y-2">
         <h3 className="text-base font-semibold tracking-tight">
           Create your logo
         </h3>
-        <p className="max-w-sm text-sm text-muted-foreground">
+        <p className="text-muted-foreground max-w-sm text-sm">
           Describe the logo you want and we&apos;ll generate it for you.
         </p>
       </div>
@@ -58,7 +58,7 @@ function EmptyState({
           <button
             key={suggestion}
             onClick={() => onSuggestionClick?.(suggestion)}
-            className="cursor-pointer border bg-card px-4 py-2.5 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+            className="bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground cursor-pointer border px-4 py-2.5 text-xs transition-colors"
           >
             &ldquo;{suggestion}&rdquo;
           </button>
@@ -75,13 +75,13 @@ function LoadingState({ imageCount }: { imageCount: ImageCount }) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
         <div className="flex items-center gap-3">
-          <span className="size-2 animate-ping bg-primary/60" />
-          <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="bg-primary/60 size-2 animate-ping" />
+          <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
             Generating logo...
           </p>
         </div>
         <div className="w-full max-w-xs">
-          <Skeleton className="aspect-square w-full rounded-none border border-border/10" />
+          <Skeleton className="border-border/10 aspect-square w-full rounded-none border" />
         </div>
       </div>
     );
@@ -91,13 +91,13 @@ function LoadingState({ imageCount }: { imageCount: ImageCount }) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
         <div className="flex items-center gap-3">
-          <span className="size-2 animate-ping bg-primary/60" />
-          <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="bg-primary/60 size-2 animate-ping" />
+          <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
             Generating logos...
           </p>
         </div>
         <div className="w-full max-w-xs">
-          <Skeleton className="aspect-square w-full rounded-none border border-border/10" />
+          <Skeleton className="border-border/10 aspect-square w-full rounded-none border" />
         </div>
       </div>
     );
@@ -106,8 +106,8 @@ function LoadingState({ imageCount }: { imageCount: ImageCount }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
       <div className="flex items-center gap-3">
-        <span className="size-2 animate-ping bg-primary/60" />
-        <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <span className="bg-primary/60 size-2 animate-ping" />
+        <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
           Generating logos...
         </p>
       </div>
@@ -115,7 +115,7 @@ function LoadingState({ imageCount }: { imageCount: ImageCount }) {
         {Array.from({ length: imageCount }, (_, i) => (
           <Skeleton
             key={i}
-            className="aspect-square w-full rounded-none border border-border/10"
+            className="border-border/10 aspect-square w-full rounded-none border"
           />
         ))}
       </div>
@@ -132,7 +132,7 @@ function ErrorState({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-sm text-destructive">{error}</p>
+      <p className="text-destructive text-sm">{error}</p>
       {onRetry && (
         <Button
           variant="outline"
@@ -162,7 +162,7 @@ function DotIndicators({
           key={i}
           className={cn(
             "size-1.5 transition-colors",
-            i === activeIndex ? "bg-primary" : "bg-muted-foreground/30"
+            i === activeIndex ? "bg-primary" : "bg-muted-foreground/30",
           )}
         />
       ))}
@@ -234,6 +234,53 @@ function ResultsView({
   );
 }
 
+function PollingView({
+  results,
+  imageCount,
+  onCardClick,
+}: {
+  results: GeneratedLogo[];
+  imageCount: ImageCount;
+  onCardClick: (logo: GeneratedLogo) => void;
+}) {
+  const skeletonsNeeded = Math.max(0, imageCount - results.length);
+
+  const renderGrid = () => (
+    <div
+      className={cn(
+        "grid w-full max-w-lg gap-3",
+        imageCount === 1 ? "max-w-xs grid-cols-1" : "grid-cols-2",
+      )}
+    >
+      {results.map((logo) => (
+        <LogoCard key={logo.id} logo={logo} onClick={onCardClick} />
+      ))}
+      {Array.from({ length: skeletonsNeeded }, (_, i) => (
+        <Skeleton
+          key={`skel-${i}`}
+          className="border-border/10 aspect-square w-full rounded-none border"
+        />
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 px-4">
+      <div className="flex items-center gap-3">
+        <span className="bg-primary/60 size-2 animate-ping" />
+        <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
+          Generating{" "}
+          {skeletonsNeeded > 0 && imageCount > 1
+            ? `${results.length}/${imageCount}`
+            : ""}
+          ...
+        </p>
+      </div>
+      {renderGrid()}
+    </div>
+  );
+}
+
 export function GenerationDisplay({
   status,
   results,
@@ -250,6 +297,13 @@ export function GenerationDisplay({
         <EmptyState onSuggestionClick={onSuggestionClick} />
       )}
       {status === "generating" && <LoadingState imageCount={imageCount} />}
+      {status === "polling" && (
+        <PollingView
+          results={results}
+          imageCount={imageCount}
+          onCardClick={setPreviewLogo}
+        />
+      )}
       {status === "error" && (
         <ErrorState error={error ?? "Something went wrong"} onRetry={onRetry} />
       )}

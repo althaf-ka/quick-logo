@@ -1,0 +1,16 @@
+{
+  "name": "@quicklogo/storage",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20260301.1",
+    "@imagekit/nodejs": "^7.3.0"
+  },
+  "devDependencies": {
+    "@quicklogo/typescript-config": "workspace:*",
+    "@types/node": "^22.0.0"
+  }
+}
