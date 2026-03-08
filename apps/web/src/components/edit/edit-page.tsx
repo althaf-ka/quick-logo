@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useEditForm } from "@/hooks/use-edit-form";
 import { MODELS } from "@quicklogo/ai-providers/models";
 import { EditHistoryPanel } from "./edit-history-panel";
@@ -45,6 +46,7 @@ export function EditPage({
   prompt: initialPrompt,
 }: EditPageProps) {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -77,6 +79,21 @@ export function EditPage({
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleCanvasOpen = () => {
+    const targetUrl = selectedEntry?.url ?? sourceImageUrl;
+    if (!targetUrl) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (navigate as any)({
+      to: "/canvas/$imageId",
+      params: { imageId: selectedEntry?.id ?? imageId },
+      state: {
+        imageUrl: targetUrl,
+        prompt: selectedEntry?.prompt ?? sourcePrompt,
+      },
+    });
   };
 
   const previewUrl = selectedEntry?.url ?? sourceImageUrl;
@@ -179,6 +196,7 @@ export function EditPage({
                     areActionsDisabled && "cursor-not-allowed opacity-60",
                   )}
                   disabled={areActionsDisabled}
+                  onClick={handleCanvasOpen}
                 >
                   <PaletteIcon className="size-4" />
                   <span className="inline">Canvas</span>
@@ -245,6 +263,7 @@ export function EditPage({
                 areActionsDisabled && "cursor-not-allowed opacity-60",
               )}
               disabled={areActionsDisabled}
+              onClick={handleCanvasOpen}
             >
               <PaletteIcon className="size-4" />
               Canvas

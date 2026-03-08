@@ -17,6 +17,7 @@ import { Route as AuthenticatedGenerateRouteImport } from './routes/_authenticat
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthenticatedEditImageIdRouteImport } from './routes/_authenticated/edit/$imageId'
+import { Route as AuthenticatedCanvasImageIdRouteImport } from './routes/_authenticated/canvas/$imageId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -57,6 +58,14 @@ const AuthenticatedEditImageIdRoute =
     path: '/edit/$imageId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCanvasImageIdRoute =
+  AuthenticatedCanvasImageIdRouteImport.update({
+    id: '/canvas/$imageId',
+    path: '/canvas/$imageId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/canvas/$imageId.lazy').then((d) => d.Route),
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedRouteWithChildren
@@ -65,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/generate': typeof AuthenticatedGenerateRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/canvas/$imageId': typeof AuthenticatedCanvasImageIdRoute
   '/edit/$imageId': typeof AuthenticatedEditImageIdRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +84,7 @@ export interface FileRoutesByTo {
   '/generate': typeof AuthenticatedGenerateRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/canvas/$imageId': typeof AuthenticatedCanvasImageIdRoute
   '/edit/$imageId': typeof AuthenticatedEditImageIdRoute
 }
 export interface FileRoutesById {
@@ -85,6 +96,7 @@ export interface FileRoutesById {
   '/_authenticated/generate': typeof AuthenticatedGenerateRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/canvas/$imageId': typeof AuthenticatedCanvasImageIdRoute
   '/_authenticated/edit/$imageId': typeof AuthenticatedEditImageIdRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +108,7 @@ export interface FileRouteTypes {
     | '/generate'
     | '/projects'
     | '/settings'
+    | '/canvas/$imageId'
     | '/edit/$imageId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +118,7 @@ export interface FileRouteTypes {
     | '/generate'
     | '/projects'
     | '/settings'
+    | '/canvas/$imageId'
     | '/edit/$imageId'
   id:
     | '__root__'
@@ -115,6 +129,7 @@ export interface FileRouteTypes {
     | '/_authenticated/generate'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/_authenticated/canvas/$imageId'
     | '/_authenticated/edit/$imageId'
   fileRoutesById: FileRoutesById
 }
@@ -181,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEditImageIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/canvas/$imageId': {
+      id: '/_authenticated/canvas/$imageId'
+      path: '/canvas/$imageId'
+      fullPath: '/canvas/$imageId'
+      preLoaderRoute: typeof AuthenticatedCanvasImageIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -200,6 +222,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedGenerateRoute: typeof AuthenticatedGenerateRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedCanvasImageIdRoute: typeof AuthenticatedCanvasImageIdRoute
   AuthenticatedEditImageIdRoute: typeof AuthenticatedEditImageIdRoute
 }
 
@@ -207,6 +230,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedGenerateRoute: AuthenticatedGenerateRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedCanvasImageIdRoute: AuthenticatedCanvasImageIdRoute,
   AuthenticatedEditImageIdRoute: AuthenticatedEditImageIdRoute,
 }
 

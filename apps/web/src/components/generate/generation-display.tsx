@@ -261,6 +261,14 @@ export function GenerationDisplay({
 }: GenerationDisplayProps) {
   const navigate = useNavigate();
   const [previewLogo, setPreviewLogo] = useState<GeneratedLogo | null>(null);
+  const handleCanvasOpen = (logo: GeneratedLogo) => {
+    navigate({
+      to: "/canvas/$imageId",
+      params: { imageId: logo.id },
+      // @ts-expect-error - Route state schema matches structurally
+      state: { imageUrl: logo.url, prompt: logo.prompt },
+    });
+  };
 
   const content = (() => {
     switch (status) {
@@ -315,7 +323,7 @@ export function GenerationDisplay({
             state: { imageUrl: logo.url, prompt: logo.prompt },
           });
         }}
-        onOpenInCanvas={() => {}}
+        onOpenInCanvas={handleCanvasOpen}
       />
     </div>
   );

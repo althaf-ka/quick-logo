@@ -42,6 +42,7 @@ export const Route = createFileRoute("/_authenticated")({
 const PAGE_TITLES: Record<string, string> = {
   "/generate": "Generate Logo",
   "/edit": "Edit with AI",
+  "/canvas": "Canvas Editor",
   "/projects": "My Projects",
   "/settings": "Settings",
 };
@@ -53,7 +54,9 @@ function AuthenticatedLayout() {
       pathname.startsWith(path),
     )?.[1] ?? "Dashboard";
   const isFullBleed =
-    pathname.startsWith("/generate") || pathname.startsWith("/edit");
+    pathname.startsWith("/generate") ||
+    pathname.startsWith("/edit") ||
+    pathname.startsWith("/canvas");
 
   return (
     <TooltipProvider>

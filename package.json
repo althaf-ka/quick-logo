@@ -16,5 +16,9 @@
   "packageManager": "pnpm@10.19.0",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
+    "styled-components": "^6.3.11"
   }
 }

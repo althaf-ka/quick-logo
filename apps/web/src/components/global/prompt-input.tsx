@@ -175,7 +175,7 @@ export function PromptInput({
                     align="start"
                     side="top"
                     sideOffset={8}
-                    className="w-[240px] sm:w-[260px]"
+                    className="w-60 sm:w-[260px]"
                   >
                     <ComboboxList>
                       {models.map((m) => (
