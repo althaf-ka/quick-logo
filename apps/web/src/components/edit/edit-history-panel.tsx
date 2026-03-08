@@ -24,7 +24,7 @@ export function EditHistoryPanel({
   isLocked = false,
   className,
 }: EditHistoryPanelProps) {
-  const editCount = history.filter((entry) => entry.id !== "source").length;
+  const editCount = Math.max(0, history.length - 1);
 
   return (
     <aside className={cn("bg-card flex flex-col", className)}>
@@ -50,14 +50,14 @@ export function EditHistoryPanel({
           </div>
         )}
 
-        {history.map((entry) => (
+        {history.map((entry, index) => (
           <HistoryCard
             key={entry.id}
             imageUrl={entry.url}
             label={entry.prompt}
             time={formatTime(entry.createdAt)}
             isActive={selectedEntry?.id === entry.id}
-            isSource={entry.id === "source"}
+            isSource={index === history.length - 1} // The oldest item is visually the source
             isLocked={isLocked}
             onClick={() => onSelectEntry(entry)}
           />
@@ -94,9 +94,7 @@ function HistoryCard({
       disabled={isLocked}
       className={cn(
         "flex w-full items-center gap-2.5 rounded-none px-2 py-2 text-left transition-all",
-        isLocked
-          ? "cursor-not-allowed opacity-60"
-          : "cursor-pointer",
+        isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer",
         isActive
           ? "bg-primary/10 border-primary ring-primary/20 border ring-1"
           : "hover:bg-muted/40 border border-transparent",

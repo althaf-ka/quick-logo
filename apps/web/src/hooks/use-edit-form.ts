@@ -83,24 +83,30 @@ export function useEditForm({
   }, [fetchResult]);
 
   const history = useMemo(() => {
-    const edits = [...serverHistory].sort(
+    if (serverHistory.length === 0) {
+      if (!sourceImageUrl) return [];
+      return [
+        {
+          id: imageId, // temporary until fetched
+          url: sourceImageUrl,
+          prompt: sourcePrompt || "Original",
+          createdAt: fetchResult?.image?.createdAt
+            ? new Date(fetchResult.image.createdAt)
+            : new Date(),
+        },
+      ];
+    }
+
+    return [...serverHistory].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
-    // Keep source pinned at the bottom while latest edit remains primary.
-    const sourceEntry: EditHistoryEntry = {
-      id: "source",
-      url: sourceImageUrl,
-      prompt: sourcePrompt || "Original",
-      createdAt: new Date(0),
-    };
-    return [...edits, sourceEntry];
-  }, [serverHistory, sourceImageUrl, sourcePrompt]);
+  }, [serverHistory, sourceImageUrl, sourcePrompt, fetchResult, imageId]);
 
   const selectedEntry = useMemo(() => {
     if (selectedEntryId) {
       return history.find((h) => h.id === selectedEntryId) || null;
     }
-    return history.find((h) => h.id !== "source") ?? history[0] ?? null;
+    return history[0] ?? null;
   }, [history, selectedEntryId]);
 
   const setSelectedEntry = useCallback((entry: EditHistoryEntry | null) => {
