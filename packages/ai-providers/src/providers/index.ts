@@ -1,4 +1,5 @@
 export { WorkersAIProvider } from "./workers-ai";
+export { LeonardoProvider } from "./leonardo";
 export {
   getModelMapping,
   createProvider,

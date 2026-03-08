@@ -9,6 +9,7 @@ export interface GenerationParams {
   width?: number;
   height?: number;
   guidance?: number;
+  providerOptions?: Record<string, any>;
 }
 
 export interface GenerationResult {

@@ -45,6 +45,34 @@ export const MODELS: ModelOption[] = [
     features: ["Reference image", "Style transfer", "Variations"],
     supportsReferenceImage: true,
   },
+  {
+    id: "quick-ideogram",
+    name: "Ideogram V3",
+    description: "Industry-leading typography and detailed illustration model.",
+    credits: 8,
+    icon: "crown",
+    features: ["Cinematic", "High detail", "Professional typography"],
+    supportsReferenceImage: false,
+  },
+  {
+    id: "quick-leo-fast",
+    name: "Leonardo Vision",
+    description: "Lightning fast model configured for serene renders",
+    credits: 6,
+    icon: "lightning",
+    features: ["Custom Style", "Fast render", "Contrast-tuned"],
+    supportsReferenceImage: true,
+  },
+  {
+    id: "quick-seedream",
+    name: "SeeDream 4.5",
+    description:
+      "Versatile and highly detailed generations, excellent for both text-to-image and reference edits.",
+    credits: 8,
+    icon: "brain",
+    features: ["Highly detailed", "Reference image support", "Versatile"],
+    supportsReferenceImage: true,
+  },
 ];
 
 export function getModelCredits(modelId: string): number {

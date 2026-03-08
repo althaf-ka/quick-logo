@@ -13,7 +13,12 @@ export const generateConfigSchema = z.object({
   negativePrompt: z.string().max(500).optional().default(""),
   background: z.enum(["transparent", "white", "custom"]),
   customBgColor: z.string(),
-  referenceImage: z.any().nullable(),
+  referenceImage: z
+    .custom<File>(
+      (val) => val instanceof File || typeof val === "object",
+      "Please attach a valid file",
+    )
+    .nullable(),
   referenceImagePreview: z.string().nullable(),
   referenceStrength: z.number().min(0).max(100),
   magicPrompt: z.boolean(),
@@ -50,7 +55,12 @@ export const generateApiRequestSchema = z.object({
   config: generateApiConfigSchema,
 });
 
+export const editApiRequestSchema = generateApiRequestSchema.extend({
+  sourceImageId: z.string().min(1, "Source image ID is required"),
+});
+
 export type GenerateConfig = z.infer<typeof generateConfigSchema>;
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 export type GenerateApiConfig = z.infer<typeof generateApiConfigSchema>;
 export type GenerateApiRequest = z.infer<typeof generateApiRequestSchema>;
+export type EditApiRequest = z.infer<typeof editApiRequestSchema>;

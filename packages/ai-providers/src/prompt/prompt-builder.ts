@@ -47,26 +47,29 @@ export function buildBasePrompt(
 ): { prompt: string; negativePrompt: string } {
   const parts: string[] = [];
 
-  if (hasReference) {
+  if (hasReference && !message.isEdit) {
     const level = getReferenceLevel(message.config.referenceStrength ?? 50);
-    parts.push(REFERENCE_INSTRUCTIONS[level]);
+    const instruction = REFERENCE_INSTRUCTIONS[level];
+    if (instruction) parts.push(instruction);
   }
 
   parts.push(`professional logo design: ${basePrompt}`);
 
   const style = message.config.style;
-  if (style && STYLE_MODIFIERS[style]) parts.push(STYLE_MODIFIERS[style]!);
+  const styleVal = style ? STYLE_MODIFIERS[style] : undefined;
+  if (styleVal) parts.push(styleVal);
 
   const palette = message.config.colorPalette;
-  if (palette && PALETTE_MODIFIERS[palette])
-    parts.push(PALETTE_MODIFIERS[palette]!);
+  const paletteVal = palette ? PALETTE_MODIFIERS[palette] : undefined;
+  if (paletteVal) parts.push(paletteVal);
 
-  if (message.config.customColors?.length) {
+  if (message.config.customColors && message.config.customColors.length > 0) {
     parts.push(`using colors: ${message.config.customColors.join(", ")}`);
   }
 
   const bg = message.config.background;
-  if (bg && BACKGROUND_MODIFIERS[bg]) parts.push(BACKGROUND_MODIFIERS[bg]!);
+  const bgVal = bg ? BACKGROUND_MODIFIERS[bg] : undefined;
+  if (bgVal) parts.push(bgVal);
 
   parts.push(
     "professional logo, vector-style, sharp edges, clean design, high quality",

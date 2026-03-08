@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   type GeneratedLogo,
   type GenerationStatus,
@@ -6,6 +7,7 @@ import {
 } from "@/types/generate";
 import { LogoCard } from "@/components/global/logo-card";
 import { LogoPreviewDialog } from "@/components/global/logo-preview-dialog";
+import { ImageLoadingState } from "@/components/global/image-loading-state";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import {
   Carousel,
@@ -17,6 +19,8 @@ import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
 import { SparkleIcon, ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { Button } from "@quicklogo/ui/components/button";
 import { cn } from "@quicklogo/ui/lib/utils";
+import { downloadImage } from "@/lib/download";
+import { LoadingStatusIndicator } from "@/components/global/loading-status-indicator";
 
 interface GenerationDisplayProps {
   status: GenerationStatus;
@@ -32,6 +36,19 @@ const PROMPT_SUGGESTIONS = [
   "A bold lettermark logo for a fitness brand",
   "A vintage emblem for a coffee shop",
 ];
+
+function getGeneratingLabel(
+  imageCount: ImageCount,
+  completedCount?: number,
+): string {
+  if (imageCount === 1) return "Generating logo...";
+
+  if (typeof completedCount === "number" && completedCount < imageCount) {
+    return `Generating logos ${completedCount}/${imageCount}...`;
+  }
+
+  return "Generating logos...";
+}
 
 function EmptyState({
   onSuggestionClick,
@@ -70,56 +87,14 @@ function EmptyState({
 
 function LoadingState({ imageCount }: { imageCount: ImageCount }) {
   const isMobile = useIsMobile();
-
-  if (imageCount === 1) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-        <div className="flex items-center gap-3">
-          <span className="bg-primary/60 size-2 animate-ping" />
-          <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
-            Generating logo...
-          </p>
-        </div>
-        <div className="w-full max-w-xs">
-          <Skeleton className="border-border/10 aspect-square w-full rounded-none border" />
-        </div>
-      </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
-        <div className="flex items-center gap-3">
-          <span className="bg-primary/60 size-2 animate-ping" />
-          <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
-            Generating logos...
-          </p>
-        </div>
-        <div className="w-full max-w-xs">
-          <Skeleton className="border-border/10 aspect-square w-full rounded-none border" />
-        </div>
-      </div>
-    );
-  }
+  const label = getGeneratingLabel(imageCount);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-      <div className="flex items-center gap-3">
-        <span className="bg-primary/60 size-2 animate-ping" />
-        <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
-          Generating logos...
-        </p>
-      </div>
-      <div className="grid w-full max-w-lg grid-cols-2 gap-3">
-        {Array.from({ length: imageCount }, (_, i) => (
-          <Skeleton
-            key={i}
-            className="border-border/10 aspect-square w-full rounded-none border"
-          />
-        ))}
-      </div>
-    </div>
+    <ImageLoadingState
+      label={label}
+      imageCount={imageCount}
+      className={isMobile && imageCount > 1 ? "px-4" : undefined}
+    />
   );
 }
 
@@ -244,6 +219,10 @@ function PollingView({
   onCardClick: (logo: GeneratedLogo) => void;
 }) {
   const skeletonsNeeded = Math.max(0, imageCount - results.length);
+  const statusLabel = getGeneratingLabel(
+    imageCount,
+    skeletonsNeeded > 0 ? results.length : undefined,
+  );
 
   const renderGrid = () => (
     <div
@@ -266,16 +245,7 @@ function PollingView({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 px-4">
-      <div className="flex items-center gap-3">
-        <span className="bg-primary/60 size-2 animate-ping" />
-        <p className="text-muted-foreground animate-pulse text-xs font-semibold tracking-widest uppercase">
-          Generating{" "}
-          {skeletonsNeeded > 0 && imageCount > 1
-            ? `${results.length}/${imageCount}`
-            : ""}
-          ...
-        </p>
-      </div>
+      <LoadingStatusIndicator label={statusLabel} subtle />
       {renderGrid()}
     </div>
   );
@@ -289,38 +259,62 @@ export function GenerationDisplay({
   onRetry,
   onSuggestionClick,
 }: GenerationDisplayProps) {
+  const navigate = useNavigate();
   const [previewLogo, setPreviewLogo] = useState<GeneratedLogo | null>(null);
+
+  const content = (() => {
+    switch (status) {
+      case "idle":
+        return <EmptyState onSuggestionClick={onSuggestionClick} />;
+      case "generating":
+        return <LoadingState imageCount={imageCount} />;
+      case "polling":
+        return (
+          <PollingView
+            results={results}
+            imageCount={imageCount}
+            onCardClick={setPreviewLogo}
+          />
+        );
+      case "error":
+        return (
+          <ErrorState
+            error={error ?? "Something went wrong"}
+            onRetry={onRetry}
+          />
+        );
+      case "done":
+        return (
+          <ResultsView
+            results={results}
+            imageCount={imageCount}
+            onCardClick={setPreviewLogo}
+          />
+        );
+      default:
+        return null;
+    }
+  })();
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {status === "idle" && (
-        <EmptyState onSuggestionClick={onSuggestionClick} />
-      )}
-      {status === "generating" && <LoadingState imageCount={imageCount} />}
-      {status === "polling" && (
-        <PollingView
-          results={results}
-          imageCount={imageCount}
-          onCardClick={setPreviewLogo}
-        />
-      )}
-      {status === "error" && (
-        <ErrorState error={error ?? "Something went wrong"} onRetry={onRetry} />
-      )}
-      {status === "done" && (
-        <ResultsView
-          results={results}
-          imageCount={imageCount}
-          onCardClick={setPreviewLogo}
-        />
-      )}
+      {content}
 
       <LogoPreviewDialog
         logo={previewLogo}
         open={!!previewLogo}
         onOpenChange={(open) => !open && setPreviewLogo(null)}
-        onDownload={() => {}}
-        onEditWithAI={() => {}}
+        onDownload={async (logo) => {
+          await downloadImage(logo.url, `quicklogo-${logo.id}.png`);
+        }}
+        onEditWithAI={(logo) => {
+          navigate({
+            to: "/edit/$imageId",
+            params: { imageId: logo.id },
+            // @ts-expect-error - Route state schema matches structurally
+            state: { imageUrl: logo.url, prompt: logo.prompt },
+          });
+        }}
         onOpenInCanvas={() => {}}
       />
     </div>

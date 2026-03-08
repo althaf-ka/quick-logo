@@ -6,12 +6,30 @@ import {
   TooltipTrigger,
 } from "@quicklogo/ui/components/tooltip";
 import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+} from "@quicklogo/ui/components/combobox";
+import {
   SparkleIcon,
   GearIcon,
   LightningIcon,
   ArrowUpIcon,
+  BrainIcon,
+  CrownIcon,
+  ShuffleIcon,
+  CpuIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
+
+interface ModelItem {
+  id: string;
+  name: string;
+  credits: number;
+  icon?: "lightning" | "brain" | "crown" | "shuffle" | string;
+}
 
 interface PromptInputProps {
   value: string;
@@ -20,12 +38,33 @@ interface PromptInputProps {
   isLoading?: boolean;
   placeholder?: string;
   credits?: number;
+  size?: "default" | "compact";
   showMagicPrompt?: boolean;
   magicPrompt?: boolean;
   onMagicPromptChange?: (value: boolean) => void;
   showConfigTrigger?: boolean;
   onConfigTrigger?: () => void;
+  configIcon?: React.ReactNode;
+  showModelSelector?: boolean;
+  models?: ModelItem[];
+  modelValue?: string;
+  onModelChange?: (value: string) => void;
   className?: string;
+}
+
+function ModelIcon({ icon, className }: { icon?: string; className?: string }) {
+  switch (icon) {
+    case "lightning":
+      return <LightningIcon weight="fill" className={className} />;
+    case "brain":
+      return <BrainIcon weight="fill" className={className} />;
+    case "crown":
+      return <CrownIcon weight="fill" className={className} />;
+    case "shuffle":
+      return <ShuffleIcon weight="fill" className={className} />;
+    default:
+      return <CpuIcon weight="fill" className={className} />;
+  }
 }
 
 export function PromptInput({
@@ -35,14 +74,25 @@ export function PromptInput({
   isLoading = false,
   placeholder = "Describe your ideal logo...",
   credits,
+  size = "default",
   showMagicPrompt = false,
   magicPrompt = false,
   onMagicPromptChange,
   showConfigTrigger = false,
   onConfigTrigger,
+  configIcon,
+  showModelSelector = false,
+  models = [],
+  modelValue,
+  onModelChange,
   className,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isCompact = size === "compact";
+
+  const maxHeight = isCompact ? 100 : 160;
+  const minHeight = isCompact ? 36 : 52;
+  const rows = isCompact ? 1 : 2;
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -51,15 +101,17 @@ export function PromptInput({
         onSubmit();
       }
     },
-    [onSubmit]
+    [onSubmit],
   );
 
   const canSubmit = value.trim().length > 0 && !isLoading;
 
+  const activeModel = models.find((m) => m.id === modelValue);
+
   return (
-    <div className={cn("shrink-0 px-4 pb-3 pt-2", className)}>
+    <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
       <div className="mx-auto max-w-2xl">
-        <div className="border bg-card transition-colors focus-within:border-primary/25">
+        <div className="border-input bg-card focus-within:border-primary/25 flex flex-col border transition-colors">
           <textarea
             ref={textareaRef}
             value={value}
@@ -67,18 +119,96 @@ export function PromptInput({
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = "auto";
-              el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+              el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            rows={2}
+            rows={rows}
             disabled={isLoading}
-            className="block w-full resize-none bg-transparent px-3 pt-3 pb-1 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 [transition:height_150ms_ease] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30"
-            style={{ minHeight: "52px", maxHeight: "160px", overflow: "auto" }}
+            className={cn(
+              "text-foreground placeholder:text-muted-foreground/50 [&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 block w-full resize-none bg-transparent text-sm [transition:height_150ms_ease] focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent",
+              isCompact ? "px-3 py-2" : "px-3 pt-3 pb-1",
+            )}
+            style={{
+              minHeight: `${minHeight}px`,
+              maxHeight: `${maxHeight}px`,
+              overflow: "auto",
+            }}
           />
 
-          <div className="flex items-center justify-between px-2 pb-2">
+          <div
+            className={cn(
+              "flex items-center justify-between px-2",
+              isCompact ? "pb-1.5" : "pb-2",
+            )}
+          >
             <div className="flex items-center gap-0.5">
+              {showModelSelector && models.length > 0 && (
+                <Combobox
+                  value={modelValue}
+                  onValueChange={(val) => {
+                    if (val) onModelChange?.(val);
+                  }}
+                >
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <div className="text-muted-foreground hover:text-foreground group relative flex h-7 w-auto max-w-56 cursor-pointer items-center gap-1.5 border-none! bg-transparent px-1 text-xs font-medium shadow-none! ring-0 transition-colors outline-none! focus-within:bg-transparent! focus-within:ring-0! hover:bg-transparent!">
+                          <ModelIcon
+                            icon={activeModel?.icon}
+                            className="text-primary size-4 shrink-0"
+                          />
+                          <span className="pointer-events-none min-w-0 truncate whitespace-nowrap capitalize">
+                            {activeModel?.name || "Model"}
+                          </span>
+                          <ComboboxInput
+                            showTrigger={false}
+                            className="absolute inset-0 h-full w-full cursor-pointer border-none! bg-transparent! opacity-0 shadow-none! ring-0! outline-none! [&_input]:absolute [&_input]:inset-0 [&_input]:h-full [&_input]:w-full [&_input]:cursor-pointer [&_input]:caret-transparent"
+                          />
+                        </div>
+                      }
+                    />
+                    <TooltipContent side="top">AI Model</TooltipContent>
+                  </Tooltip>
+
+                  <ComboboxContent
+                    align="start"
+                    side="top"
+                    sideOffset={8}
+                    className="w-[240px] sm:w-[260px]"
+                  >
+                    <ComboboxList>
+                      {models.map((m) => (
+                        <ComboboxItem
+                          key={m.id}
+                          value={m.id}
+                          className="py-2.5!"
+                        >
+                          <div className="flex w-full items-center justify-between gap-3">
+                            <span className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium capitalize">
+                              <ModelIcon
+                                icon={m.icon}
+                                className="text-muted-foreground size-4 shrink-0"
+                              />
+                              <span className="truncate whitespace-nowrap">
+                                {m.name}
+                              </span>
+                            </span>
+                            <span className="bg-primary/10 text-primary flex shrink-0 items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-bold tabular-nums">
+                              <LightningIcon
+                                weight="fill"
+                                className="size-2.5"
+                              />
+                              {m.credits}
+                            </span>
+                          </div>
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+              )}
+
               {showMagicPrompt && (
                 <Tooltip>
                   <TooltipTrigger
@@ -89,13 +219,16 @@ export function PromptInput({
                           "flex size-7 cursor-pointer items-center justify-center transition-colors",
                           magicPrompt
                             ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground/50 hover:text-muted-foreground"
+                            : "text-muted-foreground/50 hover:text-muted-foreground",
                         )}
                         onClick={() => onMagicPromptChange?.(!magicPrompt)}
                       />
                     }
                   >
-                    <SparkleIcon weight={magicPrompt ? "fill" : "regular"} className="size-4" />
+                    <SparkleIcon
+                      weight={magicPrompt ? "fill" : "regular"}
+                      className="size-4"
+                    />
                   </TooltipTrigger>
                   <TooltipContent side="top">
                     {magicPrompt ? "Magic Prompt: On" : "Magic Prompt: Off"}
@@ -109,40 +242,59 @@ export function PromptInput({
                     render={
                       <button
                         type="button"
-                        className="flex size-7 cursor-pointer items-center justify-center text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+                        className="text-muted-foreground/50 hover:text-muted-foreground flex size-7 cursor-pointer items-center justify-center transition-colors"
                         onClick={onConfigTrigger}
                       />
                     }
                   >
-                    <GearIcon weight="bold" className="size-4" />
+                    {configIcon || (
+                      <GearIcon weight="bold" className="size-4" />
+                    )}
                   </TooltipTrigger>
                   <TooltipContent side="top">Settings</TooltipContent>
                 </Tooltip>
               )}
 
-              {credits !== undefined && (
-                <span className="ml-1 flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground/50">
-                  <LightningIcon weight="fill" className="size-3 text-primary/60" />
-                  {credits}
-                </span>
+              {credits !== undefined && !showModelSelector && (
+                <div className="ml-1 flex items-center justify-center px-1.5 py-1">
+                  <span className="text-muted-foreground/50 flex items-center gap-1 text-[11px] font-medium tabular-nums">
+                    <LightningIcon
+                      weight="fill"
+                      className="text-primary/60 size-3"
+                    />
+                    {credits}
+                  </span>
+                </div>
               )}
             </div>
 
-            <Button
-              onClick={onSubmit}
-              disabled={!canSubmit}
-              size="icon-sm"
-              className={cn(
-                "size-7 cursor-pointer transition-all duration-150",
-                canSubmit && "active:scale-95"
+            <div className="flex items-center gap-2">
+              {credits !== undefined && showModelSelector && (
+                <span className="text-muted-foreground/50 flex items-center gap-1 text-[11px] font-medium tabular-nums">
+                  <LightningIcon
+                    weight="fill"
+                    className="text-primary/60 size-3"
+                  />
+                  {credits}
+                </span>
               )}
-            >
-              {isLoading ? (
-                <span className="size-3.5 animate-spin border-2 border-primary-foreground/30 border-t-primary-foreground" />
-              ) : (
-                <ArrowUpIcon weight="bold" className="size-4" />
-              )}
-            </Button>
+
+              <Button
+                onClick={onSubmit}
+                disabled={!canSubmit}
+                size="icon-sm"
+                className={cn(
+                  "size-7 cursor-pointer transition-all duration-150",
+                  canSubmit && "active:scale-95",
+                )}
+              >
+                {isLoading ? (
+                  <span className="border-primary-foreground/30 border-t-primary-foreground size-3.5 animate-spin border-2" />
+                ) : (
+                  <ArrowUpIcon weight="bold" className="size-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

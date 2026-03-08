@@ -11,7 +11,7 @@ export default {
   ): Promise<void> {
     const db = createDb(env.DB);
     const storage = new ImageKitProvider(env.IMAGEKIT_PRIVATE_KEY);
-    const pipeline = new GenerationPipeline(env.AI, db, storage);
+    const pipeline = new GenerationPipeline(env.AI, db, storage, env);
 
     for (const message of batch.messages) {
       try {

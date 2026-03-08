@@ -8,6 +8,7 @@ import {
 } from "@quicklogo/ai-providers/providers";
 import type { GenerationParams } from "@quicklogo/ai-providers/types";
 import { PromptEnhancer } from "@quicklogo/ai-providers/prompt";
+import type { Env } from "./types";
 
 export class GenerationPipeline {
   private promptEnhancer: PromptEnhancer;
@@ -16,6 +17,7 @@ export class GenerationPipeline {
     private ai: Ai,
     private db: Database,
     private storage: StorageProvider,
+    private env: Env,
   ) {
     this.promptEnhancer = new PromptEnhancer(ai);
   }
@@ -27,18 +29,32 @@ export class GenerationPipeline {
 
     try {
       const mapping = getModelMapping(message.config.model);
-      const provider = createProvider(mapping, { ai: this.ai });
-      const { finalPrompt, enhancedPrompt, negativePrompt } =
-        await this.promptEnhancer.enhance(message);
+      const provider = createProvider(mapping, { ai: this.ai, env: this.env });
+      let finalPrompt = message.prompt;
+      let enhancedPromptText: string | undefined;
+      let negativePrompt: string | undefined;
+
+      // If the model does not support native enhancement (Alchemy/etc.), we process it locally.
+      if (!mapping.capabilities.nativePromptEnhancement) {
+        const enhanced = await this.promptEnhancer.enhance(message);
+        if (message.config.magicPrompt) {
+          finalPrompt = enhanced.finalPrompt;
+          enhancedPromptText = enhanced.enhancedPrompt;
+        }
+        negativePrompt = enhanced.negativePrompt;
+      }
 
       const params: GenerationParams = {
         prompt: finalPrompt,
-        negativePrompt,
+        negativePrompt: negativePrompt || "",
         backendModel: mapping.backendModel,
         ...mapping.defaultParams,
       };
 
-      if (mapping.supportsImg2Img && message.config.referenceImageUrl) {
+      if (
+        mapping.capabilities.imageToImage &&
+        message.config.referenceImageUrl
+      ) {
         params.referenceImage = message.config.referenceImageUrl;
         params.referenceStrength = message.config.referenceStrength ?? 50;
       }
@@ -61,7 +77,7 @@ export class GenerationPipeline {
             imageId: uploaded.fileId,
             thumbnail: uploaded.thumbnail,
             prompt: message.prompt,
-            ...(enhancedPrompt && { enhancedPrompt }),
+            ...(enhancedPromptText && { enhancedPrompt: enhancedPromptText }),
           })
           .where(eq(images.id, imageId)),
         this.db

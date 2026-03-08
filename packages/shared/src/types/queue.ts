@@ -3,6 +3,7 @@ export interface GenerateImageMessage {
   projectId: string;
   userId: string;
   prompt: string;
+  isEdit?: boolean;
   config: {
     model: string;
     imageCount: number;

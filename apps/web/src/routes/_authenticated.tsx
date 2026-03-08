@@ -1,5 +1,10 @@
 import { AUTH_KEYS } from "@/hooks/use-auth";
-import { createFileRoute, Outlet, redirect, useLocation } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useLocation,
+} from "@tanstack/react-router";
 import { TooltipProvider } from "@quicklogo/ui/components/tooltip";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { AppSidebar } from "../components/sidebar/app-sidebar";
@@ -36,6 +41,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const PAGE_TITLES: Record<string, string> = {
   "/generate": "Generate Logo",
+  "/edit": "Edit with AI",
   "/projects": "My Projects",
   "/settings": "Settings",
 };
@@ -44,9 +50,10 @@ function AuthenticatedLayout() {
   const { pathname } = useLocation();
   const title =
     Object.entries(PAGE_TITLES).find(([path]) =>
-      pathname.startsWith(path)
+      pathname.startsWith(path),
     )?.[1] ?? "Dashboard";
-  const isFullBleed = pathname.startsWith("/generate");
+  const isFullBleed =
+    pathname.startsWith("/generate") || pathname.startsWith("/edit");
 
   return (
     <TooltipProvider>
@@ -62,7 +69,9 @@ function AuthenticatedLayout() {
           <div
             className={cn(
               "flex-1",
-              isFullBleed ? "flex flex-col overflow-hidden" : "overflow-y-auto p-6"
+              isFullBleed
+                ? "flex flex-col overflow-hidden"
+                : "overflow-y-auto p-6",
             )}
           >
             <Outlet />

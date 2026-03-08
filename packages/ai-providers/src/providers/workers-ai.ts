@@ -54,7 +54,7 @@ export class WorkersAIProvider implements AIProvider {
     if (params.referenceImage) {
       const buffer = await this.fetchImage(params.referenceImage);
       input.image = [...new Uint8Array(buffer)];
-      input.strength = 1 - (params.referenceStrength ?? 50) / 100;
+      input.strength = (params.referenceStrength ?? 50) / 100;
     }
 
     return this.ai.run(params.backendModel as Parameters<Ai["run"]>[0], input);

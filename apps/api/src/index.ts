@@ -7,6 +7,7 @@ import userRoute from "./routes/user";
 import uploadRoute from "./routes/upload";
 import generateRoute from "./routes/generate";
 import batchesRoute from "./routes/batches";
+import imagesRoute from "./routes/images";
 import { Bindings, Variables } from "./types";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -28,6 +29,7 @@ app.route("/api/user", userRoute);
 app.route("/api/upload", uploadRoute);
 app.route("/api/generate", generateRoute);
 app.route("/api/batches", batchesRoute);
+app.route("/api/images", imagesRoute);
 
 export default app;
 export type AppType = typeof app;

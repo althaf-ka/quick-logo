@@ -1,6 +1,9 @@
 {
   "extends": "@quicklogo/typescript-config/base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "esModuleInterop": true,
     "types": ["@cloudflare/workers-types", "node"],
     "paths": {
       "@/*": ["./src/*"]

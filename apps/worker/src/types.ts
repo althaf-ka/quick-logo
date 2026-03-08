@@ -4,4 +4,5 @@ export interface Env {
   DB: D1Database;
   AI: Ai;
   IMAGEKIT_PRIVATE_KEY: string;
+  LEONARDO_API_KEY?: string;
 }
