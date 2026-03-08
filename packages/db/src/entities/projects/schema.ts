@@ -6,7 +6,6 @@ export const projects = sqliteTable("project", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
-
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

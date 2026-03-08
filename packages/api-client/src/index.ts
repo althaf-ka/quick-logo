@@ -6,6 +6,7 @@ import type {
   BatchesType,
   ImagesType,
   PaymentsType,
+  ProjectsType,
 } from "@quicklogo/api/route-types";
 import { hc } from "hono/client";
 
@@ -20,6 +21,7 @@ export const createApiClient = (
   batches: hc<BatchesType>(`${baseUrl}/api/batches`, options),
   images: hc<ImagesType>(`${baseUrl}/api/images`, options),
   payments: hc<PaymentsType>(`${baseUrl}/api/payments`, options),
+  projects: hc<ProjectsType>(`${baseUrl}/api/projects`, options),
 });
 
 export type ApiClient = ReturnType<typeof createApiClient>;

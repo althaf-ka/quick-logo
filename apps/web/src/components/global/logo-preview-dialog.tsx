@@ -8,7 +8,11 @@ import {
   DialogFooter,
 } from "@quicklogo/ui/components/dialog";
 import { Button } from "@quicklogo/ui/components/button";
-import { DownloadIcon, PencilIcon, FrameCornersIcon } from "@phosphor-icons/react";
+import {
+  DownloadIcon,
+  PencilIcon,
+  FrameCornersIcon,
+} from "@phosphor-icons/react";
 
 const CHECKER_BG = {
   backgroundImage:

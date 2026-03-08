@@ -9,6 +9,8 @@ import generateRoute from "./routes/generate";
 import batchesRoute from "./routes/batches";
 import imagesRoute from "./routes/images";
 import paymentsRoute from "./routes/payments";
+import projectsRoute from "./routes/projects";
+
 import { Bindings, Variables } from "./types";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
@@ -32,6 +34,7 @@ app.route("/api/generate", generateRoute);
 app.route("/api/batches", batchesRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/payments", paymentsRoute);
+app.route("/api/projects", projectsRoute);
 
 export default app;
 export type AppType = typeof app;

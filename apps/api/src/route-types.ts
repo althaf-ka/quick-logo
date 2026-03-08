@@ -17,3 +17,4 @@ export type { GenerateType } from "./routes/generate";
 export type { BatchesType } from "./routes/batches";
 export type { ImagesType } from "./routes/images";
 export type { PaymentsType } from "./routes/payments";
+export type { ProjectsType } from "./routes/projects";

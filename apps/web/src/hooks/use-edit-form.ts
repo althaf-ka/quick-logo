@@ -32,9 +32,7 @@ export function useEditForm({
     queryKey: ["image-history", imageId],
     queryFn: async () => {
       const res = await api.images[":id"].$get({ param: { id: imageId } });
-      if (!res.ok) {
-        throw new Error("Failed to fetch image details");
-      }
+      if (!res.ok) throw new Error("Failed to fetch image details");
       return res.json();
     },
   });
@@ -43,33 +41,29 @@ export function useEditForm({
   const sourcePrompt = initialPrompt ?? fetchResult?.image?.prompt ?? "";
 
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
-
-  const [, setHasInitializedPrompt] = useState(false);
-  const fetchedPrompt = fetchResult?.image?.prompt;
-
-  if (!initialPrompt && fetchedPrompt) {
-    setHasInitializedPrompt((prev) => {
-      if (!prev) {
-        setPrompt(fetchedPrompt);
-        return true;
-      }
-      return prev;
-    });
-  }
-
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [errorState, setErrorState] = useState<string | null>(null);
-
   const [activeEditImageId, setActiveEditImageId] = useState<string | null>(
-    () => {
-      const pendingNode = fetchResult?.history?.find(
-        (h) => h.status === "pending" || h.status === "processing",
-      );
-      return pendingNode ? pendingNode.id : null;
-    },
+    null,
   );
-
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+
+  const fetchedPrompt = fetchResult?.image?.prompt;
+  useEffect(() => {
+    if (!initialPrompt && fetchedPrompt) {
+      setPrompt(fetchedPrompt);
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedPrompt]);
+
+  useEffect(() => {
+    if (!fetchResult?.history) return;
+    const pendingNode = fetchResult.history.find(
+      (h) => h.status === "pending" || h.status === "processing",
+    );
+    if (pendingNode) setActiveEditImageId(pendingNode.id);
+  }, [fetchResult?.history]);
 
   const serverHistory = useMemo(() => {
     if (!fetchResult?.history) return [];
@@ -88,7 +82,7 @@ export function useEditForm({
       if (!sourceImageUrl) return [];
       return [
         {
-          id: imageId, // temporary until fetched
+          id: imageId,
           url: sourceImageUrl,
           prompt: sourcePrompt || "Original",
           createdAt: fetchResult?.image?.createdAt
@@ -97,7 +91,6 @@ export function useEditForm({
         },
       ];
     }
-
     return [...serverHistory].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
@@ -105,7 +98,7 @@ export function useEditForm({
 
   const selectedEntry = useMemo(() => {
     if (selectedEntryId) {
-      return history.find((h) => h.id === selectedEntryId) || null;
+      return history.find((h) => h.id === selectedEntryId) ?? null;
     }
     return history[0] ?? null;
   }, [history, selectedEntryId]);
@@ -144,12 +137,10 @@ export function useEditForm({
         createdAt: new Date(),
       };
 
-      // Update cache so UI updates immediately without needing localHistory state
       queryClient.setQueryData(["image-history", imageId], (old: unknown) => {
         if (!old || typeof old !== "object") return old;
         const oldData = old as { history?: unknown[] };
         if (!Array.isArray(oldData.history)) return oldData;
-
         return {
           ...oldData,
           history: [
@@ -166,7 +157,6 @@ export function useEditForm({
         };
       });
 
-      // Break synchronous cascade
       setTimeout(() => {
         setSelectedEntryId(entry.id);
         setActiveEditImageId(null);
@@ -203,7 +193,6 @@ export function useEditForm({
 
   const isPolling = activeEditImageId !== null && !isPollingError;
   const isEditing = isPending || isPolling;
-
   const error =
     activeEditImageId && isPollingError
       ? "Failed to fetch edit status."
