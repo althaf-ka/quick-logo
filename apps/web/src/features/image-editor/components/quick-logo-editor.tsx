@@ -38,6 +38,18 @@ interface SaveEditResponse {
   imageId: string;
 }
 
+function getBase64Payload(dataUrl: string): string {
+  const parts = dataUrl.split(",");
+  return parts[1] ?? "";
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(2)} MB`;
+}
+
 function dataUrlToFile(dataUrl: string, fileName: string): File {
   const [meta, data] = dataUrl.split(",");
   if (!meta || !data) {
@@ -55,10 +67,12 @@ function dataUrlToFile(dataUrl: string, fileName: string): File {
   return new File([bytes], fileName, { type: mimeType });
 }
 
-const TABS_IDS = [TABS.ADJUST, TABS.ANNOTATE, TABS.FILTERS];
-const TEXT_CONFIG = { text: "Your Brand Name" };
+type EditorTabId = (typeof TABS)[keyof typeof TABS];
+const finetuneTab = (TABS as Partial<Record<"FINETUNE", EditorTabId>>).FINETUNE;
+const TABS_IDS: EditorTabId[] = finetuneTab
+  ? [TABS.ANNOTATE, TABS.ADJUST, finetuneTab, TABS.FILTERS]
+  : [TABS.ANNOTATE, TABS.ADJUST, TABS.FILTERS];
 const ROTATE_CONFIG = { angle: 90, componentType: "slider" as const };
-const ANNOT_COMMON = { fill: "#ffffff" }; // White annotation default for dark theme
 const EDITOR_THEME = {
   palette: {
     "bg-primary": "#09090b",
@@ -118,10 +132,22 @@ export function QuickLogoEditor({
     }
 
     try {
+      const outputFormat = editedImageObject.extension || "png";
+      const base64Payload = getBase64Payload(editedImageObject.imageBase64);
+      const approxRawBytes = Math.floor((base64Payload.length * 3) / 4);
+
       const file = dataUrlToFile(
         editedImageObject.imageBase64,
-        `canvas-edit-${Date.now()}.${editedImageObject.extension || "png"}`,
+        `canvas-edit-${Date.now()}.${outputFormat}`,
       );
+      console.log("[canvas-save] export", {
+        format: outputFormat,
+        approxRawSizeBytes: approxRawBytes,
+        approxRawSize: formatBytes(approxRawBytes),
+        uploadSizeBytes: file.size,
+        uploadSize: formatBytes(file.size),
+        mimeType: file.type,
+      });
 
       const uploadResultUrl = await uploadFileToImageKit(file);
 
@@ -143,18 +169,17 @@ export function QuickLogoEditor({
   };
 
   return (
-    <div className="bg-background fixed inset-0 z-50 flex h-dvh w-dvw flex-col overflow-hidden">
+    <div className="bg-background relative flex size-full min-h-0 flex-col overflow-hidden">
       <StyleSheetManager shouldForwardProp={isPropValid}>
         <FilerobotImageEditor
           source={initialImageUrl}
           onSave={handleSave}
           onClose={onClose}
-          annotationsCommon={ANNOT_COMMON}
-          Text={TEXT_CONFIG}
+          annotationsCommon={{ fill: "#111827" }}
+          Text={{ text: "Your Brand Name" }}
           Rotate={ROTATE_CONFIG}
           tabsIds={TABS_IDS}
-          defaultTabId={TABS.ANNOTATE}
-          defaultToolId={TOOLS.TEXT}
+          defaultTabId={TABS.ADJUST}
           savingPixelRatio={1}
           previewPixelRatio={
             typeof window !== "undefined" ? window.devicePixelRatio : 1
@@ -164,7 +189,8 @@ export function QuickLogoEditor({
           defaultSavedImageType="png"
           defaultSavedImageQuality={0.92}
           forceToPngInEllipticalCrop={true}
-          observePluginContainerSize={true}
+          disableSaveIfNoChanges={true}
+          defaultToolId={TOOLS.TEXT}
         />
       </StyleSheetManager>
     </div>

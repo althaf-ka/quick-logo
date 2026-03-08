@@ -265,8 +265,6 @@ export function GenerationDisplay({
     navigate({
       to: "/canvas/$imageId",
       params: { imageId: logo.id },
-      // @ts-expect-error - Route state schema matches structurally
-      state: { imageUrl: logo.url, prompt: logo.prompt },
     });
   };
 
@@ -319,8 +317,6 @@ export function GenerationDisplay({
           navigate({
             to: "/edit/$imageId",
             params: { imageId: logo.id },
-            // @ts-expect-error - Route state schema matches structurally
-            state: { imageUrl: logo.url, prompt: logo.prompt },
           });
         }}
         onOpenInCanvas={handleCanvasOpen}

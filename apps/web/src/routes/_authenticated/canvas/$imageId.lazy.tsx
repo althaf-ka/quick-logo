@@ -1,9 +1,10 @@
 import {
   createLazyFileRoute,
   useNavigate,
-  useLocation,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { EditorLoadingState } from "@/features/image-editor/components/editor-loading-state";
 
 const QuickLogoEditor = lazy(() =>
@@ -18,33 +19,37 @@ export const Route = createLazyFileRoute("/_authenticated/canvas/$imageId")({
 
 function CanvasRoute() {
   const { imageId } = Route.useParams();
-  const location = useLocation();
-  const state = location.state as
-    | { imageUrl?: string; prompt?: string }
-    | undefined;
   const navigate = useNavigate();
+  const { data, isPending } = useQuery({
+    queryKey: ["image-history", imageId],
+    queryFn: async () => {
+      const res = await api.images[":id"].$get({ param: { id: imageId } });
+      if (!res.ok) {
+        throw new Error("Failed to load canvas image");
+      }
+      return res.json();
+    },
+  });
 
-  // If no state imageUrl is passed directly from navigation,
-  // we would ideally fetch the image via API again.
-  // For simplicity, we assume the user arrives here via clicking 'Canvas' on the edit page.
-  const imageUrl = state?.imageUrl;
+  const imageUrl = data?.image?.imageUrl;
 
   const handleClose = () => {
-    // Navigate back to the edit page
     navigate({
       to: "/edit/$imageId",
       params: { imageId },
-      state: { imageUrl, prompt: state?.prompt },
     });
   };
 
   const handleSaveComplete = (newImageId: string) => {
-    // Navigate to the newly saved image
     navigate({
       to: "/edit/$imageId",
       params: { imageId: newImageId },
     });
   };
+
+  if (isPending) {
+    return <EditorLoadingState />;
+  }
 
   if (!imageUrl) {
     return (
@@ -68,7 +73,7 @@ function CanvasRoute() {
   }
 
   return (
-    <div className="h-dvh w-dvw overflow-hidden">
+    <div className="h-full min-h-0 w-full overflow-hidden">
       <Suspense fallback={<EditorLoadingState />}>
         <QuickLogoEditor
           imageId={imageId}

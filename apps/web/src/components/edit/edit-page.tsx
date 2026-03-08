@@ -85,14 +85,9 @@ export function EditPage({
     const targetUrl = selectedEntry?.url ?? sourceImageUrl;
     if (!targetUrl) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigate as any)({
+    navigate({
       to: "/canvas/$imageId",
       params: { imageId: selectedEntry?.id ?? imageId },
-      state: {
-        imageUrl: targetUrl,
-        prompt: selectedEntry?.prompt ?? sourcePrompt,
-      },
     });
   };
 
@@ -223,7 +218,7 @@ export function EditPage({
               <div className="space-y-4 p-4">
                 <h3 className="text-sm font-medium">Edit History</h3>
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[56px] w-full rounded-none" />
+                  <Skeleton key={i} className="h-14 w-full rounded-none" />
                 ))}
               </div>
             ) : (
@@ -237,7 +232,7 @@ export function EditPage({
             )}
           </div>
 
-          <div className="bg-card flex flex-shrink-0 flex-col gap-2 border-t p-4">
+          <div className="bg-card flex shrink-0 flex-col gap-2 border-t p-4">
             <Button
               variant="outline"
               size="sm"
