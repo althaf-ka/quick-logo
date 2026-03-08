@@ -44,6 +44,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/edit": "Edit with AI",
   "/canvas": "Canvas Editor",
   "/projects": "My Projects",
+  "/credits": "Billing & Credits",
   "/settings": "Settings",
 };
 
@@ -74,7 +75,7 @@ function AuthenticatedLayout() {
               "flex-1",
               isFullBleed
                 ? "flex flex-col overflow-hidden"
-                : "overflow-y-auto p-6",
+                : "scrollbar-subtle overflow-y-auto p-6",
             )}
           >
             <Outlet />

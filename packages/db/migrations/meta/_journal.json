@@ -22,6 +22,13 @@
       "when": 1772448302189,
       "tag": "0002_tearful_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1772958242896,
+      "tag": "0003_shocking_maestro",
+      "breakpoints": true
     }
   ]
 }

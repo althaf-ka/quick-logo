@@ -23,6 +23,15 @@ export function createAuth(db: Database, env: AuthEnv) {
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
 
+    user: {
+      additionalFields: {
+        credits: {
+          type: "number",
+          defaultValue: 0,
+        },
+      },
+    },
+
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema: {

@@ -6,6 +6,13 @@ import { adminClient } from "better-auth/client/plugins";
 export function createClient(baseURL: string) {
   return createAuthClient({
     baseURL,
+    user: {
+      additionalFields: {
+        credits: {
+          type: "number",
+        },
+      },
+    },
     plugins: [adminClient()],
   });
 }

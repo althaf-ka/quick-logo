@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { EditApiRequest } from "@quicklogo/shared";
+import { AUTH_KEYS } from "@/hooks/use-auth";
 
 export interface EditHistoryEntry {
   id: string;
@@ -191,7 +192,7 @@ export function useEditForm({
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user", "credits"] });
+      queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
     },
     onError: (err) => {
       toast.error("Edit failed", {

@@ -1,5 +1,5 @@
 import { D1Database } from "@cloudflare/workers-types";
-import type { Database, User, Session } from "@quicklogo/db";
+import type { Database, User } from "@quicklogo/db";
 import type { GenerateImageMessage } from "@quicklogo/shared";
 
 export type Bindings = {
@@ -12,10 +12,12 @@ export type Bindings = {
   BETTER_AUTH_URL: string;
   IMAGEKIT_PRIVATE_KEY: string;
   IMAGEKIT_URL_ENDPOINT: string;
+  DODO_PAYMENTS_API_KEY: string;
+  DODO_PAYMENTS_WEBHOOK_KEY: string;
+  DODO_PAYMENTS_ENVIRONMENT: string;
 };
 
 export type Variables = {
   db: Database;
   user: User;
-  session: Session;
 };

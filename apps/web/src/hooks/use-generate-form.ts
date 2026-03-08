@@ -10,7 +10,7 @@ import type {
 import type { GenerateApiRequest } from "@quicklogo/shared";
 import { DEFAULT_CONFIG, MODELS } from "@quicklogo/shared";
 import { uploadFileToImageKit } from "@/lib/imagekit";
-import { useAuth } from "@/hooks/use-auth";
+import { AUTH_KEYS, useAuth } from "@/hooks/use-auth";
 import { useBatchStatus } from "./use-batch-status";
 
 export function useGenerateForm() {
@@ -155,7 +155,7 @@ export function useGenerateForm() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user", "credits"] });
+      queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
     },
     onError: (error) => {
       toast.error("Generation failed", {

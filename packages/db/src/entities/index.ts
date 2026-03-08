@@ -10,3 +10,6 @@ export * from "./projects/schema";
 
 // ── Images exports ──
 export * from "./images/schema";
+
+// ── Transactions exports ──
+export * from "./transactions/schema";

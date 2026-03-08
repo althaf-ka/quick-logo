@@ -2,12 +2,29 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { useRouter } from "@tanstack/react-router";
-// import { api } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { InferResponseType } from "@quicklogo/api-client";
 
 export const AUTH_KEYS = {
   session: ["auth", "session"] as const,
   user: ["auth", "user"] as const,
 };
+
+export type CurrentUser = InferResponseType<
+  (typeof api.user.profile)["$get"],
+  200
+>;
+
+function isCurrentUser(value: unknown): value is CurrentUser {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.email === "string" &&
+    typeof candidate.credits === "number"
+  );
+}
 
 export function useSession() {
   return useQuery({
@@ -21,20 +38,24 @@ export function useSession() {
   });
 }
 
-// export function useUser() {
-//   const { data: session } = useSession();
+export function useUser() {
+  const { data: session } = useSession();
 
-//   return useQuery({
-//     queryKey: AUTH_KEYS.user,
-//     queryFn: async () => {
-//       const res = await api.user.me.$get();
-//       if (!res.ok) throw new Error("Failed to fetch user");
-//       return res.json();
-//     },
-//     enabled: !!session,
-//     staleTime: 10 * 60 * 1000,
-//   });
-// }
+  return useQuery({
+    queryKey: AUTH_KEYS.user,
+    queryFn: async () => {
+      const res = await api.user.profile.$get();
+      if (!res.ok) throw new Error("Failed to fetch user");
+      const data = await res.json();
+      if (!isCurrentUser(data)) {
+        throw new Error("Invalid user payload");
+      }
+      return data;
+    },
+    enabled: !!session?.session,
+    staleTime: 30 * 1000,
+  });
+}
 
 export function useGoogleLogin() {
   return useMutation({
@@ -82,12 +103,13 @@ export function useLogout() {
 }
 
 export function useAuth() {
-  const { data, isLoading: sessionLoading } = useSession();
+  const { data: sessionData, isLoading: sessionLoading } = useSession();
+  const { data: userData, isLoading: userLoading } = useUser();
 
   return {
-    session: data?.session,
-    user: data?.user,
-    isLoading: sessionLoading,
-    isAuthenticated: !!data?.session,
+    session: sessionData?.session,
+    user: userData,
+    isLoading: sessionLoading || (!!sessionData?.session && userLoading),
+    isAuthenticated: !!sessionData?.session,
   };
 }

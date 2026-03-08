@@ -13,39 +13,43 @@ import {
   SidebarMenuItem,
 } from "@quicklogo/ui/components/sidebar";
 import { Separator } from "@quicklogo/ui/components/separator";
-import { useLogout } from "@/hooks/use-auth";
+import { useLogout, useAuth } from "@/hooks/use-auth";
 
 export function NavSystem() {
   const matchRoute = useMatchRoute();
   const { mutate: logout, isPending } = useLogout();
+  const { user } = useAuth();
+  const credits = user?.credits ?? 0;
 
   return (
     <SidebarGroup className="mt-auto pb-2">
       <SidebarMenu className="mb-1 gap-0.5">
         <SidebarMenuItem>
           <SidebarMenuButton
-            tooltip="50 credits remaining"
+            tooltip={`${credits} credits remaining`}
             className="text-muted-foreground h-9 cursor-default rounded-none"
           >
             <LightningIcon weight="fill" className="text-primary size-4" />
             <span className="flex-1 text-[13px] tracking-tight">Credits</span>
             <span className="bg-primary/10 text-primary px-1.5 py-0.5 text-[11px] leading-none font-bold tabular-nums">
-              50
+              {credits}
             </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
 
         <SidebarMenuItem>
           <SidebarMenuButton
-            tooltip="Get more credits"
-            className="text-primary hover:bg-primary/10 group/upgrade h-9 cursor-pointer rounded-none transition-all duration-150 active:scale-[0.98]"
+            tooltip="Buy More Credits"
+            isActive={!!matchRoute({ to: "/credits" })}
+            className="text-primary hover:bg-primary/10 group/upgrade data-[active=true]:bg-primary/10 h-9 cursor-pointer rounded-none transition-all duration-150 active:scale-[0.98]"
+            render={<Link to={"/credits"} />}
           >
             <PlusIcon
               weight="bold"
               className="size-4 transition-transform duration-300 group-hover/upgrade:rotate-90"
             />
             <span className="text-[13px] font-medium tracking-tight">
-              Get More Credits
+              Buy More Credits
             </span>
           </SidebarMenuButton>
         </SidebarMenuItem>

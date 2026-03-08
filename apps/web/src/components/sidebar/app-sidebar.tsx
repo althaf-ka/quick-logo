@@ -21,7 +21,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarSeparator className="mx-0" />
 
-      <SidebarContent>
+      <SidebarContent className="scrollbar-subtle">
         <NavMain />
         <NavSystem />
       </SidebarContent>

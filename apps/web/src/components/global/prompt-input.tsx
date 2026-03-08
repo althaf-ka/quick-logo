@@ -126,7 +126,7 @@ export function PromptInput({
             rows={rows}
             disabled={isLoading}
             className={cn(
-              "text-foreground placeholder:text-muted-foreground/50 [&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 block w-full resize-none bg-transparent text-sm [transition:height_150ms_ease] focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent",
+              "scrollbar-subtle text-foreground placeholder:text-muted-foreground/50 block w-full resize-none bg-transparent text-sm [transition:height_150ms_ease] focus:outline-none disabled:opacity-50",
               isCompact ? "px-3 py-2" : "px-3 pt-3 pb-1",
             )}
             style={{

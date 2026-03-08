@@ -152,3 +152,31 @@
     @apply font-mono;
   }
 }
+
+@layer utilities {
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--border) 60%, transparent)
+      transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 0.25rem;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--border) 60%, transparent);
+  }
+
+  .scrollbar-subtle:hover::-webkit-scrollbar-thumb {
+    background: color-mix(
+      in oklab,
+      var(--muted-foreground) 30%,
+      transparent
+    );
+  }
+}
