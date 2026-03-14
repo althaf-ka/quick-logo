@@ -22,6 +22,11 @@ export function createAuth(db: Database, env: AuthEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+    ],
 
     user: {
       additionalFields: {

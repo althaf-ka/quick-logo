@@ -13,3 +13,6 @@ export * from "./images/schema";
 
 // ── Transactions exports ──
 export * from "./transactions/schema";
+
+// ── System Logs exports ──
+export * from "./system_logs/schema";

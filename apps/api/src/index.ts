@@ -10,6 +10,8 @@ import batchesRoute from "./routes/batches";
 import imagesRoute from "./routes/images";
 import paymentsRoute from "./routes/payments";
 import projectsRoute from "./routes/projects";
+import adminRoute from "./routes/admin";
+import logsRoute from "./routes/logs";
 
 import { Bindings, Variables } from "./types";
 
@@ -19,8 +21,15 @@ app.use("*", logger());
 app.use("*", dbMiddleware);
 
 app.use("/api/*", async (c, next) => {
+  const allowedOrigins = [
+    c.env.CLIENT_URL ?? "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+  ];
+  const origin = c.req.header("Origin") || "";
+
   const corsMiddleware = cors({
-    origin: c.env.CLIENT_URL ?? "http://localhost:5173",
+    origin: allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
     credentials: true,
   });
   return corsMiddleware(c, next);
@@ -35,6 +44,8 @@ app.route("/api/batches", batchesRoute);
 app.route("/api/images", imagesRoute);
 app.route("/api/payments", paymentsRoute);
 app.route("/api/projects", projectsRoute);
+app.route("/api/admin", adminRoute);
+app.route("/api/logs", logsRoute);
 
 export default app;
 export type AppType = typeof app;

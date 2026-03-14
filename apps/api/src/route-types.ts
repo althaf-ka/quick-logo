@@ -11,6 +11,7 @@
 // ──────────────────────────────────────────────────────────
 
 export type { AuthType } from "./routes/auth";
+export type { AdminType } from "./routes/admin";
 export type { UserType } from "./routes/user";
 export type { UploadType } from "./routes/upload";
 export type { GenerateType } from "./routes/generate";

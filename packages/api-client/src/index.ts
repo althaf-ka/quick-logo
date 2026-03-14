@@ -1,6 +1,7 @@
 import type {
   UserType,
   AuthType,
+  AdminType,
   UploadType,
   GenerateType,
   BatchesType,
@@ -16,6 +17,7 @@ export const createApiClient = (
 ) => ({
   user: hc<UserType>(`${baseUrl}/api/user`, options),
   auth: hc<AuthType>(`${baseUrl}/api/auth`, options),
+  admin: hc<AdminType>(`${baseUrl}/api/admin`, options),
   upload: hc<UploadType>(`${baseUrl}/api/upload`, options),
   generate: hc<GenerateType>(`${baseUrl}/api/generate`, options),
   batches: hc<BatchesType>(`${baseUrl}/api/batches`, options),

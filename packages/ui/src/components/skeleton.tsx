@@ -1,13 +1,16 @@
-import { cn } from "@quicklogo/ui/lib/utils"
+import { cn } from "@quicklogo/ui/lib/utils";
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+function Skeleton({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="skeleton"
-      className={cn("bg-muted rounded-none animate-pulse", className)}
+      className={cn("bg-muted animate-pulse rounded-none", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Skeleton }
+export { Skeleton };

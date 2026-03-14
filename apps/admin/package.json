@@ -1,18 +1,16 @@
 {
-  "name": "@quicklogo/web",
+  "name": "@quicklogo/admin",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite --port 5174",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emotion/is-prop-valid": "^1.4.0",
     "@phosphor-icons/react": "^2.1.10",
-    "@quicklogo/ai-providers": "workspace:*",
     "@quicklogo/api-client": "workspace:*",
     "@quicklogo/auth": "workspace:*",
     "@quicklogo/shared": "workspace:*",
@@ -23,13 +21,9 @@
     "@tanstack/react-router": "^1.159.5",
     "@tanstack/react-router-devtools": "^1.159.5",
     "date-fns": "^4.1.0",
-    "embla-carousel-autoplay": "^8.6.0",
-    "embla-carousel-fade": "^8.6.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-filerobot-image-editor": "5.0.0-beta.153",
     "react-intersection-observer": "^10.0.3",
-    "styled-components": "^6.3.11",
     "tailwindcss": "^4.1.16",
     "zod": "^4.3.6"
   },

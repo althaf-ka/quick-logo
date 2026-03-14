@@ -1,5 +1,5 @@
-import { D1Database } from "@cloudflare/workers-types";
-import type { Database, User } from "@quicklogo/db";
+import type { D1Database, Queue } from "@cloudflare/workers-types";
+import type { Database, User, Session } from "@quicklogo/db";
 import type { GenerateImageMessage } from "@quicklogo/shared";
 
 export type Bindings = {
@@ -20,4 +20,5 @@ export type Bindings = {
 export type Variables = {
   db: Database;
   user: User;
+  session: Session;
 };
