@@ -1,5 +1,10 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { ChartLineUp, Users, CreditCard, Pulse } from "@phosphor-icons/react";
+import {
+  ChartLineUpIcon,
+  UsersIcon,
+  CreditCardIcon,
+  PulseIcon,
+} from "@phosphor-icons/react";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -12,25 +17,25 @@ const NAV_ITEMS = [
   {
     title: "Dashboard",
     to: "/",
-    icon: ChartLineUp,
+    icon: ChartLineUpIcon,
     tooltip: "Dashboard",
   },
   {
     title: "Users",
     to: "/users",
-    icon: Users,
+    icon: UsersIcon,
     tooltip: "User Management",
   },
   {
     title: "Transactions",
     to: "/transactions",
-    icon: CreditCard,
+    icon: CreditCardIcon,
     tooltip: "Revenue & Payments",
   },
   {
     title: "System Health",
     to: "/logs",
-    icon: Pulse,
+    icon: PulseIcon,
     tooltip: "Error Detection & Logs",
   },
 ] as const;

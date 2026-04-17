@@ -9,6 +9,7 @@ import { uploadFileToImageKit } from "@/lib/imagekit";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { parseApiError } from "@/lib/api-error";
 
 declare global {
   interface Window {
@@ -111,7 +112,7 @@ export function QuickLogoEditor({
         },
       });
       if (!res.ok) {
-        throw new Error("Failed to save edited image version to database");
+        throw await parseApiError(res);
       }
       return (await res.json()) as SaveEditResponse;
     },

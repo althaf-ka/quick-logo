@@ -1,4 +1,3 @@
-// packages/db/src/schema/auth.ts
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createId } from "@paralleldrive/cuid2";
 import { users } from "../user/schema";

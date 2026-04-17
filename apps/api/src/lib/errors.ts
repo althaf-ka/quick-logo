@@ -1,21 +1,58 @@
-export class InsufficientCreditsError extends Error {
-  readonly code = "INSUFFICIENT_CREDITS" as const;
-  public readonly required: number;
-  public readonly available: number;
+import { ERROR_CODES } from "@quicklogo/shared";
 
-  constructor(required: number, available: number) {
-    super(`You need ${required} credits but only have ${available}.`);
-    this.name = "InsufficientCreditsError";
-    this.required = required;
-    this.available = available;
+export class AppError extends Error {
+  readonly statusCode: number;
+  readonly code: string;
+  readonly details?: Record<string, unknown>;
+
+  constructor(statusCode: number, code: string, message: string, details?: Record<string, unknown>) {
+    super(message);
+    this.name = "AppError";
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+  }
+
+  toJSON() {
+    return {
+      error: this.message,
+      code: this.code,
+      ...(this.details && { ...this.details }),
+    };
   }
 }
 
-export class UserNotFoundError extends Error {
-  readonly code = "USER_NOT_FOUND" as const;
+export class InsufficientCreditsError extends AppError {
+  constructor(required: number, available: number) {
+    super(
+      402,
+      ERROR_CODES.INSUFFICIENT_CREDITS,
+      `You need ${required} credits but only have ${available}.`,
+      { required, available },
+    );
+  }
+}
 
+export class UserNotFoundError extends AppError {
   constructor() {
-    super("Account not found. Please sign in again.");
-    this.name = "UserNotFoundError";
+    super(404, ERROR_CODES.USER_NOT_FOUND, "Account not found. Please sign in again.");
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource = "Resource") {
+    super(404, ERROR_CODES.NOT_FOUND, `${resource} not found`);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor() {
+    super(403, ERROR_CODES.FORBIDDEN, "You do not have access to this resource.");
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor() {
+    super(401, ERROR_CODES.UNAUTHORIZED, "Please sign in to access this resource.");
   }
 }

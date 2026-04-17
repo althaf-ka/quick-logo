@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@quicklogo/ui/components/card";
 import { useLogout } from "@/hooks/use-auth";
-import { ShieldWarning } from "@phosphor-icons/react";
+import { ShieldWarningIcon } from "@phosphor-icons/react";
 
 export const Route = createFileRoute("/_auth/access-denied")({
   component: AccessDeniedPage,
@@ -21,7 +21,10 @@ function AccessDeniedPage() {
     <Card className="border-destructive/50">
       <CardHeader className="text-center">
         <div className="bg-destructive/10 mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
-          <ShieldWarning className="text-destructive size-6" weight="fill" />
+          <ShieldWarningIcon
+            className="text-destructive size-6"
+            weight="fill"
+          />
         </div>
         <CardTitle>Access Denied</CardTitle>
         <CardDescription>

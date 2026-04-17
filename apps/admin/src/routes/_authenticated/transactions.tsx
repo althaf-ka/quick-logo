@@ -56,7 +56,7 @@ function TransactionsPage() {
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="bg-gradient-to-r from-emerald-500 to-emerald-300 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+          <h2 className="bg-linear-to-r from-emerald-500 to-emerald-300 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
             Revenue & Payments
           </h2>
           <p className="text-muted-foreground">
@@ -68,8 +68,8 @@ function TransactionsPage() {
         </div>
       </div>
 
-      <Card className="border-muted-foreground/10 bg-muted/5 overflow-hidden rounded-none shadow-xl backdrop-blur-sm">
-        <CardHeader className="bg-muted/30 border-muted-foreground/10 border-b py-4">
+      <Card className="border-muted-foreground/10 bg-muted/5 overflow-hidden rounded-none py-0 shadow-xl backdrop-blur-sm">
+        <CardHeader className="bg-muted/30 border-muted-foreground/10 border-b py-3.5">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Receipt className="size-5 text-emerald-500" />
             Transaction Ledger
@@ -82,7 +82,7 @@ function TransactionsPage() {
           <Table>
             <TableHeader className="bg-muted/20">
               <TableRow className="border-muted-foreground/10 hover:bg-transparent">
-                <TableHead className="w-[200px]">Transaction ID</TableHead>
+                <TableHead className="w-50">Transaction ID</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
@@ -95,17 +95,17 @@ function TransactionsPage() {
                   key={tx.id}
                   className="border-muted-foreground/10 hover:bg-muted/30 transition-colors"
                 >
-                  <TableCell className="text-muted-foreground font-mono text-[10px] tracking-tighter uppercase">
+                  <TableCell className="text-muted-foreground py-3 font-mono text-[10px] tracking-tighter uppercase">
                     {tx.id}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3">
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">
                         {tx.userEmail || "Anonymous"}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3">
                     <span className="font-bold text-emerald-500">
                       {new Intl.NumberFormat("en-IN", {
                         style: "currency",
@@ -113,10 +113,10 @@ function TransactionsPage() {
                       }).format(tx.amount)}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3">
                     <StatusBadge status={tx.status} />
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-right text-sm">
+                  <TableCell className="text-muted-foreground py-3 text-right text-sm">
                     {format(new Date(tx.createdAt), "MMM d, h:mm a")}
                   </TableCell>
                 </TableRow>
@@ -138,12 +138,12 @@ function TransactionsPage() {
             </div>
           )}
 
-          {/* Infinite Scroll Trigger */}
-          <div ref={ref} className="flex h-10 items-center justify-center py-4">
-            {isFetchingNextPage && (
+          <div ref={ref} className="h-px" />
+          {isFetchingNextPage && (
+            <div className="flex items-center justify-center py-4">
               <Skeleton className="h-8 w-32 rounded-none" />
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

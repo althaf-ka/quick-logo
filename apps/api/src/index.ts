@@ -14,11 +14,18 @@ import adminRoute from "./routes/admin";
 import logsRoute from "./routes/logs";
 
 import { Bindings, Variables } from "./types";
+import { globalErrorHandler } from "./lib/error-handler";
+import { ERROR_CODES } from "@quicklogo/shared";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 app.use("*", logger());
 app.use("*", dbMiddleware);
+
+app.onError(globalErrorHandler);
+app.notFound((c) =>
+  c.json({ error: "Not found", code: ERROR_CODES.NOT_FOUND }, 404),
+);
 
 app.use("/api/*", async (c, next) => {
   const allowedOrigins = [
@@ -35,7 +42,6 @@ app.use("/api/*", async (c, next) => {
   return corsMiddleware(c, next);
 });
 
-//User Routes
 app.route("/api/auth", authRoute);
 app.route("/api/user", userRoute);
 app.route("/api/upload", uploadRoute);

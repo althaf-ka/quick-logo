@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -16,30 +17,47 @@ export function NavUser() {
 
   const name = user?.name || "User";
   const email = user?.email || "";
-  // @ts-expect-error - image property might exist on user object
-  const imageUrl: string | undefined = user?.image || user?.picture;
+  const imageUrl = user?.image ?? undefined;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const initials = name.slice(0, 2).toUpperCase();
+
+  const displayImageUrl =
+    imageUrl && imageUrl !== failedUrl ? imageUrl : undefined;
+
+  const handleImageError = useCallback(() => {
+    if (imageUrl) setFailedUrl(imageUrl);
+  }, [imageUrl]);
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <div
-          className={`hover:bg-sidebar-accent flex items-center p-2.5 transition-colors ${
-            state === "collapsed" ? "justify-center" : "gap-2.5"
+          className={`group/nav-user hover:border-border/60 hover:bg-muted/40 relative flex items-center rounded-none border border-transparent px-2.5 py-2 transition-colors ${
+            state === "collapsed" ? "justify-center" : "gap-3"
           }`}
         >
-          <Avatar className="border-border size-9 shrink-0 rounded-none border after:rounded-none">
-            {imageUrl && (
-              <AvatarImage src={imageUrl} alt={name} className="rounded-none" />
-            )}
+          <span className="bg-primary/60 pointer-events-none absolute top-1/2 left-0 h-6 w-0.5 -translate-y-1/2 opacity-0 transition-opacity group-hover/nav-user:opacity-100" />
+
+          <Avatar className="border-border/60 bg-muted/20 size-9 shrink-0 rounded-none border shadow-sm after:rounded-none">
+            <AvatarImage
+              key={displayImageUrl ?? "no-avatar"}
+              src={displayImageUrl ?? ""}
+              alt={name}
+              className="rounded-none"
+              referrerPolicy="no-referrer"
+              onError={handleImageError}
+            />
             <AvatarFallback className="bg-primary/10 text-primary rounded-none text-xs font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
 
           {state === "expanded" && (
-            <div className="grid flex-1 overflow-hidden text-left leading-tight">
-              <span className="truncate text-[13px] font-semibold">{name}</span>
+            <div className="grid min-w-0 flex-1 overflow-hidden text-left leading-tight">
+              <span className="truncate text-[13px] font-semibold tracking-tight">
+                {name}
+              </span>
+
               {email && (
                 <span className="text-muted-foreground mt-0.5 truncate text-[11px]">
                   {email}

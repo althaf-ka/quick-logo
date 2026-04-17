@@ -19,16 +19,6 @@ import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { Input } from "@quicklogo/ui/components/input";
 import { Button } from "@quicklogo/ui/components/button";
 import { format } from "date-fns";
-import {
-  Users as UsersIcon,
-  MagnifyingGlass,
-  ShieldCheck,
-  Prohibit,
-  UserCircleGear,
-  UserSwitch,
-  Trash,
-  CaretDown,
-} from "@phosphor-icons/react";
 import { useInView } from "react-intersection-observer";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -42,6 +32,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@quicklogo/ui/components/dropdown-menu";
+import {
+  CaretDownIcon,
+  MagnifyingGlassIcon,
+  ProhibitIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+  UserCircleGearIcon,
+  UsersIcon,
+  UserSwitchIcon,
+} from "@phosphor-icons/react";
 
 interface UserWithAdmin extends User {
   role: string;
@@ -82,7 +82,7 @@ function UsersPage() {
     <div className="space-y-6 pb-12">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+          <h2 className="from-primary to-primary/60 bg-linear-to-r bg-clip-text text-3xl font-bold tracking-tight text-transparent">
             User Management
           </h2>
           <p className="text-muted-foreground">
@@ -90,7 +90,7 @@ function UsersPage() {
           </p>
         </div>
         <div className="group relative w-full md:w-80">
-          <MagnifyingGlass className="text-muted-foreground group-focus-within:text-primary absolute top-1/2 left-3 size-4 -translate-y-1/2 transition-colors" />
+          <MagnifyingGlassIcon className="text-muted-foreground group-focus-within:text-primary absolute top-1/2 left-3 size-4 -translate-y-1/2 transition-colors" />
           <Input
             placeholder="Search users..."
             className="border-muted-foreground/10 bg-muted/40 focus:bg-background h-11 rounded-none pl-10 transition-all"
@@ -100,8 +100,8 @@ function UsersPage() {
         </div>
       </div>
 
-      <Card className="border-muted-foreground/10 bg-muted/5 overflow-hidden rounded-none shadow-xl backdrop-blur-sm">
-        <CardHeader className="border-muted-foreground/10 bg-muted/30 border-b py-4">
+      <Card className="border-muted-foreground/10 bg-muted/5 overflow-hidden rounded-none py-0 shadow-xl backdrop-blur-sm">
+        <CardHeader className="border-muted-foreground/10 bg-muted/30 border-b py-3.5">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
               <UsersIcon className="text-primary size-5" />
@@ -119,12 +119,12 @@ function UsersPage() {
           <Table>
             <TableHeader className="bg-muted/20">
               <TableRow className="border-muted-foreground/10 hover:bg-transparent">
-                <TableHead className="w-[80px]">Av.</TableHead>
-                <TableHead className="min-w-[200px]">Identity</TableHead>
+                <TableHead className="w-20">Av.</TableHead>
+                <TableHead className="min-w-50">Identity</TableHead>
                 <TableHead>Authorization</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Activity</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead className="w-25 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,7 +144,7 @@ function UsersPage() {
 
           {isError && (
             <div className="text-destructive flex flex-col items-center gap-2 p-12 text-center">
-              <Prohibit size={32} />
+              <ProhibitIcon size={32} />
               <p className="font-medium">
                 Connectivity interrupted. Could not sync users.
               </p>
@@ -165,12 +165,12 @@ function UsersPage() {
             </div>
           )}
 
-          {/* Infinite Scroll Trigger */}
-          <div ref={ref} className="flex h-10 items-center justify-center py-4">
-            {isFetchingNextPage && (
+          <div ref={ref} className="h-px" />
+          {isFetchingNextPage && (
+            <div className="flex items-center justify-center py-4">
               <Skeleton className="h-8 w-32 rounded-none" />
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -205,7 +205,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
           {user.name.charAt(0).toUpperCase()}
         </div>
       </TableCell>
-      <TableCell className="py-4">
+      <TableCell className="py-3">
         <div className="flex flex-col">
           <span className="text-[15px] font-semibold">{user.name}</span>
           <span className="text-muted-foreground font-mono text-xs">
@@ -227,14 +227,14 @@ function UserRow({ user }: { user: UserWithAdmin }) {
             variant="destructive"
             className="flex w-fit items-center gap-1 rounded-none px-2"
           >
-            <Prohibit size={12} /> Banned
+            <ProhibitIcon size={12} /> Banned
           </Badge>
         ) : (
           <Badge
             variant="outline"
             className="flex w-fit items-center gap-1 rounded-none border-emerald-500/20 bg-emerald-500/5 px-2 text-emerald-500"
           >
-            <ShieldCheck size={12} /> Active
+            <ShieldCheckIcon size={12} /> Active
           </Badge>
         )}
       </TableCell>
@@ -256,7 +256,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
               disabled={isPending}
             >
               <span className="text-xs font-medium">Manage</span>
-              <CaretDown size={12} />
+              <CaretDownIcon size={12} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -279,7 +279,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
                   )
                 }
               >
-                <UserSwitch size={16} />
+                <UserSwitchIcon size={16} />
                 <span>Impersonate Account</span>
               </DropdownMenuItem>
 
@@ -296,7 +296,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
                   )
                 }
               >
-                <UserCircleGear size={16} />
+                <UserCircleGearIcon size={16} />
                 <span>
                   {user.role === "admin"
                     ? "Demote to User"
@@ -318,7 +318,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
                     )
                   }
                 >
-                  <ShieldCheck size={16} />
+                  <ShieldCheckIcon size={16} />
                   <span>Lift Account Ban</span>
                 </DropdownMenuItem>
               ) : (
@@ -331,7 +331,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
                     )
                   }
                 >
-                  <Prohibit size={16} />
+                  <ProhibitIcon size={16} />
                   <span>Ban User Account</span>
                 </DropdownMenuItem>
               )}
@@ -351,7 +351,7 @@ function UserRow({ user }: { user: UserWithAdmin }) {
                   }
                 }}
               >
-                <Trash size={16} />
+                <TrashIcon size={16} />
                 <span>Remove User Profile</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>

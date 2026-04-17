@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useInfiniteAdminLogs, useLogActions } from "@/hooks/use-admin";
+import {
+  useInfiniteAdminLogs,
+  useLogActions,
+  type AdminLog,
+} from "@/hooks/use-admin";
 import {
   Table,
   TableBody,
@@ -28,15 +32,15 @@ import { Button } from "@quicklogo/ui/components/button";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { format } from "date-fns";
 import {
-  Pulse,
-  Bug,
-  ShieldCheck,
-  WarningCircle,
-  Trash,
-  CheckCircle,
-  Eye,
-  CaretDown,
-  Circle,
+  PulseIcon,
+  BugIcon,
+  ShieldCheckIcon,
+  WarningCircleIcon,
+  TrashIcon,
+  CheckCircleIcon,
+  EyeIcon,
+  CaretDownIcon,
+  CircleIcon,
 } from "@phosphor-icons/react";
 import { useInView } from "react-intersection-observer";
 import { useEffect, useState } from "react";
@@ -78,13 +82,13 @@ function LogsPage() {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <Bug className="text-destructive size-12 opacity-50" />
+        <BugIcon className="text-destructive size-12 opacity-50" />
         <div className="text-center">
           <h3 className="text-destructive text-lg font-semibold">
             Failed to Load Logs
           </h3>
           <p className="text-muted-foreground text-sm">
-            {(error as any)?.message || "Internal API Error"}
+            {error instanceof Error ? error.message : "Internal API Error"}
           </p>
         </div>
         <Button variant="outline" onClick={() => window.location.reload()}>
@@ -98,7 +102,7 @@ function LogsPage() {
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="bg-gradient-to-r from-amber-500 to-orange-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+          <h2 className="bg-linear-to-r from-amber-500 to-orange-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent">
             System Health
           </h2>
           <p className="text-muted-foreground">
@@ -107,14 +111,14 @@ function LogsPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="rounded-none border border-amber-500/20 bg-amber-500/10 p-3">
-            <Pulse className="size-6 text-amber-500" />
+            <PulseIcon className="size-6 text-amber-500" />
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
         <select
-          className="border-muted-foreground/20 bg-muted/20 focus:ring-primary h-9 w-[150px] rounded-none border px-3 text-xs focus:ring-1 focus:outline-none"
+          className="border-muted-foreground/20 bg-muted/20 focus:ring-primary h-9 w-37.5 rounded-none border px-3 text-xs focus:ring-1 focus:outline-none"
           onChange={(e) => setLevel(e.target.value || undefined)}
           value={level || ""}
         >
@@ -126,7 +130,7 @@ function LogsPage() {
         </select>
 
         <select
-          className="border-muted-foreground/20 bg-muted/20 focus:ring-primary h-9 w-[150px] rounded-none border px-3 text-xs focus:ring-1 focus:outline-none"
+          className="border-muted-foreground/20 bg-muted/20 focus:ring-primary h-9 w-37.5 rounded-none border px-3 text-xs focus:ring-1 focus:outline-none"
           onChange={(e) => setSource(e.target.value || undefined)}
           value={source || ""}
         >
@@ -144,10 +148,10 @@ function LogsPage() {
         </Badge>
       </div>
 
-      <Card className="border-muted-foreground/10 bg-muted/5 overflow-hidden rounded-none shadow-xl backdrop-blur-sm">
-        <CardHeader className="bg-muted/30 border-muted-foreground/10 border-b py-4">
+      <Card className="border-muted-foreground/10 bg-muted/5 overflow-hidden rounded-none py-0 shadow-xl backdrop-blur-sm">
+        <CardHeader className="bg-muted/30 border-muted-foreground/10 border-b py-3.5">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <Bug className="size-5 text-amber-500" />
+            <BugIcon className="size-5 text-amber-500" />
             Incident Ledger
           </CardTitle>
         </CardHeader>
@@ -155,12 +159,12 @@ function LogsPage() {
           <Table>
             <TableHeader className="bg-muted/20">
               <TableRow className="border-muted-foreground/10 hover:bg-transparent">
-                <TableHead className="w-[100px]">Level</TableHead>
-                <TableHead className="w-[100px]">Source</TableHead>
+                <TableHead className="w-25">Level</TableHead>
+                <TableHead className="w-25">Source</TableHead>
                 <TableHead>Message</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Timestamp</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -173,7 +177,7 @@ function LogsPage() {
                     className="text-muted-foreground h-24 text-center"
                   >
                     <div className="flex flex-col items-center gap-2 py-4">
-                      <ShieldCheck className="size-8 opacity-20" />
+                      <ShieldCheckIcon className="size-8 opacity-20" />
                       <p className="text-sm">
                         No incidents detected. System is healthy.
                       </p>
@@ -195,18 +199,19 @@ function LogsPage() {
             </div>
           )}
 
-          <div ref={ref} className="flex h-10 items-center justify-center py-4">
-            {isFetchingNextPage && (
+          <div ref={ref} className="h-px" />
+          {isFetchingNextPage && (
+            <div className="flex items-center justify-center py-4">
               <Skeleton className="h-8 w-32 rounded-none" />
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function LogRow({ log }: { log: any }) {
+function LogRow({ log }: { log: AdminLog }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { resolveLog, ignoreLog, deleteLog } = useLogActions();
   const isPending =
@@ -216,18 +221,20 @@ function LogRow({ log }: { log: any }) {
     try {
       await action();
       toast.success(msg);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred",
+      );
     }
   };
 
   return (
     <>
       <TableRow className="border-muted-foreground/10 hover:bg-muted/30 group transition-colors">
-        <TableCell>
+        <TableCell className="py-2.5">
           <LevelBadge level={log.level} />
         </TableCell>
-        <TableCell>
+        <TableCell className="py-2.5">
           <Badge
             variant="outline"
             className="border-muted-foreground/10 rounded-none font-mono text-[10px] uppercase"
@@ -235,7 +242,7 @@ function LogRow({ log }: { log: any }) {
             {log.source}
           </Badge>
         </TableCell>
-        <TableCell className="max-w-[400px]">
+        <TableCell className="max-w-100 py-2.5">
           <div className="flex flex-col gap-0.5">
             <span className="truncate text-sm font-medium">{log.message}</span>
             <span className="text-muted-foreground truncate font-mono text-xs tracking-tighter">
@@ -243,13 +250,13 @@ function LogRow({ log }: { log: any }) {
             </span>
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-2.5">
           <StatusBadge status={log.status} />
         </TableCell>
-        <TableCell className="text-muted-foreground text-right text-xs">
+        <TableCell className="text-muted-foreground py-2.5 text-right text-xs">
           {format(new Date(log.createdAt), "MMM d, HH:mm:ss")}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="py-2.5 text-right">
           <DropdownMenu>
             <DropdownMenuTrigger>
               <Button
@@ -257,7 +264,7 @@ function LogRow({ log }: { log: any }) {
                 size="sm"
                 className="hover:border-muted-foreground/20 h-8 w-8 rounded-none border border-transparent p-0"
               >
-                <CaretDown size={14} />
+                <CaretDownIcon size={14} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -272,7 +279,7 @@ function LogRow({ log }: { log: any }) {
                   className="focus:bg-primary/10 flex cursor-pointer items-center gap-2"
                   onClick={() => setDetailsOpen(true)}
                 >
-                  <Eye size={14} /> View Payload
+                  <EyeIcon size={14} /> View Payload
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator className="bg-muted-foreground/10" />
@@ -287,7 +294,7 @@ function LogRow({ log }: { log: any }) {
                     )
                   }
                 >
-                  <ShieldCheck size={14} /> Resolve
+                  <ShieldCheckIcon size={14} /> Resolve
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex cursor-pointer items-center gap-2 text-amber-500 focus:bg-amber-500/10 focus:text-amber-500"
@@ -299,7 +306,7 @@ function LogRow({ log }: { log: any }) {
                     )
                   }
                 >
-                  <Circle size={14} /> Ignore
+                  <CircleIcon size={14} /> Ignore
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-muted-foreground/10" />
                 <DropdownMenuItem
@@ -314,7 +321,7 @@ function LogRow({ log }: { log: any }) {
                     }
                   }}
                 >
-                  <Trash size={14} /> Purge
+                  <TrashIcon size={14} /> Purge
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -326,7 +333,7 @@ function LogRow({ log }: { log: any }) {
         <DialogContent className="border-muted-foreground/20 max-w-2xl overflow-hidden rounded-none bg-zinc-950 p-0 outline-none">
           <DialogHeader className="border-muted-foreground/10 bg-muted/20 border-b p-6">
             <DialogTitle className="text-primary flex items-center gap-2">
-              <Bug size={20} /> Incident Details
+              <BugIcon size={20} /> Incident Details
             </DialogTitle>
           </DialogHeader>
           <div className="custom-scrollbar max-h-[70vh] space-y-4 overflow-y-auto p-6">
@@ -430,7 +437,7 @@ function StatusBadge({ status }: { status: string }) {
           variant="outline"
           className="flex w-fit items-center gap-1 rounded-none border-emerald-500/20 bg-emerald-500/5 px-2 text-[10px] text-emerald-500 uppercase"
         >
-          <CheckCircle size={10} /> Resolved
+          <CheckCircleIcon size={10} /> Resolved
         </Badge>
       );
     case "ignored":
@@ -439,7 +446,7 @@ function StatusBadge({ status }: { status: string }) {
           variant="outline"
           className="border-muted-foreground/20 bg-muted/5 text-muted-foreground flex w-fit items-center gap-1 rounded-none px-2 text-[10px] uppercase"
         >
-          <Circle size={10} /> Ignored
+          <CircleIcon size={10} /> Ignored
         </Badge>
       );
     default:
@@ -448,7 +455,7 @@ function StatusBadge({ status }: { status: string }) {
           variant="outline"
           className="flex w-fit items-center gap-1 rounded-none border-amber-500/20 bg-amber-500/5 px-2 text-[10px] text-amber-500 uppercase"
         >
-          <WarningCircle size={10} /> Open
+          <WarningCircleIcon size={10} /> Open
         </Badge>
       );
   }

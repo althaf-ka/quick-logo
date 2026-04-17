@@ -12,6 +12,7 @@ import { DEFAULT_CONFIG, MODELS } from "@quicklogo/shared";
 import { uploadFileToImageKit } from "@/lib/imagekit";
 import { AUTH_KEYS, useAuth } from "@/hooks/use-auth";
 import { useBatchStatus } from "./use-batch-status";
+import { parseApiError, ApiError, ERROR_CODES } from "@/lib/api-error";
 
 export function useGenerateForm() {
   const queryClient = useQueryClient();
@@ -142,15 +143,7 @@ export function useGenerateForm() {
     mutationFn: async (data: GenerateApiRequest) => {
       const res = await api.generate.index.$post({ json: data });
       if (!res.ok) {
-        const body = (await res.json()) as {
-          error?: string;
-          issues?: { field: string }[];
-        };
-        if (body.issues?.length) {
-          const fields = body.issues.map((i) => i.field).join(", ");
-          throw new Error(`Please check: ${fields}`);
-        }
-        throw new Error(body.error || "Generation failed");
+        throw await parseApiError(res);
       }
       return res.json();
     },
@@ -158,6 +151,12 @@ export function useGenerateForm() {
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
     },
     onError: (error) => {
+      if (error instanceof ApiError && error.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
+        toast.error("Not enough credits", {
+          description: error.message,
+        });
+        return;
+      }
       toast.error("Generation failed", {
         description: error instanceof Error ? error.message : "Unknown error",
       });

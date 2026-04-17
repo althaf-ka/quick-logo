@@ -4,12 +4,13 @@ import { Webhooks } from "@dodopayments/hono";
 import DodoPayments from "dodopayments";
 import { eq, sql, desc, lt, and } from "@quicklogo/db";
 import { createId } from "@paralleldrive/cuid2";
-import { createCheckoutRequestSchema, PRICING_TIERS } from "@quicklogo/shared";
+import { createCheckoutRequestSchema, PRICING_TIERS, ERROR_CODES } from "@quicklogo/shared";
 import { users, transactions } from "@quicklogo/db";
 import { z } from "zod";
 import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
+import { AppError } from "../lib/errors";
 
 const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .post(
@@ -33,13 +34,12 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           | "live_mode",
       });
 
+      const txId = createId();
       try {
-        // Create pending transaction in our local DB
-        const txId = createId();
         await db.insert(transactions).values({
           id: txId,
           userId: user.id,
-          amount: tier.priceAmount * 100, // Minimal unit (paisa)
+          amount: tier.priceAmount * 100,
           currency: tier.currency,
           creditsAdded: tier.credits,
           status: "pending",
@@ -81,23 +81,14 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
         return c.json({ url: redirectUrl }, 200);
       } catch (error: any) {
-        // Mark as failed locally if it didn't even start
-        try {
-          // @ts-ignore - txId is defined in the outer scope of the try block
-          await db
-            .update(transactions)
-            .set({ status: "failed" })
-            // @ts-ignore
-            .where(eq(transactions.id, txId));
-        } catch (dbError) {
-          console.error("Failed to mark transaction as failed:", dbError);
-        }
+        await db
+          .update(transactions)
+          .set({ status: "failed" })
+          .where(eq(transactions.id, txId))
+          .catch(() => {});
 
         console.error("Dodo error:", error.response?.data || error);
-        return c.json(
-          { error: error?.message || "Failed to create checkout session" },
-          500,
-        );
+        throw new AppError(500, ERROR_CODES.PAYMENT_FAILED, "Payment processing failed. Please try again.");
       }
     },
   )

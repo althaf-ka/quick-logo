@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { EditApiRequest } from "@quicklogo/shared";
 import { AUTH_KEYS } from "@/hooks/use-auth";
+import { parseApiError, ApiError, ERROR_CODES } from "@/lib/api-error";
 
 export interface EditHistoryEntry {
   id: string;
@@ -176,8 +177,7 @@ export function useEditForm({
     mutationFn: async (data: EditApiRequest) => {
       const res = await api.generate.edit.$post({ json: data });
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error || "Edit failed");
+        throw await parseApiError(res);
       }
       return res.json();
     },
@@ -185,6 +185,10 @@ export function useEditForm({
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
     },
     onError: (err) => {
+      if (err instanceof ApiError && err.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
+        toast.error("Not enough credits", { description: err.message });
+        return;
+      }
       toast.error("Edit failed", {
         description: err instanceof Error ? err.message : "Unknown error",
       });

@@ -34,6 +34,7 @@ import {
 import { toast } from "@quicklogo/ui/components/sonner";
 import { api } from "@/lib/api";
 import { cn } from "@quicklogo/ui/lib/utils";
+import { parseApiError } from "@/lib/api-error";
 
 const CHECKER_BG = {
   backgroundImage:
@@ -96,8 +97,7 @@ export function ProjectPreviewDialog({
         param: { id: project!.id },
       });
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? "Failed to extend");
+        throw await parseApiError(res);
       }
       return res.json();
     },
@@ -116,8 +116,7 @@ export function ProjectPreviewDialog({
         param: { id: project!.id },
       });
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? "Failed to delete");
+        throw await parseApiError(res);
       }
     },
     onSuccess: () => {

@@ -5,6 +5,7 @@ import {
 import { Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { parseApiError } from "@/lib/api-error";
 import { EditorLoadingState } from "@/features/image-editor/components/editor-loading-state";
 
 const QuickLogoEditor = lazy(() =>
@@ -25,7 +26,7 @@ function CanvasRoute() {
     queryFn: async () => {
       const res = await api.images[":id"].$get({ param: { id: imageId } });
       if (!res.ok) {
-        throw new Error("Failed to load canvas image");
+        throw await parseApiError(res);
       }
       return res.json();
     },

@@ -6,7 +6,7 @@ import { ImageKitProvider } from "@quicklogo/storage";
 import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
-import { InsufficientCreditsError } from "../lib/errors";
+import { InsufficientCreditsError, NotFoundError } from "../lib/errors";
 
 const EXTEND_COST = 10;
 const EXTEND_DAYS = 30;
@@ -102,7 +102,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .limit(1);
 
     if (!project) {
-      return c.json({ error: "Project not found", code: "NOT_FOUND" }, 404);
+      throw new NotFoundError("Project");
     }
 
     const storage = new ImageKitProvider(c.env.IMAGEKIT_PRIVATE_KEY);
@@ -132,7 +132,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .limit(1);
 
     if (!project) {
-      return c.json({ error: "Project not found", code: "NOT_FOUND" }, 404);
+      throw new NotFoundError("Project");
     }
 
     const [updated] = await db

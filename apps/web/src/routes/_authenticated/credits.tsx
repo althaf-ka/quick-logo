@@ -22,6 +22,7 @@ import { PRICING_TIERS } from "@quicklogo/shared";
 import { useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { parseApiError } from "@/lib/api-error";
 import { InView } from "react-intersection-observer";
 import { format } from "date-fns";
 
@@ -58,8 +59,7 @@ function CreditsPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create checkout session");
+        throw await parseApiError(response);
       }
 
       return response.json();
@@ -68,7 +68,6 @@ function CreditsPage() {
       window.location.href = data.url;
     },
     onError: (error) => {
-      console.error("Checkout error:", error);
       toast.error(error.message || "Failed to initiate checkout");
       setLoadingTier(null);
     },

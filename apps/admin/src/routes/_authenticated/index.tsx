@@ -6,10 +6,10 @@ import {
   CardTitle,
 } from "@quicklogo/ui/components/card";
 import {
-  Users,
-  FolderSimple,
-  CreditCard,
-  ChartLineUp,
+  CreditCardIcon,
+  FolderSimpleIcon,
+  ChartLineUpIcon,
+  UsersIcon,
 } from "@phosphor-icons/react";
 
 import { useAdminDashboard } from "@/hooks/use-admin";
@@ -36,7 +36,7 @@ function DashboardPage() {
     {
       title: "Total Users",
       value: data?.metrics.totalUsers ?? 0,
-      icon: Users,
+      icon: UsersIcon,
       description: "Registered users",
       trend: null,
     },
@@ -46,7 +46,7 @@ function DashboardPage() {
         style: "currency",
         currency: "INR",
       }).format(data?.metrics.totalRevenue ?? 0),
-      icon: CreditCard,
+      icon: CreditCardIcon,
       description: "Total gross revenue",
       trend: data?.metrics.revenueGrowth
         ? {
@@ -59,20 +59,20 @@ function DashboardPage() {
     {
       title: "Total Projects",
       value: data?.metrics.totalTransactions ?? 0, // Using transactions as a proxy or just showing transactions
-      icon: FolderSimple,
+      icon: FolderSimpleIcon,
       description: "Successful projects",
     },
     {
       title: "Images Generated",
       value: data?.metrics.totalImages ?? 0,
-      icon: ChartLineUp,
+      icon: ChartLineUpIcon,
       description: "High-quality logos",
     },
   ];
 
   if (isError) {
     return (
-      <div className="text-destructive flex h-[400px] items-center justify-center rounded-lg border border-dashed">
+      <div className="text-destructive flex h-100 items-center justify-center rounded-lg border border-dashed">
         Failed to load dashboard metrics. Please try again.
       </div>
     );
@@ -153,7 +153,7 @@ function DashboardPage() {
                   Last 5 registrations
                 </p>
               </div>
-              <Users
+              <UsersIcon
                 className="text-muted-foreground size-6"
                 weight="duotone"
               />
@@ -227,7 +227,7 @@ function DashboardPage() {
                   Most recent payments
                 </p>
               </div>
-              <CreditCard
+              <CreditCardIcon
                 className="text-muted-foreground size-6"
                 weight="duotone"
               />

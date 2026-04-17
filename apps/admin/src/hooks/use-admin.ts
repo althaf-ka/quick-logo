@@ -12,7 +12,7 @@ export const ADMIN_KEYS = {
   dashboard: ["admin", "dashboard"] as const,
   users: ["admin", "users"] as const,
   transactions: (page: number) => ["admin", "transactions", { page }] as const,
-  logs: (filters: any) => ["admin", "logs", filters] as const,
+  logs: (filters: LogFilters) => ["admin", "logs", filters] as const,
 };
 
 export type DashboardData = InferResponseType<
@@ -24,6 +24,18 @@ export type AdminTransactionsResponse = InferResponseType<
   (typeof api.admin.transactions)["$get"],
   200
 >;
+
+export type AdminLogsResponse = InferResponseType<
+  (typeof api.admin.logs)["$get"],
+  200
+>;
+
+export type AdminLog = AdminLogsResponse["items"][number];
+
+export type LogFilters = {
+  level?: string;
+  source?: string;
+};
 
 export function useAdminDashboard() {
   return useQuery({
@@ -175,9 +187,7 @@ export function useInfiniteAdminTransactions() {
   });
 }
 
-export function useInfiniteAdminLogs(
-  filters: { level?: string; source?: string } = {},
-) {
+export function useInfiniteAdminLogs(filters: LogFilters = {}) {
   return useInfiniteQuery({
     queryKey: ADMIN_KEYS.logs(filters),
     queryFn: async ({ pageParam = 1 }) => {
@@ -207,7 +217,8 @@ export function useLogActions() {
 
   const resolveLog = useMutation({
     mutationFn: async (id: string) => {
-      const res = await (api.admin.logs as any)[":id"].$patch({
+      // @ts-expect-error - Hono RPC nested route type complexity
+      const res = await api.admin.logs[":id"].$patch({
         param: { id },
         json: { status: "resolved" },
       });
@@ -219,7 +230,8 @@ export function useLogActions() {
 
   const ignoreLog = useMutation({
     mutationFn: async (id: string) => {
-      const res = await (api.admin.logs as any)[":id"].$patch({
+      // @ts-expect-error - Hono RPC nested route type complexity
+      const res = await api.admin.logs[":id"].$patch({
         param: { id },
         json: { status: "ignored" },
       });
@@ -231,7 +243,8 @@ export function useLogActions() {
 
   const deleteLog = useMutation({
     mutationFn: async (id: string) => {
-      const res = await (api.admin.logs as any)[":id"].$delete({
+      // @ts-expect-error - Hono RPC nested route type complexity
+      const res = await api.admin.logs[":id"].$delete({
         param: { id },
       });
       if (!res.ok) throw new Error("Failed to delete log");

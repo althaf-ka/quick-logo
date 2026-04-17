@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -9,7 +10,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@quicklogo/ui/components/avatar";
-import { SignOut } from "@phosphor-icons/react";
+import { SignOutIcon } from "@phosphor-icons/react";
 
 export function NavUser() {
   const { state } = useSidebar();
@@ -18,22 +19,35 @@ export function NavUser() {
 
   const name = user?.name || "Admin User";
   const email = user?.email || "";
-  // @ts-expect-error - image property might exist on user object
-  const imageUrl: string | undefined = user?.image || user?.picture;
+  const imageUrl = user?.image ?? undefined;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const initials = name.slice(0, 2).toUpperCase();
+
+  const displayImageUrl =
+    imageUrl && imageUrl !== failedUrl ? imageUrl : undefined;
+
+  const handleImageError = useCallback(() => {
+    if (imageUrl) setFailedUrl(imageUrl);
+  }, [imageUrl]);
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <div
-          className={`hover:bg-sidebar-accent flex items-center p-2.5 transition-colors ${
-            state === "collapsed" ? "justify-center" : "gap-2.5"
+          className={`group/nav-user hover:border-border/60 hover:bg-muted/40 relative flex items-center rounded-none border border-transparent px-2.5 py-2 transition-colors ${
+            state === "collapsed" ? "justify-center" : "gap-3"
           }`}
         >
-          <Avatar className="border-border size-9 shrink-0 rounded-none border after:rounded-none">
-            {imageUrl && (
-              <AvatarImage src={imageUrl} alt={name} className="rounded-none" />
-            )}
+          <span className="bg-primary/60 pointer-events-none absolute top-1/2 left-0 h-6 w-0.5 -translate-y-1/2 opacity-0 transition-opacity group-hover/nav-user:opacity-100" />
+          <Avatar className="border-border/60 bg-muted/20 size-9 shrink-0 rounded-none border shadow-sm after:rounded-none">
+            <AvatarImage
+              key={displayImageUrl ?? "no-avatar"}
+              src={displayImageUrl ?? ""}
+              alt={name}
+              className="rounded-none"
+              referrerPolicy="no-referrer"
+              onError={handleImageError}
+            />
             <AvatarFallback className="bg-primary/10 text-primary rounded-none text-xs font-bold">
               {initials}
             </AvatarFallback>
@@ -41,8 +55,8 @@ export function NavUser() {
 
           {state === "expanded" && (
             <>
-              <div className="grid flex-1 overflow-hidden text-left leading-tight">
-                <span className="truncate text-[13px] font-semibold">
+              <div className="grid min-w-0 flex-1 overflow-hidden text-left leading-tight">
+                <span className="truncate text-[13px] font-semibold tracking-tight">
                   {name}
                 </span>
                 {email && (
@@ -56,7 +70,7 @@ export function NavUser() {
                 className="text-muted-foreground hover:text-foreground transition-colors outline-none"
                 title="Sign out"
               >
-                <SignOut size={16} />
+                <SignOutIcon size={16} />
               </button>
             </>
           )}

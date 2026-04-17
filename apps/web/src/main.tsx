@@ -5,7 +5,6 @@ import "@quicklogo/ui/globals.css";
 import { routeTree } from "./routeTree.gen";
 import { queryClient } from "./lib/query-client";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@quicklogo/ui/components/sonner";
 import { initGlobalMonitoring } from "@quicklogo/ui/lib/telemetry";
 
@@ -32,7 +31,6 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       <Toaster richColors toastOptions={{ style: { borderRadius: 0 } }} />
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </StrictMode>,
 );

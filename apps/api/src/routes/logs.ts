@@ -24,30 +24,24 @@ logsRoute.post("/report", async (c) => {
     return c.json({ error: "Missing required fields" }, 400);
   }
 
-  // Inject server-side metadata
   const enrichedContext = {
     ...(typeof context === "object" ? context : { rawContext: context }),
     userAgent: c.req.header("User-Agent"),
     ip: c.req.header("CF-Connecting-IP") || "unknown",
   };
 
-  try {
-    await db.insert(systemLogs).values({
-      level,
-      source,
-      message,
-      stack,
-      pathname,
-      context: JSON.stringify(enrichedContext),
-      userId: session?.user?.id ?? null,
-      status: "unresolved",
-    });
+  await db.insert(systemLogs).values({
+    level,
+    source,
+    message,
+    stack,
+    pathname,
+    context: JSON.stringify(enrichedContext),
+    userId: session?.user?.id ?? null,
+    status: "unresolved",
+  });
 
-    return c.json({ success: true }, 201);
-  } catch (err) {
-    console.error("Failed to persist system log:", err);
-    return c.json({ error: "Failed to log event" }, 500);
-  }
+  return c.json({ success: true }, 201);
 });
 
 export default logsRoute;
