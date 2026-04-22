@@ -30,7 +30,7 @@ function AuthLayout() {
   return (
     <div className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center">
       <div className="flex w-full flex-1 flex-col items-center justify-center">
-        <div className="animate-in fade-in zoom-in-95 w-full max-w-[400px] duration-500">
+        <div className="animate-in fade-in zoom-in-95 w-full max-w-100 duration-500">
           <div className="bg-background mb-8 text-center">
             <h1 className="text-foreground text-2xl font-bold tracking-tight">
               QuickLogo Admin

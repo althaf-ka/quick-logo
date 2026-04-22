@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ImageKitProvider } from "@quicklogo/storage";
+import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
 
 const upload = new Hono<{ Bindings: Bindings; Variables: Variables }>().get(
   "/auth",
+  requireAuth,
   (c) => {
     const { IMAGEKIT_PRIVATE_KEY } = c.env;
 

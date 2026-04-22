@@ -15,6 +15,7 @@ export type Bindings = {
   DODO_PAYMENTS_API_KEY: string;
   DODO_PAYMENTS_WEBHOOK_KEY: string;
   DODO_PAYMENTS_ENVIRONMENT: string;
+  ALLOWED_ORIGINS: string;
 };
 
 export type Variables = {

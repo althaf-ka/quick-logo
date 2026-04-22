@@ -28,15 +28,11 @@ app.notFound((c) =>
 );
 
 app.use("/api/*", async (c, next) => {
-  const allowedOrigins = [
-    c.env.CLIENT_URL ?? "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-  ];
+  const allowedOrigins = (c.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim());
   const origin = c.req.header("Origin") || "";
 
   const corsMiddleware = cors({
-    origin: allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    origin: allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || c.env.CLIENT_URL,
     credentials: true,
   });
   return corsMiddleware(c, next);

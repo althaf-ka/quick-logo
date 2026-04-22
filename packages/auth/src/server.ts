@@ -16,17 +16,14 @@ type AuthEnv = {
   GOOGLE_CLIENT_SECRET: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
+  ALLOWED_ORIGINS: string;
 };
 
 export function createAuth(db: Database, env: AuthEnv) {
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:5175",
-    ],
+    trustedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()),
 
     user: {
       additionalFields: {

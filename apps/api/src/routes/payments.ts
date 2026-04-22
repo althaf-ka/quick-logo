@@ -12,6 +12,8 @@ import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
 import { AppError } from "../lib/errors";
 
+import { isAllowedRedirect } from "../lib/url";
+
 const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .post(
     "/create-checkout",
@@ -21,6 +23,18 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const db = c.get("db");
       const user = c.get("user");
       const { tierName, returnUrl } = c.req.valid("json");
+
+      const allowedOrigins = (c.env.ALLOWED_ORIGINS || "")
+        .split(",")
+        .map((o) => o.trim());
+
+      if (!isAllowedRedirect(returnUrl, allowedOrigins)) {
+        throw new AppError(
+          400,
+          ERROR_CODES.VALIDATION_ERROR,
+          "The provided return URL is not allowed. Please use a trusted domain."
+        );
+      }
 
       const tier = PRICING_TIERS.find((t) => t.name === tierName);
       if (!tier) {
