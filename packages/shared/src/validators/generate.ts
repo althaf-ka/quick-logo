@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { MODELS } from "../constants/models";
+
+const modelIds = MODELS.map((m) => m.id) as [string, ...string[]];
 
 // ── Frontend form schema (includes File/preview fields for UI) ──────
 
 export const generateConfigSchema = z.object({
-  model: z.string(),
+  model: z.enum(modelIds),
   style: z.string(),
   imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]),
   colorPalette: z.string(),
@@ -34,7 +37,7 @@ export const generateRequestSchema = z.object({
 const hexColor = z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
 
 export const generateApiConfigSchema = z.object({
-  model: z.string(),
+  model: z.enum(modelIds),
   imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
   style: z.string().optional().default(""),
   colorPalette: z.string().optional().default("auto"),

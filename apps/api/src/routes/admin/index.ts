@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { paginationSchema, adminLogsQuerySchema } from "@quicklogo/shared";
 import type { Bindings, Variables } from "../../types";
 import { requireAdmin } from "../../middleware/require-auth";
 
@@ -21,16 +23,9 @@ import {
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .use("*", requireAdmin)
 
-  // Health/Identity check for the admin dashboard
-  .get("/me", (c) => {
-    return c.json({ user: c.get("user") });
-  })
-
-  // Dashboard Overview Metrics
   .get("/dashboard", async (c) => {
     const db = c.get("db");
 
-    // 1. Core Totals
     const [userCount] = await db.select({ value: count() }).from(users);
     const [revenueResult] = await db
       .select({ value: sum(transactions.amount) })
@@ -44,7 +39,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .from(images)
       .where(eq(images.status, "completed"));
 
-    // 2. Growth Metrics (Last 30 Days vs Previous 30 Days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const sixtyDaysAgo = new Date();
@@ -71,7 +65,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         ),
       );
 
-    // 3. Revenue Trend (Daily - Last 14 days)
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
@@ -90,7 +83,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .groupBy(sql`date(${transactions.createdAt}, 'unixepoch')`)
       .orderBy(sql`date(${transactions.createdAt}, 'unixepoch')`);
 
-    // 4. Model Usage Breakdown
     const modelStats = await db
       .select({
         model: images.model,
@@ -100,7 +92,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .groupBy(images.model)
       .orderBy(desc(count()));
 
-    // 5. Recent Activity
     const recentUsers = await db
       .select({
         id: users.id,
@@ -151,10 +142,9 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
   })
 
-  // List Users (Paginated)
-  .get("/users", async (c) => {
+  .get("/users", zValidator("query", paginationSchema), async (c) => {
     const db = c.get("db");
-    const page = Number(c.req.query("page")) || 1;
+    const { page } = c.req.valid("query");
     const limit = 50;
     const offset = (page - 1) * limit;
 
@@ -177,10 +167,9 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
   })
 
-  // List Projects (Paginated)
-  .get("/projects", async (c) => {
+  .get("/projects", zValidator("query", paginationSchema), async (c) => {
     const db = c.get("db");
-    const page = Number(c.req.query("page")) || 1;
+    const { page } = c.req.valid("query");
     const limit = 50;
     const offset = (page - 1) * limit;
 
@@ -210,10 +199,9 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
   })
 
-  // List Transactions (Paginated)
-  .get("/transactions", async (c) => {
+  .get("/transactions", zValidator("query", paginationSchema), async (c) => {
     const db = c.get("db");
-    const page = Number(c.req.query("page")) || 1;
+    const { page } = c.req.valid("query");
     const limit = 50;
     const offset = (page - 1) * limit;
 
@@ -245,14 +233,11 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
   })
 
-  // List System Logs (Paginated)
-  .get("/logs", async (c) => {
+  .get("/logs", zValidator("query", adminLogsQuerySchema), async (c) => {
     const db = c.get("db");
-    const page = Number(c.req.query("page")) || 1;
+    const { page, level, source } = c.req.valid("query");
     const limit = 50;
     const offset = (page - 1) * limit;
-    const level = c.req.query("level") as any;
-    const source = c.req.query("source") as any;
 
     const whereClauses = [];
     if (level) whereClauses.push(eq(systemLogs.level, level));
@@ -293,7 +278,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
   })
 
-  // Update Log Status (Resolve/Ignore)
   .patch("/logs/:id", async (c) => {
     const db = c.get("db");
     const id = c.req.param("id");
@@ -308,7 +292,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     return c.json({ success: true });
   })
 
-  // Delete Log
   .delete("/logs/:id", async (c) => {
     const db = c.get("db");
     const id = c.req.param("id");

@@ -25,11 +25,20 @@ export function createAuth(db: Database, env: AuthEnv) {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()),
 
+    onAPIError: {
+      errorURL:
+        ((env.ALLOWED_ORIGINS || "").split(",")[0] || "").trim() + "/login",
+    },
+
     user: {
       additionalFields: {
         credits: {
           type: "number",
           defaultValue: 0,
+        },
+        banned: {
+          type: "boolean",
+          defaultValue: false,
         },
       },
     },
@@ -55,6 +64,7 @@ export function createAuth(db: Database, env: AuthEnv) {
       admin({
         defaultRole: "user",
         adminRoles: ["admin"],
+        bannedUserMessage: "Your account has been suspended. Please contact support.",
       }),
     ],
 

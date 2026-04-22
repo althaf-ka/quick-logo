@@ -175,6 +175,13 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             return;
           }
 
+          if (localTx.userId !== user_id) {
+            console.error(
+              `[Webhook Security] User ID mismatch! Transaction ${transaction_id} belongs to ${localTx.userId}, but payload claimed ${user_id}`,
+            );
+            return;
+          }
+
           await safeDb.batch([
             safeDb
               .update(transactions)
@@ -187,11 +194,11 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             safeDb
               .update(users)
               .set({ credits: sql`${users.credits} + ${localTx.creditsAdded}` })
-              .where(eq(users.id, user_id)),
+              .where(eq(users.id, localTx.userId)),
           ]);
 
           console.log(
-            `[Webhook] Success: Added ${localTx.creditsAdded} derived to user ${user_id}`,
+            `[Webhook] Success: Added ${localTx.creditsAdded} credits to user ${localTx.userId}`,
           );
         } catch (e) {
           console.error("[Webhook Processing Failed]", e);

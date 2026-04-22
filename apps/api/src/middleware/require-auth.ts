@@ -11,6 +11,7 @@ export const requireAuth = createMiddleware<{
   });
 
   if (!session) return c.json({ error: "Unauthorized" }, 401);
+  if (session.user.banned) return c.json({ error: "Account suspended" }, 403);
 
   c.set("user", session.user as Variables["user"]);
   c.set("session", session.session as Variables["session"]);

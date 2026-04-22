@@ -5,6 +5,9 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useGoogleLogin } from "@/hooks/use-auth";
 import z from "zod";
 import { Spinner } from "@quicklogo/ui/components/spinner";
+import { toast } from "@quicklogo/ui/components/sonner";
+import { useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_auth/login")({
   head: () => ({
@@ -16,6 +19,8 @@ export const Route = createFileRoute("/_auth/login")({
 
   validateSearch: z.object({
     redirect: z.string().optional().catch(""),
+    error: z.string().optional().catch(""),
+    error_description: z.string().optional().catch(""),
   }),
 
   component: LoginPage,
@@ -23,7 +28,21 @@ export const Route = createFileRoute("/_auth/login")({
 
 function LoginPage() {
   const { mutate: login, isPending } = useGoogleLogin();
-  const { redirect } = Route.useSearch();
+  const { redirect, error, error_description } = Route.useSearch();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error_description || "Authentication failed", {
+        id: "auth-error",
+      });
+      router.navigate({
+        to: "/login",
+        search: { redirect },
+        replace: true,
+      });
+    }
+  }, [error, error_description, redirect, router]);
 
   const handleLogin = () => {
     login({ redirect: redirect || "/generate" });
