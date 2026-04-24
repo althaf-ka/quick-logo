@@ -2,6 +2,8 @@
   "extends": "@quicklogo/typescript-config/react-library.json",
   "compilerOptions": {
     "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "paths": {
       "@quicklogo/api-client/*": ["./src/*"]
     }

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/projects")({
 });
 
 type ProjectItem = InferResponseType<
-  (typeof api.projects.index)["$get"],
+  typeof api.projects.index.$get,
   200
 >["items"][number];
 

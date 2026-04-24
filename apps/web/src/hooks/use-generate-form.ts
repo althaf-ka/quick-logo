@@ -151,7 +151,10 @@ export function useGenerateForm() {
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
     },
     onError: (error) => {
-      if (error instanceof ApiError && error.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
+      if (
+        error instanceof ApiError &&
+        error.code === ERROR_CODES.INSUFFICIENT_CREDITS
+      ) {
         toast.error("Not enough credits", {
           description: error.message,
         });

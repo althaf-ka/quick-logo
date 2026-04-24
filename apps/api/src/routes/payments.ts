@@ -4,19 +4,22 @@ import { Webhooks } from "@dodopayments/hono";
 import DodoPayments from "dodopayments";
 import { eq, sql, desc, lt, and } from "@quicklogo/db";
 import { createId } from "@paralleldrive/cuid2";
-import { createCheckoutRequestSchema, PRICING_TIERS, ERROR_CODES } from "@quicklogo/shared";
+import {
+  createCheckoutRequestSchema,
+  PRICING_TIERS,
+  ERROR_CODES,
+} from "@quicklogo/shared";
 import { users, transactions } from "@quicklogo/db";
 import { z } from "zod";
 import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
 import { AppError } from "../lib/errors";
-
 import { isAllowedRedirect } from "../lib/url";
 
 const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .post(
-    "/create-checkout",
+    "/checkout",
     requireAuth,
     zValidator("json", createCheckoutRequestSchema, validationHook),
     async (c) => {
@@ -32,7 +35,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         throw new AppError(
           400,
           ERROR_CODES.VALIDATION_ERROR,
-          "The provided return URL is not allowed. Please use a trusted domain."
+          "The provided return URL is not allowed. Please use a trusted domain.",
         );
       }
 
@@ -102,12 +105,16 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           .catch(() => {});
 
         console.error("Dodo error:", error.response?.data || error);
-        throw new AppError(500, ERROR_CODES.PAYMENT_FAILED, "Payment processing failed. Please try again.");
+        throw new AppError(
+          500,
+          ERROR_CODES.PAYMENT_FAILED,
+          "Payment processing failed. Please try again.",
+        );
       }
     },
   )
   .get(
-    "/list-transactions",
+    "/transactions",
     requireAuth,
     zValidator(
       "query",

@@ -38,16 +38,17 @@ app.use("/api/*", async (c, next) => {
   return corsMiddleware(c, next);
 });
 
-app.route("/api/auth", authRoute);
-app.route("/api/user", userRoute);
-app.route("/api/upload", uploadRoute);
-app.route("/api/generate", generateRoute);
-app.route("/api/batches", batchesRoute);
-app.route("/api/images", imagesRoute);
-app.route("/api/payments", paymentsRoute);
-app.route("/api/projects", projectsRoute);
-app.route("/api/admin", adminRoute);
-app.route("/api/logs", logsRoute);
+const routes = app
+  .route("/api/auth", authRoute)
+  .route("/api/user", userRoute)
+  .route("/api/upload", uploadRoute)
+  .route("/api/generate", generateRoute)
+  .route("/api/batches", batchesRoute)
+  .route("/api/images", imagesRoute)
+  .route("/api/payments", paymentsRoute)
+  .route("/api/projects", projectsRoute)
+  .route("/api/admin", adminRoute)
+  .route("/api/logs", logsRoute);
 
 export default app;
-export type AppType = typeof app;
+export type AppType = typeof routes;

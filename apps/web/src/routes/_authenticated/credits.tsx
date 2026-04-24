@@ -39,7 +39,7 @@ function CreditsPage() {
     useInfiniteQuery({
       queryKey: ["transactions"],
       queryFn: async ({ pageParam }) => {
-        const res = await api.payments["list-transactions"].$get({
+        const res = await api.payments.transactions.$get({
           query: { cursor: (pageParam as string) || undefined, limit: "10" },
         });
         if (!res.ok) throw new Error("Failed to fetch transactions");
@@ -51,7 +51,7 @@ function CreditsPage() {
 
   const createCheckoutMutation = useMutation({
     mutationFn: async (tierName: "Starter" | "Pro") => {
-      const response = await api.payments["create-checkout"].$post({
+      const response = await api.payments.checkout.$post({
         json: {
           tierName,
           returnUrl: window.location.href,

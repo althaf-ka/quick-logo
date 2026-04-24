@@ -11,7 +11,7 @@ export const AUTH_KEYS = {
 };
 
 export type CurrentUser = InferResponseType<
-  (typeof api.user.profile)["$get"],
+  typeof api.user.profile.$get,
   200
 >;
 
@@ -60,9 +60,14 @@ export function useUser() {
 export function useGoogleLogin() {
   return useMutation({
     mutationFn: async ({ redirect }: { redirect?: string } = {}) => {
+      let callbackURL = redirect || `${window.location.origin}/generate`;
+      if (callbackURL.startsWith('/')) {
+        callbackURL = `${window.location.origin}${callbackURL}`;
+      }
+
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: redirect || `${window.location.origin}/generate`,
+        callbackURL,
       });
     },
     onError: (error) => {
