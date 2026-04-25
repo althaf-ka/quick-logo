@@ -13,7 +13,9 @@ export const transactions = sqliteTable("transaction", {
   amount: integer("amount").notNull(),
   currency: text("currency").notNull().default("INR"),
   creditsAdded: integer("credits_added").notNull(),
-  status: text("status", { enum: ["pending", "completed", "failed"] })
+  status: text("status", {
+    enum: ["pending", "completed", "failed", "cancelled", "processing"],
+  })
     .notNull()
     .default("pending"),
   dodoPaymentId: text("dodo_payment_id"),

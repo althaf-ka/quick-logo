@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Card,
@@ -19,12 +19,43 @@ import {
 } from "@phosphor-icons/react";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { PRICING_TIERS } from "@quicklogo/shared";
-import { useMutation, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, AUTH_KEYS } from "@/hooks/use-auth";
 import { parseApiError } from "@/lib/api-error";
 import { InView } from "react-intersection-observer";
 import { format } from "date-fns";
+
+const STATUS_STYLES: Record<string, { classes: string; label: string }> = {
+  completed: {
+    classes: "bg-green-500/10 text-green-600",
+    label: "Completed",
+  },
+  failed: {
+    classes: "bg-red-500/10 text-red-600",
+    label: "Failed",
+  },
+  cancelled: {
+    classes: "bg-zinc-500/10 text-zinc-500",
+    label: "Cancelled",
+  },
+  processing: {
+    classes: "bg-blue-500/10 text-blue-600",
+    label: "Processing",
+  },
+  pending: {
+    classes: "bg-amber-500/10 text-amber-600",
+    label: "Pending",
+  },
+};
+
+function getStatusStyle(status: string) {
+  return STATUS_STYLES[status] ?? STATUS_STYLES.pending;
+}
 
 export const Route = createFileRoute("/_authenticated/credits")({
   component: CreditsPage,
@@ -32,8 +63,86 @@ export const Route = createFileRoute("/_authenticated/credits")({
 
 function CreditsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const currentCredits = user?.credits ?? 0;
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment_cancelled") === "true") return false;
+    const hasTxInUrl = params.has("transaction_id");
+    const hasTxInStorage = !!sessionStorage.getItem("pending_transaction_id");
+    return hasTxInUrl || hasTxInStorage;
+  });
+  const hasVerifiedRef = useRef(false);
+
+  const verifyTransaction = useCallback(
+    async (txId: string) => {
+      try {
+        const res = await api.payments.verify.$get({
+          query: { transaction_id: txId },
+        });
+        if (!res.ok) return;
+        const result = await res.json();
+
+        if (result.status === "completed") {
+          toast.success(
+            `Payment successful! ${result.creditsAdded} credits added.`,
+          );
+          queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
+        } else if (result.status === "failed") {
+          toast.error("Payment failed. Please try again.");
+        } else if (result.status === "cancelled") {
+          toast.info("Payment was cancelled.");
+        } else {
+          toast.info(
+            "Payment is still processing. Credits will be added shortly.",
+          );
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      } catch {
+        // Webhook will handle reconciliation
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [queryClient],
+  );
+
+  if (!hasVerifiedRef.current) {
+    hasVerifiedRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const wasCancelled = params.get("payment_cancelled") === "true";
+    const txIdFromUrl = params.get("transaction_id");
+
+    if (wasCancelled) {
+      window.history.replaceState({}, "", window.location.pathname);
+      const cancelledTxId = sessionStorage.getItem("pending_transaction_id");
+      sessionStorage.removeItem("pending_transaction_id");
+      toast.info("Payment was cancelled.");
+
+      if (cancelledTxId) {
+        api.payments.cancel
+          .$post({ json: { transaction_id: cancelledTxId } })
+          .catch(() => {})
+          .finally(() => {
+            queryClient.invalidateQueries({ queryKey: ["transactions"] });
+          });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      }
+    } else if (txIdFromUrl) {
+      window.history.replaceState({}, "", window.location.pathname);
+      verifyTransaction(txIdFromUrl);
+    } else {
+      const pendingTxId = sessionStorage.getItem("pending_transaction_id");
+      if (pendingTxId) {
+        sessionStorage.removeItem("pending_transaction_id");
+        verifyTransaction(pendingTxId);
+      }
+    }
+  }
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery({
@@ -54,7 +163,7 @@ function CreditsPage() {
       const response = await api.payments.checkout.$post({
         json: {
           tierName,
-          returnUrl: window.location.href,
+          returnUrl: window.location.origin + window.location.pathname,
         },
       });
 
@@ -65,6 +174,10 @@ function CreditsPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      if (data.transactionId) {
+        sessionStorage.setItem("pending_transaction_id", data.transactionId);
+      }
+
       window.location.href = data.url;
     },
     onError: (error) => {
@@ -90,6 +203,17 @@ function CreditsPage() {
           Manage your credit balance and view your transaction history.
         </p>
       </div>
+
+      {isVerifying && (
+        <Card className="border-blue-500/30 bg-blue-500/5 mb-8 shadow-none">
+          <div className="flex items-center gap-3 p-4">
+            <SpinnerGapIcon className="text-blue-500 size-5 animate-spin" />
+            <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              Verifying your payment status...
+            </p>
+          </div>
+        </Card>
+      )}
 
       <Card className="border-border/60 bg-muted/20 mb-8 shadow-none">
         <div className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
@@ -210,46 +334,51 @@ function CreditsPage() {
           <div className="divide-border/60 divide-y">
             {transactionsList.length > 0 ? (
               <>
-                {transactionsList.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="grid grid-cols-4 items-center gap-4 px-4 py-3 text-sm md:grid-cols-5"
-                  >
-                    <div className="col-span-2">
-                      <p className="text-foreground font-medium">
-                        {tx.tierName} Package
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs md:hidden">
+                {transactionsList.map((tx) => {
+                  const style = getStatusStyle(tx.status);
+                  return (
+                    <div
+                      key={tx.id}
+                      className="grid grid-cols-4 items-center gap-4 px-4 py-3 text-sm md:grid-cols-5"
+                    >
+                      <div className="col-span-2">
+                        <p className="text-foreground font-medium">
+                          {tx.tierName} Package
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs md:hidden">
+                          {format(new Date(tx.createdAt), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <div className="text-muted-foreground hidden md:block">
                         {format(new Date(tx.createdAt), "MMM d, yyyy")}
-                      </p>
-                    </div>
-                    <div className="text-muted-foreground hidden md:block">
-                      {format(new Date(tx.createdAt), "MMM d, yyyy")}
-                    </div>
-                    <div className="text-right font-medium text-green-600 dark:text-green-500">
-                      +{tx.creditsAdded}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-foreground font-medium">
-                        {tx.currency === "INR" ? "₹" : tx.currency}
-                        {(tx.amount / 100).toFixed(2)}
-                      </p>
-                      <div className="mt-1 flex justify-end">
-                        <span
-                          className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
-                            tx.status === "completed"
-                              ? "bg-green-500/10 text-green-600"
-                              : tx.status === "failed"
-                                ? "bg-red-500/10 text-red-600"
-                                : "bg-amber-500/10 text-amber-600"
-                          }`}
-                        >
-                          {tx.status}
-                        </span>
+                      </div>
+                      <div
+                        className={`text-right font-medium ${
+                          tx.status === "completed"
+                            ? "text-green-600 dark:text-green-500"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {tx.status === "completed"
+                          ? `+${tx.creditsAdded}`
+                          : "0"}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-foreground font-medium">
+                          {tx.currency === "INR" ? "₹" : tx.currency}
+                          {(tx.amount / 100).toFixed(2)}
+                        </p>
+                        <div className="mt-1 flex justify-end">
+                          <span
+                            className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase ${style.classes}`}
+                          >
+                            {style.label}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <InView
                   as="div"
                   onChange={(inView) => {
@@ -277,7 +406,7 @@ function CreditsPage() {
             )}
           </div>
         </div>
-        <div className="h-12" /> {/* Extra padding at bottom */}
+        <div className="h-12" />
       </div>
     </div>
   );
