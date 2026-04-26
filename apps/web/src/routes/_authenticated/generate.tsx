@@ -8,6 +8,12 @@ import { PromptInput } from "@/components/global/prompt-input";
 
 export const Route = createFileRoute("/_authenticated/generate")({
   component: GeneratePage,
+  head: () => ({
+    meta: [
+      { title: "Generate Logo | QuickLogo" },
+      { name: "description", content: "Use AI to generate professional logos instantly." },
+    ],
+  }),
 });
 
 function GeneratePage() {

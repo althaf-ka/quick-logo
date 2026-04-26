@@ -11,6 +11,12 @@ import type { InferResponseType } from "@quicklogo/api-client";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   component: ProjectsPage,
+  head: () => ({
+    meta: [
+      { title: "My Projects | QuickLogo" },
+      { name: "description", content: "View and manage your generated logos." },
+    ],
+  }),
 });
 
 type ProjectItem = InferResponseType<

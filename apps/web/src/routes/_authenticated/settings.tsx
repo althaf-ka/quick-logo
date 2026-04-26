@@ -39,6 +39,12 @@ import {
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
+  head: () => ({
+    meta: [
+      { title: "Settings | QuickLogo" },
+      { name: "description", content: "Manage your account and preferences." },
+    ],
+  }),
 });
 
 type SettingsPreferences = {

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Card,
@@ -59,6 +59,12 @@ function getStatusStyle(status: string) {
 
 export const Route = createFileRoute("/_authenticated/credits")({
   component: CreditsPage,
+  head: () => ({
+    meta: [
+      { title: "Credits & Billing | QuickLogo" },
+      { name: "description", content: "Manage your credits and view your billing history." },
+    ],
+  }),
 });
 
 function CreditsPage() {
@@ -109,7 +115,8 @@ function CreditsPage() {
     [queryClient],
   );
 
-  if (!hasVerifiedRef.current) {
+  useEffect(() => {
+    if (hasVerifiedRef.current) return;
     hasVerifiedRef.current = true;
 
     const params = new URLSearchParams(window.location.search);
@@ -142,7 +149,7 @@ function CreditsPage() {
         verifyTransaction(pendingTxId);
       }
     }
-  }
+  }, [verifyTransaction, queryClient]);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery({

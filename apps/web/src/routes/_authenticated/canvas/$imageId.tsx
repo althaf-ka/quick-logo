@@ -5,4 +5,11 @@ export interface CanvasRouteState {
   prompt?: string;
 }
 
-export const Route = createFileRoute("/_authenticated/canvas/$imageId")();
+export const Route = createFileRoute("/_authenticated/canvas/$imageId")({
+  head: () => ({
+    meta: [
+      { title: "Canvas | QuickLogo" },
+      { name: "description", content: "Advanced logo editor." },
+    ],
+  }),
+});

@@ -9,6 +9,12 @@ export interface EditRouteState {
 
 export const Route = createFileRoute("/_authenticated/edit/$imageId")({
   component: EditRoute,
+  head: () => ({
+    meta: [
+      { title: "Edit Logo | QuickLogo" },
+      { name: "description", content: "Edit your generated logo." },
+    ],
+  }),
 });
 
 function EditRoute() {
