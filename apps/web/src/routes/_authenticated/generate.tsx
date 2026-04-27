@@ -56,6 +56,8 @@ function GeneratePage() {
           showMagicPrompt
           magicPrompt={config.magicPrompt}
           onMagicPromptChange={(val) => updateConfig("magicPrompt", val)}
+          brandName={config.brandName}
+          onBrandNameChange={(val) => updateConfig("brandName", val)}
           showConfigTrigger={isMobile}
           onConfigTrigger={() => setMobileConfigOpen(true)}
         />

@@ -49,6 +49,8 @@ interface PromptInputProps {
   models?: ModelItem[];
   modelValue?: string;
   onModelChange?: (value: string) => void;
+  brandName?: string;
+  onBrandNameChange?: (value: string) => void;
   className?: string;
 }
 
@@ -85,6 +87,8 @@ export function PromptInput({
   models = [],
   modelValue,
   onModelChange,
+  brandName,
+  onBrandNameChange,
   className,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -111,7 +115,25 @@ export function PromptInput({
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
       <div className="mx-auto max-w-2xl">
-        <div className="border-input bg-card focus-within:border-primary/25 flex flex-col border transition-colors">
+        <div className="border-input bg-card focus-within:border-primary/25 flex flex-col border rounded-none overflow-hidden shadow-sm transition-colors">
+          {onBrandNameChange && !isCompact && (
+            <div className="flex items-center px-3 h-10 gap-3 bg-muted/5 border-b border-border/40 transition-colors focus-within:bg-muted/10">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 select-none">
+                  Brand:
+                </span>
+                <div className="h-4 w-px bg-border" />
+              </div>
+              <input
+                type="text"
+                value={brandName || ""}
+                onChange={(e) => onBrandNameChange(e.target.value)}
+                maxLength={50}
+                className="bg-transparent text-sm text-foreground w-full outline-none flex-1 h-full"
+                disabled={isLoading}
+              />
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             value={value}
@@ -138,7 +160,7 @@ export function PromptInput({
 
           <div
             className={cn(
-              "flex items-center justify-between px-2",
+              "flex items-center justify-between px-3 pt-2 border-t border-border/20",
               isCompact ? "pb-1.5" : "pb-2",
             )}
           >

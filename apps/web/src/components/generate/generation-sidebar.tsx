@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@quicklogo/ui/components/textarea";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { Button } from "@quicklogo/ui/components/button";
+import { Input } from "@quicklogo/ui/components/input";
 import {
   Dialog,
   DialogContent,
@@ -149,6 +150,18 @@ export function GenerationSidebar({
       <h3 className="text-muted-foreground/40 text-[10px] font-bold tracking-widest uppercase">
         Configuration
       </h3>
+
+      <ConfigField
+        label="Brand Name"
+        tooltip="The exact text you want to appear in the logo."
+      >
+        <Input
+          value={config.brandName || ""}
+          onChange={(e) => onConfigChange("brandName", e.target.value)}
+          placeholder="e.g. Acme Corp"
+          className="h-8 text-xs"
+        />
+      </ConfigField>
 
       <ConfigField
         label="Model"

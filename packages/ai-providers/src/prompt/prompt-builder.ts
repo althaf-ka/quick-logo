@@ -59,6 +59,10 @@ export function buildBasePrompt(
   const styleVal = style ? STYLE_MODIFIERS[style] : undefined;
   if (styleVal) parts.push(styleVal);
 
+  if (message.config.brandName && message.config.brandName.trim().length > 0 && !message.isEdit) {
+    parts.push(`incorporating the text "${message.config.brandName.trim()}"`);
+  }
+
   const palette = message.config.colorPalette;
   const paletteVal = palette ? PALETTE_MODIFIERS[palette] : undefined;
   if (paletteVal) parts.push(paletteVal);

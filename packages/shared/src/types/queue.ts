@@ -16,5 +16,6 @@ export interface GenerateImageMessage {
     referenceImageUrl?: string;
     referenceStrength?: number;
     magicPrompt?: boolean;
+    brandName?: string;
   };
 }

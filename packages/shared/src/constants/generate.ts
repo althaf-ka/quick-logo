@@ -6,6 +6,7 @@ export { MODELS };
 export const DEFAULT_CONFIG: GenerateConfig = {
   model: MODELS[0].id,
   style: "",
+  brandName: "",
   imageCount: 1,
   colorPalette: "auto",
   customColors: [],

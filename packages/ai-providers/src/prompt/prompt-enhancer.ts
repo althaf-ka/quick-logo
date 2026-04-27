@@ -66,7 +66,7 @@ Rules:
 - Output ONLY the rewritten prompt — no explanation, no preamble, no quotes
 - Keep it under 150 words
 - Be specific about shapes, composition, and visual style
-- Never mention real brand names or copyrighted characters
+- Never mention real brand names or copyrighted characters (except the provided Brand Name)
 - Always end with: "professional logo, vector-style, sharp edges, clean design"${referenceRules}`;
 
     const userPrompt = isEdit
@@ -82,10 +82,11 @@ ${
       : `Rewrite this logo description into a detailed generation prompt.
 
 Description: "${message.prompt}"
-Style: ${style}${
+Style: ${style}
+${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorporate this text into the logo UNLESS the description explicitly asks for an icon-only logo, no text, or an abbreviation)\n` : ""}${
           !hasReference
-            ? `\nColor palette: ${palette}`
-            : "\nColor palette: IGNORED — colors come from the reference image"
+            ? `Color palette: ${palette}`
+            : "Color palette: IGNORED — colors come from the reference image"
         }${
           message.config.customColors?.length && !hasReference
             ? `\nCustom colors: ${message.config.customColors.join(", ")}`

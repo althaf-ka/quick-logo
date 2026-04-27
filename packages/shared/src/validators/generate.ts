@@ -8,6 +8,7 @@ const modelIds = MODELS.map((m) => m.id) as [string, ...string[]];
 export const generateConfigSchema = z.object({
   model: z.enum(modelIds),
   style: z.string(),
+  brandName: z.string().max(100).optional().default(""),
   imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]),
   colorPalette: z.string(),
   customColors: z
@@ -38,6 +39,7 @@ const hexColor = z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
 
 export const generateApiConfigSchema = z.object({
   model: z.enum(modelIds),
+  brandName: z.string().max(100).optional().default(""),
   imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
   style: z.string().optional().default(""),
   colorPalette: z.string().optional().default("auto"),
