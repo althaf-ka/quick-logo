@@ -16,6 +16,7 @@ import {
   ComboboxList,
   ComboboxItem,
 } from "@quicklogo/ui/components/combobox";
+import { ModelSelector } from "@/components/ui/model-selector/model-selector";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -38,15 +39,11 @@ import {
 } from "@quicklogo/ui/components/tooltip";
 import { Separator } from "@quicklogo/ui/components/separator";
 import {
-  LightningIcon,
-  BrainIcon,
-  CrownIcon,
-  ShuffleIcon,
-  XIcon,
-  UploadIcon,
   SparkleIcon,
   PaletteIcon,
   QuestionIcon,
+  XIcon,
+  UploadIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 
@@ -87,12 +84,6 @@ function ConfigField({
   );
 }
 
-const MODEL_ICONS = {
-  lightning: LightningIcon,
-  brain: BrainIcon,
-  crown: CrownIcon,
-  shuffle: ShuffleIcon,
-} as const;
 
 const STYLE_GRADIENTS: Record<string, string> = {
   minimal: "from-slate-200 to-slate-400",
@@ -167,58 +158,10 @@ export function GenerationSidebar({
         label="Model"
         tooltip="Better models cost more credits but produce higher quality."
       >
-        <Combobox
+        <ModelSelector
           value={config.model}
-          onValueChange={(val) => {
-            if (val) onConfigChange("model", val);
-          }}
-        >
-          <ComboboxInput
-            placeholder="Select model..."
-            className="cursor-pointer [&_input]:cursor-pointer [&_input]:capitalize! [&_input]:caret-transparent"
-          />
-          <ComboboxContent>
-            <ComboboxList className="[&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent">
-              {MODELS.map((model) => {
-                const Icon = MODEL_ICONS[model.icon];
-                return (
-                  <ComboboxItem
-                    key={model.id}
-                    value={model.id}
-                    className="py-2.5!"
-                  >
-                    <div className="flex w-full items-center gap-3">
-                      <div className="bg-primary/10 flex size-8 shrink-0 items-center justify-center">
-                        <Icon weight="fill" className="text-primary size-4" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold capitalize">
-                            {model.name}
-                          </span>
-                          <span className="bg-primary/10 text-primary flex items-center gap-0.5 px-1.5 py-px text-[9px] font-bold tabular-nums">
-                            <LightningIcon weight="fill" className="size-2" />
-                            {model.credits}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {model.features.map((f) => (
-                            <span
-                              key={f}
-                              className="border-border/50 bg-muted/50 text-muted-foreground border px-1.5 py-0.5 text-[9px] font-medium"
-                            >
-                              {f}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </ComboboxItem>
-                );
-              })}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
+          onChange={(val: string) => onConfigChange("model", val)}
+        />
       </ConfigField>
 
       <ConfigField label="Style" tooltip="Visual style for your logo.">

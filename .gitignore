@@ -43,3 +43,5 @@ dist/
 .vscode/
 
 .wrangler
+
+.fallow
