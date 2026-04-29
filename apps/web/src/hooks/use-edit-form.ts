@@ -15,7 +15,7 @@ export interface EditHistoryEntry {
 
 type EditStatus = "idle" | "generating" | "polling" | "done" | "error";
 
-const DEFAULT_MODEL = "quick-remix";
+const DEFAULT_MODEL = "quick-seedream";
 const REFERENCE_STRENGTH = 35;
 
 export function useEditForm({
@@ -41,7 +41,7 @@ export function useEditForm({
   const sourceImageUrl = initialImageUrl ?? fetchResult?.image?.imageUrl ?? "";
   const sourcePrompt = initialPrompt ?? fetchResult?.image?.prompt ?? "";
 
-  const [prompt, setPrompt] = useState(initialPrompt ?? "");
+  const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [errorState, setErrorState] = useState<string | null>(null);
   const [activeEditImageId, setActiveEditImageId] = useState<string | null>(
@@ -51,11 +51,7 @@ export function useEditForm({
 
   const fetchedPrompt = fetchResult?.image?.prompt;
   useEffect(() => {
-    if (!initialPrompt && fetchedPrompt) {
-      setPrompt(fetchedPrompt);
-    }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // We keep prompt empty by default as per user preference for "Empty-State" editing
   }, [fetchedPrompt]);
 
   useEffect(() => {
@@ -106,6 +102,7 @@ export function useEditForm({
 
   const setSelectedEntry = useCallback((entry: EditHistoryEntry | null) => {
     setSelectedEntryId(entry?.id ?? null);
+    setPrompt(""); // Clear prompt for new instructions when switching versions
   }, []);
 
   const { data: pollingData, isError: isPollingError } = useQuery({
@@ -223,6 +220,7 @@ export function useEditForm({
         sourceImageId: targetImageId,
         config: {
           model,
+          brandName: (fetchResult?.image as any)?.brandName ?? "",
           imageCount: 1,
           style: "",
           colorPalette: "auto",
@@ -250,6 +248,7 @@ export function useEditForm({
     mutateAsync,
     selectedEntry?.id,
     selectedEntry?.url,
+    fetchResult?.image,
   ]);
 
   return {

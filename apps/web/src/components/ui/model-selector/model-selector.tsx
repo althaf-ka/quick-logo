@@ -1,5 +1,9 @@
 import * as React from "react";
-import { MODELS, type ModelOption } from "@quicklogo/ai-providers/models";
+import {
+  MODELS,
+  type ModelOption,
+  type ModelContext,
+} from "@quicklogo/ai-providers/models";
 import {
   Dialog,
   DialogContent,
@@ -24,53 +28,18 @@ const MODEL_ICONS = {
   shuffle: ShuffleIcon,
 } as const;
 
-/**
- * User-friendly metadata for each model.
- * `label` is the primary thing users see — outcome-focused, not technical.
- * `description` rewrites the original to be simpler and action-oriented.
- */
-const MODEL_META: Record<
-  string,
-  { label: string; description: string; recommended?: boolean }
-> = {
-  "quick-v1": {
-    label: "Fast",
-    description: "Quick drafts in seconds — great for exploring ideas",
-  },
-  "quick-hd": {
-    label: "Balanced",
-    description: "Sharp details with higher resolution output",
-  },
-  "quick-pro": {
-    label: "Best Quality",
-    description: "Production-ready logos with maximum detail",
-    recommended: true,
-  },
-  "quick-remix": {
-    label: "Remix",
-    description: "Upload a reference image and create variations",
-  },
-  "quick-ideogram": {
-    label: "Typography Expert",
-    description: "Best for logos that need perfect text and lettering",
-  },
-  "quick-leo-fast": {
-    label: "Creative",
-    description: "Fast and artistic — great for unique visual styles",
-  },
-  "quick-seedream": {
-    label: "Versatile",
-    description: "Highly detailed, works well with or without references",
-  },
-};
-
-
-
 interface ModelSelectorProps {
   value: string;
   onChange: (value: string) => void;
   models?: ModelOption[];
   className?: string;
+  variant?: "default" | "minimal";
+  /**
+   * Context determines which model gets the "Recommended" badge.
+   * - "generate": Quick Pro is recommended
+   * - "edit": SeeDream 4.5 is recommended
+   */
+  context?: ModelContext;
 }
 
 export function ModelSelector({
@@ -78,12 +47,13 @@ export function ModelSelector({
   onChange,
   models = MODELS,
   className,
+  variant = "default",
+  context = "generate",
 }: ModelSelectorProps) {
   const [open, setOpen] = React.useState(false);
   const selectedModel = models.find((m) => m.id === value) || models[0];
 
   const Icon = selectedModel ? MODEL_ICONS[selectedModel.icon] : LightningIcon;
-  const selectedMeta = selectedModel ? MODEL_META[selectedModel.id] : undefined;
 
   return (
     <>
@@ -94,20 +64,41 @@ export function ModelSelector({
           setOpen(true);
         }}
         className={cn(
-          "group bg-card hover:border-primary/40 hover:bg-muted/30 focus-visible:ring-primary/50 relative flex w-full cursor-pointer items-center justify-between gap-3 border px-3 py-2 text-left transition-colors outline-none focus-visible:ring-1",
+          "group focus-visible:ring-primary/50 relative flex cursor-pointer items-center justify-between transition-all outline-none focus-visible:ring-1",
+          variant === "minimal"
+            ? "hover:bg-primary/5 h-8 w-fit gap-1.5 rounded-none border-none bg-transparent px-2.5"
+            : "bg-card hover:bg-muted/30 hover:border-primary/40 w-full gap-3 border px-3 py-2",
           className,
         )}
       >
-        <div className="flex items-center gap-2.5">
-          <div className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center">
-            <Icon weight="fill" className="size-4" />
+        <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "flex shrink-0 items-center justify-center transition-colors",
+              variant === "minimal"
+                ? "text-primary size-4"
+                : "bg-primary/10 text-primary size-7",
+            )}
+          >
+            <Icon
+              weight="fill"
+              className={variant === "minimal" ? "size-3.5" : "size-4"}
+            />
           </div>
-          <div className="flex flex-col">
-            <span className="text-foreground text-xs font-semibold">
-              {selectedMeta?.label || selectedModel?.name || "Select Model"}
+
+          <div className="flex flex-col items-start leading-none">
+            <span
+              className={cn(
+                "font-bold tracking-tight transition-colors",
+                variant === "minimal"
+                  ? "text-foreground/90 group-hover:text-primary text-[11px]"
+                  : "text-foreground text-xs",
+              )}
+            >
+              {selectedModel?.label || selectedModel?.name || "Select Model"}
             </span>
-            {selectedModel && (
-              <span className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
+            {selectedModel && variant === "default" && (
+              <span className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px] font-medium">
                 <span className="capitalize">{selectedModel.name}</span>
                 <span className="text-border">·</span>
                 <span className="flex items-center gap-0.5 tabular-nums">
@@ -123,16 +114,13 @@ export function ModelSelector({
         </div>
         <CaretDownIcon
           className={cn(
-            "text-muted-foreground size-3.5 transition-transform duration-200",
+            "text-muted-foreground/40 group-hover:text-muted-foreground size-3 transition-transform duration-200",
             open && "rotate-180",
           )}
         />
       </button>
 
-      <Dialog
-        open={open}
-        onOpenChange={setOpen}
-      >
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className="w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-md"
           showCloseButton={false}
@@ -142,7 +130,9 @@ export function ModelSelector({
               Choose AI Model
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-[11px]">
-              Pick the best fit for your logo
+              {context === "edit"
+                ? "Pick the best model for editing your logo"
+                : "Pick the best fit for your logo"}
             </DialogDescription>
           </DialogHeader>
 
@@ -150,9 +140,9 @@ export function ModelSelector({
             <div className="flex flex-col">
               {models.map((model) => {
                 const ModelIcon = MODEL_ICONS[model.icon];
-                const meta = MODEL_META[model.id];
                 const isSelected = model.id === value;
-                const isRecommended = meta?.recommended;
+                const showEditBadge =
+                  context === "edit" && model.bestForEdits;
 
                 return (
                   <button
@@ -163,12 +153,10 @@ export function ModelSelector({
                       setOpen(false);
                     }}
                     className={cn(
-                      "group relative flex w-full cursor-pointer items-start gap-3 border-b border-border/40 px-4 py-3.5 text-left transition-colors outline-none hover:bg-muted/50",
+                      "group border-border/40 hover:bg-muted/50 relative flex w-full cursor-pointer items-start gap-3 border-b px-4 py-3.5 text-left transition-all outline-none",
                       isSelected &&
-                        "bg-primary/[0.07] hover:bg-primary/[0.07]",
-                      isRecommended &&
-                        !isSelected &&
-                        "bg-muted/20",
+                        "bg-primary/[0.06] shadow-[inset_0_0_20px_-10px_rgba(var(--primary),0.3)]",
+                      model.recommended && !isSelected && "bg-muted/20",
                     )}
                   >
                     {/* Selected accent bar */}
@@ -195,17 +183,20 @@ export function ModelSelector({
                         <span
                           className={cn(
                             "text-xs font-bold",
-                            isSelected
-                              ? "text-primary"
-                              : "text-foreground",
+                            isSelected ? "text-primary" : "text-foreground",
                           )}
                         >
-                          {meta?.label || model.name}
+                          {model.label}
                         </span>
-                        {isRecommended && (
-                          <span className="bg-primary/15 text-primary inline-flex items-center gap-0.5 px-1.5 py-px text-[8px] font-bold uppercase tracking-wider">
+                        {model.recommended && (
+                          <span className="bg-primary/15 text-primary inline-flex items-center gap-0.5 px-1.5 py-px text-[8px] font-bold tracking-wider uppercase">
                             <StarIcon weight="fill" className="size-2" />
                             Recommended
+                          </span>
+                        )}
+                        {showEditBadge && (
+                          <span className="inline-flex items-center gap-0.5 bg-emerald-500/15 px-1.5 py-px text-[8px] font-bold tracking-wider uppercase text-emerald-500">
+                            Best for Edits
                           </span>
                         )}
                       </div>
@@ -217,7 +208,7 @@ export function ModelSelector({
 
                       {/* Description */}
                       <span className="text-muted-foreground text-[11px] leading-relaxed">
-                        {meta?.description || model.description}
+                        {model.friendlyDescription}
                       </span>
                     </div>
 
@@ -232,8 +223,6 @@ export function ModelSelector({
                   </button>
                 );
               })}
-
-
             </div>
           </div>
         </DialogContent>

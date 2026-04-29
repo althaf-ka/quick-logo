@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useEditForm } from "@/hooks/use-edit-form";
-import { MODELS } from "@quicklogo/ai-providers/models";
+import { getModelsForContext } from "@quicklogo/ai-providers/models";
 import { EditHistoryPanel } from "./edit-history-panel";
 import { PromptInput } from "@/components/global/prompt-input";
 import { ImageLoadingState } from "@/components/global/image-loading-state";
@@ -15,6 +15,7 @@ import {
   DownloadIcon,
   PaletteIcon,
   ClockCounterClockwiseIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
 import {
   Drawer,
@@ -30,9 +31,7 @@ const CHECKER = {
   backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
 } as const;
 
-const EDIT_MODELS = MODELS.filter((m) => m.supportsReferenceImage).map(
-  ({ id, name, credits, icon }) => ({ id, name, credits, icon }),
-);
+const EDIT_MODELS = getModelsForContext("edit");
 
 interface EditPageProps {
   imageId: string;
@@ -142,7 +141,8 @@ export function EditPage({
           onChange={setPrompt}
           onSubmit={handleEdit}
           isLoading={isEditing}
-          placeholder="Describe final image (e.g., 'isometric 3D, nature colors')"
+          placeholder="Describe your changes (e.g., 'make it red', 'add a hat')..."
+          contextPrompt={selectedEntry?.prompt || sourcePrompt}
           credits={credits}
           showModelSelector
           showConfigTrigger={isMobile}
@@ -153,6 +153,7 @@ export function EditPage({
           models={EDIT_MODELS}
           modelValue={model}
           onModelChange={setModel}
+          modelContext="edit"
         />
       </div>
 
@@ -232,37 +233,59 @@ export function EditPage({
             )}
           </div>
 
-          <div className="bg-card flex shrink-0 flex-col gap-2 border-t p-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                "w-full cursor-pointer justify-start gap-2 transition-opacity",
-                areActionsDisabled && "cursor-not-allowed opacity-60",
-              )}
-              disabled={areActionsDisabled}
-              onClick={handleDownload}
-            >
-              {isDownloading ? (
-                <Spinner className="size-4" />
-              ) : (
-                <DownloadIcon className="size-4" />
-              )}
-              Download
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className={cn(
-                "w-full cursor-pointer justify-start gap-2 transition-opacity",
-                areActionsDisabled && "cursor-not-allowed opacity-60",
-              )}
-              disabled={areActionsDisabled}
-              onClick={handleCanvasOpen}
-            >
-              <PaletteIcon className="size-4" />
-              Canvas
-            </Button>
+          <div className="bg-card flex shrink-0 flex-col gap-3 border-t p-4">
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className={cn(
+                  "group flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-none border-primary/40 bg-primary/10 text-primary transition-all hover:bg-primary/20",
+                  areActionsDisabled && "cursor-not-allowed opacity-50",
+                )}
+                disabled={areActionsDisabled}
+                onClick={handleCanvasOpen}
+              >
+                <SparkleIcon
+                  weight="fill"
+                  className="size-3.5 transition-transform group-hover:scale-110"
+                />
+                <span className="text-[11px] font-semibold tracking-tight">
+                  Generate Brand Kit
+                </span>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-full cursor-pointer justify-start gap-2 rounded-none border-border/60 text-[11px] font-medium transition-colors hover:bg-muted/50",
+                  areActionsDisabled && "cursor-not-allowed opacity-60",
+                )}
+                disabled={areActionsDisabled}
+                onClick={handleDownload}
+              >
+                {isDownloading ? (
+                  <Spinner className="size-3.5" />
+                ) : (
+                  <DownloadIcon className="size-3.5" />
+                )}
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-full cursor-pointer justify-start gap-2 rounded-none border-border/60 text-[11px] font-medium transition-colors hover:bg-muted/50",
+                  areActionsDisabled && "cursor-not-allowed opacity-60",
+                )}
+                disabled={areActionsDisabled}
+                onClick={handleCanvasOpen}
+              >
+                <PaletteIcon className="size-3.5" />
+                Canvas
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { useRef, useCallback } from "react";
+import type { ModelOption, ModelContext } from "@quicklogo/ai-providers/models";
 import { Button } from "@quicklogo/ui/components/button";
 import {
   Tooltip,
@@ -14,12 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 
-interface ModelItem {
-  id: string;
-  name: string;
-  credits: number;
-  icon?: "lightning" | "brain" | "crown" | "shuffle" | string;
-}
+
 
 interface PromptInputProps {
   value: string;
@@ -36,12 +32,15 @@ interface PromptInputProps {
   onConfigTrigger?: () => void;
   configIcon?: React.ReactNode;
   showModelSelector?: boolean;
-  models?: ModelItem[];
+  models?: ModelOption[];
   modelValue?: string;
   onModelChange?: (value: string) => void;
+  /** Which context determines the recommended badge in the model selector */
+  modelContext?: ModelContext;
   brandName?: string;
   onBrandNameChange?: (value: string) => void;
   className?: string;
+  contextPrompt?: string;
 }
 
 
@@ -66,6 +65,8 @@ export function PromptInput({
   brandName,
   onBrandNameChange,
   className,
+  contextPrompt,
+  modelContext = "generate",
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isCompact = size === "compact";
@@ -90,7 +91,10 @@ export function PromptInput({
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
       <div className="mx-auto max-w-2xl">
-        <div className="border-input bg-card focus-within:border-primary/25 flex flex-col border rounded-none overflow-hidden shadow-sm transition-colors">
+        <div 
+          className="border-input bg-card focus-within:border-primary/25 flex flex-col border rounded-none overflow-hidden shadow-sm transition-colors"
+          title={contextPrompt}
+        >
           {onBrandNameChange && !isCompact && (
             <div className="flex items-center px-3 h-10 gap-3 bg-muted/5 border-b border-border/40 transition-colors focus-within:bg-muted/10">
               <div className="flex items-center gap-2.5">
@@ -141,12 +145,17 @@ export function PromptInput({
           >
             <div className="flex items-center gap-0.5">
               {showModelSelector && models.length > 0 && (
-                <ModelSelector
-                  value={modelValue || ""}
-                  onChange={(val: string) => {
-                    if (val) onModelChange?.(val);
-                  }}
-                />
+                <div className="flex items-center">
+                  <ModelSelector
+                    variant="minimal"
+                    models={models}
+                    value={modelValue || ""}
+                    onChange={(val: string) => {
+                      if (val) onModelChange?.(val);
+                    }}
+                    context={modelContext}
+                  />
+                </div>
               )}
 
               {showMagicPrompt && (
@@ -208,24 +217,23 @@ export function PromptInput({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              {credits !== undefined && showModelSelector && (
-                <span className="text-muted-foreground/50 flex items-center gap-1 text-[11px] font-medium tabular-nums">
+            <div className="flex items-center gap-2.5">
+              {modelValue && models.find((m) => m.id === modelValue) && (
+                <div className="text-primary flex items-center gap-1 text-[11px] font-bold tabular-nums tracking-tight">
                   <LightningIcon
                     weight="fill"
-                    className="text-primary/60 size-3"
+                    className="size-3.5"
                   />
-                  {credits}
-                </span>
+                  {models.find((m) => m.id === modelValue)?.credits}
+                </div>
               )}
-
               <Button
                 onClick={onSubmit}
                 disabled={!canSubmit}
                 size="icon-sm"
                 className={cn(
                   "size-7 cursor-pointer transition-all duration-150",
-                  canSubmit && "active:scale-95",
+                  canSubmit && "active:scale-95 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20",
                 )}
               >
                 {isLoading ? (
