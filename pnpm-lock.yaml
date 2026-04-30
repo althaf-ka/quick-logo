@@ -306,6 +306,10 @@ importers:
         version: 4.66.0(@cloudflare/workers-types@4.20260301.1)
 
   packages/ai-providers:
+    dependencies:
+      '@quicklogo/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20260301.1
@@ -313,9 +317,6 @@ importers:
       '@quicklogo/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@quicklogo/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@quicklogo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config

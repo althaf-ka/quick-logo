@@ -11,7 +11,10 @@ export const Route = createFileRoute("/_authenticated/generate")({
   head: () => ({
     meta: [
       { title: "Generate Logo | QuickLogo" },
-      { name: "description", content: "Use AI to generate professional logos instantly." },
+      {
+        name: "description",
+        content: "Use AI to generate professional logos instantly.",
+      },
     ],
   }),
 });

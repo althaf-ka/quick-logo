@@ -1,3 +1,4 @@
+import type { ModelId } from "@quicklogo/shared";
 import type { AIProvider } from "../types";
 import { WorkersAIProvider } from "./workers-ai";
 import { LeonardoProvider } from "./leonardo";
@@ -20,7 +21,7 @@ export interface ModelMapping {
   };
 }
 
-const MODEL_REGISTRY: Record<string, ModelMapping> = {
+const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
   "quick-v1": {
     provider: "workers-ai",
     inputType: "json",
@@ -116,7 +117,29 @@ const MODEL_REGISTRY: Record<string, ModelMapping> = {
       },
     },
   },
+  "quick-nano-banana": {
+    provider: "leonardo",
+    inputType: "json",
+    backendModel: "nano-banana-2",
+    capabilities: {
+      nativePromptEnhancement: true,
+      imageToImage: true,
+      apiSchema: "v2",
+    },
+    defaultParams: {
+      width: 1024,
+      height: 1024,
+      providerOptions: {
+        apiSchema: "v2",
+        alchemy: false,
+        ultra: false,
+      },
+    },
+  },
 };
+
+const MODEL_REGISTRY_BY_ID: Partial<Record<string, ModelMapping>> =
+  MODEL_REGISTRY;
 
 export interface ProviderDeps {
   ai: Ai;
@@ -126,7 +149,7 @@ export interface ProviderDeps {
 }
 
 export function getModelMapping(modelId: string): ModelMapping {
-  const mapping = MODEL_REGISTRY[modelId];
+  const mapping = MODEL_REGISTRY_BY_ID[modelId];
   if (!mapping) throw new Error(`Unknown model: ${modelId}`);
   return mapping;
 }

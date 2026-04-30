@@ -15,8 +15,6 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 
-
-
 interface PromptInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -42,7 +40,6 @@ interface PromptInputProps {
   className?: string;
   contextPrompt?: string;
 }
-
 
 export function PromptInput({
   value,
@@ -87,28 +84,27 @@ export function PromptInput({
 
   const canSubmit = value.trim().length > 0 && !isLoading;
 
-
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
       <div className="mx-auto max-w-2xl">
-        <div 
-          className="border-input bg-card focus-within:border-primary/25 flex flex-col border rounded-none overflow-hidden shadow-sm transition-colors"
+        <div
+          className="border-input bg-card focus-within:border-primary/25 flex flex-col overflow-hidden rounded-none border shadow-sm transition-colors"
           title={contextPrompt}
         >
           {onBrandNameChange && !isCompact && (
-            <div className="flex items-center px-3 h-10 gap-3 bg-muted/5 border-b border-border/40 transition-colors focus-within:bg-muted/10">
+            <div className="bg-muted/5 border-border/40 focus-within:bg-muted/10 flex h-10 items-center gap-3 border-b px-3 transition-colors">
               <div className="flex items-center gap-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 select-none">
+                <span className="text-muted-foreground/50 text-[10px] font-bold tracking-wider uppercase select-none">
                   Brand:
                 </span>
-                <div className="h-4 w-px bg-border" />
+                <div className="bg-border h-4 w-px" />
               </div>
               <input
                 type="text"
                 value={brandName || ""}
                 onChange={(e) => onBrandNameChange(e.target.value)}
                 maxLength={50}
-                className="bg-transparent text-sm text-foreground w-full outline-none flex-1 h-full"
+                className="text-foreground h-full w-full flex-1 bg-transparent text-sm outline-none"
                 disabled={isLoading}
               />
             </div>
@@ -139,7 +135,7 @@ export function PromptInput({
 
           <div
             className={cn(
-              "flex items-center justify-between px-3 pt-2 border-t border-border/20",
+              "border-border/20 flex items-center justify-between border-t px-3 pt-2",
               isCompact ? "pb-1.5" : "pb-2",
             )}
           >
@@ -219,11 +215,8 @@ export function PromptInput({
 
             <div className="flex items-center gap-2.5">
               {modelValue && models.find((m) => m.id === modelValue) && (
-                <div className="text-primary flex items-center gap-1 text-[11px] font-bold tabular-nums tracking-tight">
-                  <LightningIcon
-                    weight="fill"
-                    className="size-3.5"
-                  />
+                <div className="text-primary flex items-center gap-1 text-[11px] font-bold tracking-tight tabular-nums">
+                  <LightningIcon weight="fill" className="size-3.5" />
                   {models.find((m) => m.id === modelValue)?.credits}
                 </div>
               )}
@@ -233,7 +226,8 @@ export function PromptInput({
                 size="icon-sm"
                 className={cn(
                   "size-7 cursor-pointer transition-all duration-150",
-                  canSubmit && "active:scale-95 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20",
+                  canSubmit &&
+                    "bg-primary hover:bg-primary/90 shadow-primary/20 shadow-lg active:scale-95",
                 )}
               >
                 {isLoading ? (

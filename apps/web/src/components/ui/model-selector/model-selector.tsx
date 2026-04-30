@@ -141,8 +141,8 @@ export function ModelSelector({
               {models.map((model) => {
                 const ModelIcon = MODEL_ICONS[model.icon];
                 const isSelected = model.id === value;
-                const showEditBadge =
-                  context === "edit" && model.bestForEdits;
+                const showRecommendedBadge =
+                  context === "edit" ? model.bestForEdits : model.recommended;
 
                 return (
                   <button
@@ -156,7 +156,7 @@ export function ModelSelector({
                       "group border-border/40 hover:bg-muted/50 relative flex w-full cursor-pointer items-start gap-3 border-b px-4 py-3.5 text-left transition-all outline-none",
                       isSelected &&
                         "bg-primary/[0.06] shadow-[inset_0_0_20px_-10px_rgba(var(--primary),0.3)]",
-                      model.recommended && !isSelected && "bg-muted/20",
+                      showRecommendedBadge && !isSelected && "bg-muted/20",
                     )}
                   >
                     {/* Selected accent bar */}
@@ -188,15 +188,10 @@ export function ModelSelector({
                         >
                           {model.label}
                         </span>
-                        {model.recommended && (
+                        {showRecommendedBadge && (
                           <span className="bg-primary/15 text-primary inline-flex items-center gap-0.5 px-1.5 py-px text-[8px] font-bold tracking-wider uppercase">
                             <StarIcon weight="fill" className="size-2" />
                             Recommended
-                          </span>
-                        )}
-                        {showEditBadge && (
-                          <span className="inline-flex items-center gap-0.5 bg-emerald-500/15 px-1.5 py-px text-[8px] font-bold tracking-wider uppercase text-emerald-500">
-                            Best for Edits
                           </span>
                         )}
                       </div>

@@ -1,10 +1,16 @@
 import type { GenerateConfig } from "../validators/generate";
-import { MODELS } from "./models";
+import { MODEL_IDS } from "./models";
 
-export { MODELS };
+export {
+  MODEL_IDS,
+  MODELS,
+  getModelCredits,
+  getModelsForContext,
+} from "./models";
+export type { ModelContext, ModelId, ModelOption } from "./models";
 
 export const DEFAULT_CONFIG: GenerateConfig = {
-  model: MODELS[0].id,
+  model: MODEL_IDS[0],
   style: "",
   brandName: "",
   imageCount: 1,

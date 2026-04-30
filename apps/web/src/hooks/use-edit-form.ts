@@ -44,23 +44,17 @@ export function useEditForm({
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [errorState, setErrorState] = useState<string | null>(null);
-  const [activeEditImageId, setActiveEditImageId] = useState<string | null>(
-    null,
-  );
+  const [manualActiveId, setManualActiveId] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 
-  const fetchedPrompt = fetchResult?.image?.prompt;
-  useEffect(() => {
-    // We keep prompt empty by default as per user preference for "Empty-State" editing
-  }, [fetchedPrompt]);
+  // The active ID is either local optimistic state or a pending server edit.
+  const activeEditImageId = useMemo(() => {
+    if (manualActiveId) return manualActiveId;
 
-  useEffect(() => {
-    if (!fetchResult?.history) return;
-    const pendingNode = fetchResult.history.find(
+    return fetchResult?.history?.find(
       (h) => h.status === "pending" || h.status === "processing",
-    );
-    if (pendingNode) setActiveEditImageId(pendingNode.id);
-  }, [fetchResult?.history]);
+    )?.id ?? null;
+  }, [manualActiveId, fetchResult?.history]);
 
   const serverHistory = useMemo(() => {
     if (!fetchResult?.history) return [];
@@ -102,7 +96,6 @@ export function useEditForm({
 
   const setSelectedEntry = useCallback((entry: EditHistoryEntry | null) => {
     setSelectedEntryId(entry?.id ?? null);
-    setPrompt(""); // Clear prompt for new instructions when switching versions
   }, []);
 
   const { data: pollingData, isError: isPollingError } = useQuery({
@@ -157,7 +150,7 @@ export function useEditForm({
 
       setTimeout(() => {
         setSelectedEntryId(entry.id);
-        setActiveEditImageId(null);
+        setManualActiveId(null);
       }, 0);
 
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -165,8 +158,9 @@ export function useEditForm({
     } else if (polledImage.status === "failed") {
       setTimeout(() => {
         setErrorState("Edit failed during generation.");
-        setActiveEditImageId(null);
+        setManualActiveId(null);
       }, 0);
+      queryClient.invalidateQueries({ queryKey: ["image-history", imageId] });
     }
   }, [pollingData, isPollingError, activeEditImageId, queryClient, imageId]);
 
@@ -178,11 +172,20 @@ export function useEditForm({
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
+      queryClient.invalidateQueries({
+        queryKey: ["image-status", data.imageId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["image-history", imageId] });
+      setManualActiveId(data.imageId);
+      setPrompt("");
     },
     onError: (err) => {
-      if (err instanceof ApiError && err.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
+      if (
+        err instanceof ApiError &&
+        err.code === ERROR_CODES.INSUFFICIENT_CREDITS
+      ) {
         toast.error("Not enough credits", { description: err.message });
         return;
       }
@@ -215,12 +218,17 @@ export function useEditForm({
     setErrorState(null);
 
     try {
+      const fetchedBrandName = (fetchResult?.image as Record<string, unknown>)
+        ?.brandName;
+      const brandName =
+        typeof fetchedBrandName === "string" ? fetchedBrandName : "";
+
       const payload: EditApiRequest = {
         prompt,
         sourceImageId: targetImageId,
         config: {
           model,
-          brandName: (fetchResult?.image as any)?.brandName ?? "",
+          brandName,
           imageCount: 1,
           style: "",
           colorPalette: "auto",
@@ -233,7 +241,7 @@ export function useEditForm({
       };
 
       const response = await mutateAsync(payload);
-      if (response?.imageId) setActiveEditImageId(response.imageId);
+      if (response?.imageId) setManualActiveId(response.imageId);
     } catch (err) {
       setErrorState(
         err instanceof Error ? err.message : "Failed to start edit",

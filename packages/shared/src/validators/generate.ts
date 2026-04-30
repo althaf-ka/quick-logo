@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { MODELS } from "../constants/models";
+import { MODEL_IDS } from "../constants/models";
 
-const modelIds = MODELS.map((m) => m.id) as [string, ...string[]];
+const modelIds = [...MODEL_IDS] as [string, ...string[]];
 
 // ── Frontend form schema (includes File/preview fields for UI) ──────
 
