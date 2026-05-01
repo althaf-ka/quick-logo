@@ -19,6 +19,7 @@ import {
   CheckIcon,
   TrashIcon,
   CaretUpIcon,
+  PaletteIcon,
 } from "@phosphor-icons/react";
 import {
   AlertDialog,
@@ -61,6 +62,7 @@ interface ProjectPreviewDialogProps {
   onDownload?: (project: Project) => void;
   onEditWithAI?: (project: Project) => void;
   onOpenInCanvas?: (project: Project) => void;
+  onOpenBrandKit?: (project: Project) => void;
   onDeleted?: (projectId: string) => void;
 }
 
@@ -71,6 +73,7 @@ export function ProjectPreviewDialog({
   onDownload,
   onEditWithAI,
   onOpenInCanvas,
+  onOpenBrandKit,
   onDeleted,
 }: ProjectPreviewDialogProps) {
   const [storageOpen, setStorageOpen] = useState(false);
@@ -327,7 +330,7 @@ export function ProjectPreviewDialog({
           </div>
         </div>
 
-        <div className="border-border/50 grid grid-cols-3 border-t">
+        <div className="border-border/50 grid grid-cols-4 border-t">
           <ActionCell
             icon={<PencilIcon weight="bold" className="size-3.5" />}
             label="Edit with AI"
@@ -352,6 +355,16 @@ export function ProjectPreviewDialog({
             icon={<DownloadIcon weight="bold" className="size-3.5" />}
             label="Download"
             onClick={() => onDownload?.(project)}
+            className="border-border/50 border-x"
+          />
+          <ActionCell
+            icon={<PaletteIcon weight="bold" className="size-3.5" />}
+            label="Brand Kit"
+            disabled={!project.latestImageId}
+            onClick={() => {
+              onOpenBrandKit?.(project);
+              onOpenChange(false);
+            }}
           />
         </div>
 

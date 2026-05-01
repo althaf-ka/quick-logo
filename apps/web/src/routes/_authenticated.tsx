@@ -46,6 +46,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/projects": "My Projects",
   "/credits": "Billing & Credits",
   "/settings": "Settings",
+  "/brand-kit": "Brand Kit",
 };
 
 function AuthenticatedLayout() {
@@ -57,7 +58,8 @@ function AuthenticatedLayout() {
   const isFullBleed =
     pathname.startsWith("/generate") ||
     pathname.startsWith("/edit") ||
-    pathname.startsWith("/canvas");
+    pathname.startsWith("/canvas") ||
+    pathname.startsWith("/brand-kit/create");
 
   return (
     <TooltipProvider>

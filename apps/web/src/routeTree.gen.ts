@@ -17,8 +17,10 @@ import { Route as AuthenticatedGenerateRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCreditsRouteImport } from './routes/_authenticated/credits'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as AuthenticatedBrandKitIndexRouteImport } from './routes/_authenticated/brand-kit/index'
 import { Route as AuthenticatedEditImageIdRouteImport } from './routes/_authenticated/edit/$imageId'
 import { Route as AuthenticatedCanvasImageIdRouteImport } from './routes/_authenticated/canvas/$imageId'
+import { Route as AuthenticatedBrandKitCreateRouteImport } from './routes/_authenticated/brand-kit/create'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -58,6 +60,12 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthenticatedBrandKitIndexRoute =
+  AuthenticatedBrandKitIndexRouteImport.update({
+    id: '/brand-kit/',
+    path: '/brand-kit/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedEditImageIdRoute =
   AuthenticatedEditImageIdRouteImport.update({
     id: '/edit/$imageId',
@@ -72,6 +80,12 @@ const AuthenticatedCanvasImageIdRoute =
   } as any).lazy(() =>
     import('./routes/_authenticated/canvas/$imageId.lazy').then((d) => d.Route),
   )
+const AuthenticatedBrandKitCreateRoute =
+  AuthenticatedBrandKitCreateRouteImport.update({
+    id: '/brand-kit/create',
+    path: '/brand-kit/create',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedRouteWithChildren
@@ -81,8 +95,10 @@ export interface FileRoutesByFullPath {
   '/generate': typeof AuthenticatedGenerateRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/brand-kit/create': typeof AuthenticatedBrandKitCreateRoute
   '/canvas/$imageId': typeof AuthenticatedCanvasImageIdRoute
   '/edit/$imageId': typeof AuthenticatedEditImageIdRoute
+  '/brand-kit/': typeof AuthenticatedBrandKitIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedRouteWithChildren
@@ -92,8 +108,10 @@ export interface FileRoutesByTo {
   '/generate': typeof AuthenticatedGenerateRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/brand-kit/create': typeof AuthenticatedBrandKitCreateRoute
   '/canvas/$imageId': typeof AuthenticatedCanvasImageIdRoute
   '/edit/$imageId': typeof AuthenticatedEditImageIdRoute
+  '/brand-kit': typeof AuthenticatedBrandKitIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,8 +123,10 @@ export interface FileRoutesById {
   '/_authenticated/generate': typeof AuthenticatedGenerateRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/brand-kit/create': typeof AuthenticatedBrandKitCreateRoute
   '/_authenticated/canvas/$imageId': typeof AuthenticatedCanvasImageIdRoute
   '/_authenticated/edit/$imageId': typeof AuthenticatedEditImageIdRoute
+  '/_authenticated/brand-kit/': typeof AuthenticatedBrandKitIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,8 +138,10 @@ export interface FileRouteTypes {
     | '/generate'
     | '/projects'
     | '/settings'
+    | '/brand-kit/create'
     | '/canvas/$imageId'
     | '/edit/$imageId'
+    | '/brand-kit/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,8 +151,10 @@ export interface FileRouteTypes {
     | '/generate'
     | '/projects'
     | '/settings'
+    | '/brand-kit/create'
     | '/canvas/$imageId'
     | '/edit/$imageId'
+    | '/brand-kit'
   id:
     | '__root__'
     | '/_auth'
@@ -141,8 +165,10 @@ export interface FileRouteTypes {
     | '/_authenticated/generate'
     | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/_authenticated/brand-kit/create'
     | '/_authenticated/canvas/$imageId'
     | '/_authenticated/edit/$imageId'
+    | '/_authenticated/brand-kit/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,6 +234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_authenticated/brand-kit/': {
+      id: '/_authenticated/brand-kit/'
+      path: '/brand-kit'
+      fullPath: '/brand-kit/'
+      preLoaderRoute: typeof AuthenticatedBrandKitIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/edit/$imageId': {
       id: '/_authenticated/edit/$imageId'
       path: '/edit/$imageId'
@@ -220,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/canvas/$imageId'
       fullPath: '/canvas/$imageId'
       preLoaderRoute: typeof AuthenticatedCanvasImageIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/brand-kit/create': {
+      id: '/_authenticated/brand-kit/create'
+      path: '/brand-kit/create'
+      fullPath: '/brand-kit/create'
+      preLoaderRoute: typeof AuthenticatedBrandKitCreateRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
@@ -242,8 +282,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedGenerateRoute: typeof AuthenticatedGenerateRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedBrandKitCreateRoute: typeof AuthenticatedBrandKitCreateRoute
   AuthenticatedCanvasImageIdRoute: typeof AuthenticatedCanvasImageIdRoute
   AuthenticatedEditImageIdRoute: typeof AuthenticatedEditImageIdRoute
+  AuthenticatedBrandKitIndexRoute: typeof AuthenticatedBrandKitIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -251,8 +293,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedGenerateRoute: AuthenticatedGenerateRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedBrandKitCreateRoute: AuthenticatedBrandKitCreateRoute,
   AuthenticatedCanvasImageIdRoute: AuthenticatedCanvasImageIdRoute,
   AuthenticatedEditImageIdRoute: AuthenticatedEditImageIdRoute,
+  AuthenticatedBrandKitIndexRoute: AuthenticatedBrandKitIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

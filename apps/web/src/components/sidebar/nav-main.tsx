@@ -1,5 +1,5 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { FolderIcon, MagicWandIcon } from "@phosphor-icons/react";
+import { FolderIcon, MagicWandIcon, SwatchesIcon } from "@phosphor-icons/react";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -44,6 +44,20 @@ export function NavMain() {
               className="size-4 transition-transform duration-300 group-hover/projects:scale-110"
             />
             <span className="text-[13px] tracking-tight">My Projects</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            tooltip="Brand Kit"
+            isActive={!!matchRoute({ to: "/brand-kit" })}
+            className="text-muted-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-sidebar-accent group/brandkit h-9 rounded-none transition-all duration-150 active:scale-[0.98]"
+            render={<Link to="/brand-kit" />}
+          >
+            <SwatchesIcon
+              weight="bold"
+              className="size-4 transition-transform duration-300 group-hover/brandkit:scale-110"
+            />
+            <span className="text-[13px] tracking-tight">Brand Kit</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

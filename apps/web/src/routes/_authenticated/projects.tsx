@@ -152,6 +152,14 @@ function ProjectsPage() {
             params: { imageId: p.latestImageId },
           });
         }}
+        onOpenBrandKit={(p) => {
+          if (!p.latestImageId) return;
+          setDialogOpen(false);
+          navigate({
+            to: "/brand-kit/create",
+            search: { imageId: p.latestImageId },
+          });
+        }}
         onDeleted={handleDeleted}
       />
     </div>

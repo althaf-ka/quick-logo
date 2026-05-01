@@ -242,7 +242,14 @@ export function EditPage({
                   areActionsDisabled && "cursor-not-allowed opacity-50",
                 )}
                 disabled={areActionsDisabled}
-                onClick={handleCanvasOpen}
+                onClick={() => {
+                  const targetUrl = selectedEntry?.url ?? sourceImageUrl;
+                  if (!targetUrl) return;
+                  navigate({
+                    to: "/brand-kit/create",
+                    search: { imageId: selectedEntry?.id ?? imageId },
+                  });
+                }}
               >
                 <SparkleIcon
                   weight="fill"

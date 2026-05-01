@@ -39,6 +39,7 @@ interface PromptInputProps {
   onBrandNameChange?: (value: string) => void;
   className?: string;
   contextPrompt?: string;
+  allowEmptySubmit?: boolean;
 }
 
 export function PromptInput({
@@ -64,6 +65,7 @@ export function PromptInput({
   className,
   contextPrompt,
   modelContext = "generate",
+  allowEmptySubmit = false,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isCompact = size === "compact";
@@ -82,7 +84,7 @@ export function PromptInput({
     [onSubmit],
   );
 
-  const canSubmit = value.trim().length > 0 && !isLoading;
+  const canSubmit = (!isLoading) && (allowEmptySubmit || value.trim().length > 0);
 
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
@@ -200,17 +202,6 @@ export function PromptInput({
                 </Tooltip>
               )}
 
-              {credits !== undefined && !showModelSelector && (
-                <div className="ml-1 flex items-center justify-center px-1.5 py-1">
-                  <span className="text-muted-foreground/50 flex items-center gap-1 text-[11px] font-medium tabular-nums">
-                    <LightningIcon
-                      weight="fill"
-                      className="text-primary/60 size-3"
-                    />
-                    {credits}
-                  </span>
-                </div>
-              )}
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -218,6 +209,12 @@ export function PromptInput({
                 <div className="text-primary flex items-center gap-1 text-[11px] font-bold tracking-tight tabular-nums">
                   <LightningIcon weight="fill" className="size-3.5" />
                   {models.find((m) => m.id === modelValue)?.credits}
+                </div>
+              )}
+              {credits !== undefined && !showModelSelector && (
+                <div className="text-primary flex items-center gap-1 text-[11px] font-bold tracking-tight tabular-nums">
+                  <LightningIcon weight="fill" className="size-3.5" />
+                  {credits}
                 </div>
               )}
               <Button
