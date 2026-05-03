@@ -13,8 +13,9 @@ import {
   QuestionIcon,
   CheckIcon,
   UploadIcon,
+  UploadSimpleIcon,
   XIcon,
-  Lightning,
+  LightningIcon,
 } from "@phosphor-icons/react";
 import {
   Tooltip,
@@ -23,6 +24,8 @@ import {
 } from "@quicklogo/ui/components/tooltip";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { toast } from "@quicklogo/ui/components/sonner";
+import { Skeleton } from "@quicklogo/ui/components/skeleton";
+import type { Deliverables } from "@/hooks/use-brand-kit";
 
 function ConfigField({
   label,
@@ -78,24 +81,18 @@ const FONTS = [
 ];
 
 export interface BrandKitSidebarProps {
+  // Logo
+  logoUrl: string | null;
+  isLoadingLogo: boolean;
+  onLogoUpload: (file: File) => void;
+  onLogoRemove: () => void;
+  isFromPlatform: boolean;
+
+  // Config
   typography: string;
   setTypography: (v: string) => void;
-  deliverables: {
-    colorPalette: boolean;
-    typography: boolean;
-    socialMedia: boolean;
-    businessCard: boolean;
-    favicon: boolean;
-  };
-  setDeliverables: React.Dispatch<
-    React.SetStateAction<{
-      colorPalette: boolean;
-      typography: boolean;
-      socialMedia: boolean;
-      businessCard: boolean;
-      favicon: boolean;
-    }>
-  >;
+  deliverables: Deliverables;
+  setDeliverables: React.Dispatch<React.SetStateAction<Deliverables>>;
   mockupImages: File[];
   setMockupImages: React.Dispatch<React.SetStateAction<File[]>>;
   mockupPreviews: string[];
@@ -104,17 +101,22 @@ export interface BrandKitSidebarProps {
 }
 
 export function BrandKitSidebar({
+  logoUrl,
+  isLoadingLogo,
+  onLogoUpload,
+  onLogoRemove,
+  isFromPlatform,
   typography,
   setTypography,
   deliverables,
   setDeliverables,
-  mockupImages,
   setMockupImages,
   mockupPreviews,
   extractedColors,
   className,
 }: BrandKitSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const selectedFont = FONTS.find((f) => f.id === typography);
 
@@ -127,6 +129,74 @@ export function BrandKitSidebar({
         className,
       )}
     >
+      {/* Logo Preview Section */}
+      <div className="space-y-2">
+        <h3 className="text-muted-foreground/40 text-[10px] font-bold tracking-widest uppercase">
+          Logo
+        </h3>
+
+        <input
+          ref={logoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onLogoUpload(file);
+          }}
+        />
+
+        {isLoadingLogo ? (
+          <div className="border-border/30 flex aspect-square items-center justify-center border border-dashed">
+            <Skeleton className="size-16" />
+          </div>
+        ) : logoUrl ? (
+          <div className="group border-border/30 relative border">
+            <div className="bg-muted/20 flex aspect-square items-center justify-center p-4">
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="max-h-full max-w-full object-contain drop-shadow-md"
+              />
+            </div>
+            {!isFromPlatform && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-none font-mono text-[10px]"
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  Change
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="rounded-none font-mono text-[10px]"
+                  onClick={onLogoRemove}
+                >
+                  Remove
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => logoInputRef.current?.click()}
+            className="group border-muted-foreground/20 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary flex w-full cursor-pointer flex-col items-center gap-2 border border-dashed py-6 transition-all"
+          >
+            <UploadSimpleIcon
+              weight="bold"
+              className="size-5 transition-transform group-hover:-translate-y-0.5"
+            />
+            <span className="font-mono text-[10px] tracking-wide uppercase">
+              Upload Logo
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Brand Settings */}
       <h3 className="text-muted-foreground/40 text-[10px] font-bold tracking-widest uppercase">
         Brand Settings
       </h3>
@@ -334,7 +404,7 @@ function DeliverableToggle({
       </div>
       {credits > 0 && (
         <span className="text-muted-foreground flex items-center gap-0.5 font-mono text-[9px] tracking-widest uppercase">
-          <Lightning weight="fill" className="text-primary size-2.5" />+
+          <LightningIcon weight="fill" className="text-primary size-2.5" />+
           {credits}
         </span>
       )}

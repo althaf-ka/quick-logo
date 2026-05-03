@@ -12,6 +12,8 @@ import {
   GearIcon,
   LightningIcon,
   ArrowUpIcon,
+  XIcon,
+  CrosshairIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 
@@ -40,6 +42,10 @@ interface PromptInputProps {
   className?: string;
   contextPrompt?: string;
   allowEmptySubmit?: boolean;
+  /** Shows a targeting context badge above the input. Only used by brand-kit. */
+  targetContext?: string;
+  /** Called when user dismisses the targeting badge. */
+  onClearTarget?: () => void;
 }
 
 export function PromptInput({
@@ -65,6 +71,8 @@ export function PromptInput({
   className,
   contextPrompt,
   modelContext = "generate",
+  targetContext,
+  onClearTarget,
   allowEmptySubmit = false,
 }: PromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -93,7 +101,24 @@ export function PromptInput({
           className="border-input bg-card focus-within:border-primary/25 flex flex-col overflow-hidden rounded-none border shadow-sm transition-colors"
           title={contextPrompt}
         >
-          {onBrandNameChange && !isCompact && (
+          {targetContext && (
+            <div className="bg-primary/5 border-border/20 flex items-center gap-2 border-b px-3 py-1.5">
+              <CrosshairIcon weight="bold" className="text-primary size-3" />
+              <span className="text-primary font-mono text-[10px] font-bold tracking-wider uppercase">
+                Refining: {targetContext}
+              </span>
+              {onClearTarget && (
+                <button
+                  onClick={onClearTarget}
+                  className="text-muted-foreground/50 hover:text-foreground ml-auto cursor-pointer transition-colors"
+                >
+                  <XIcon weight="bold" className="size-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {onBrandNameChange && !isCompact && !targetContext && (
             <div className="bg-muted/5 border-border/40 focus-within:bg-muted/10 flex h-10 items-center gap-3 border-b px-3 transition-colors">
               <div className="flex items-center gap-2.5">
                 <span className="text-muted-foreground/50 text-[10px] font-bold tracking-wider uppercase select-none">

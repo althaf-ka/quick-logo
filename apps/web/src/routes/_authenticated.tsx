@@ -59,7 +59,8 @@ function AuthenticatedLayout() {
     pathname.startsWith("/generate") ||
     pathname.startsWith("/edit") ||
     pathname.startsWith("/canvas") ||
-    pathname.startsWith("/brand-kit/create");
+    pathname.startsWith("/brand-kit/create") ||
+    /^\/brand-kit\/(?!create$)[^/]+$/.test(pathname);
 
   return (
     <TooltipProvider>
