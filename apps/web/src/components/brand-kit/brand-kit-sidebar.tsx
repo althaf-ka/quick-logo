@@ -64,21 +64,7 @@ function ConfigField({
   );
 }
 
-const FONTS = [
-  { id: "modern-sans", name: "Modern Sans-Serif", family: "Inter, sans-serif" },
-  { id: "classic-serif", name: "Classic Serif", family: "Merriweather, serif" },
-  {
-    id: "playful-display",
-    name: "Playful Display",
-    family: "Comic Sans MS, cursive",
-  },
-  {
-    id: "elegant-script",
-    name: "Elegant Script",
-    family: "Brush Script MT, cursive",
-  },
-  { id: "tech-mono", name: "Tech Mono", family: "JetBrains Mono, monospace" },
-];
+import { BRAND_KIT_FONTS as FONTS } from "./brand-kit-fonts";
 
 export interface BrandKitSidebarProps {
   // Logo

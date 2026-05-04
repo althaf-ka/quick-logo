@@ -1,7 +1,10 @@
 import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
 import { PromptInput } from "@/components/global/prompt-input";
 import { BrandKitSidebar } from "@/components/brand-kit/brand-kit-sidebar";
+import { BrandKitResults } from "@/components/brand-kit/brand-kit-results";
 import { useBrandKit, getSectionLabel } from "@/hooks/use-brand-kit";
+import { LoadingStatusIndicator } from "@/components/global/loading-status-indicator";
+import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { SlidersHorizontalIcon, SparkleIcon } from "@phosphor-icons/react";
 import {
   Drawer,
@@ -11,9 +14,7 @@ import {
 } from "@quicklogo/ui/components/drawer";
 
 interface BrandKitWorkspaceProps {
-  /** For create mode — optional platform logo ID from search params */
   imageId?: string;
-  /** For view mode — saved brand kit ID to fetch from DB */
   brandKitId?: string;
 }
 
@@ -30,16 +31,19 @@ export function BrandKitWorkspace({
 
   return (
     <div className="flex h-full">
-      {/* Center Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="scrollbar-subtle flex flex-1 flex-col items-center overflow-y-auto p-4 md:p-6">
-          {bk.results ? (
-            // Phase 2: <BrandKitResults> will go here
-            <div className="mx-auto w-full max-w-3xl">
-              <p className="text-muted-foreground font-mono text-xs">
-                Results will be displayed here after generation.
-              </p>
-            </div>
+          {bk.isGenerating ? (
+            <GeneratingState />
+          ) : bk.results ? (
+            <BrandKitResults
+              data={bk.results}
+              onRefine={(sectionId) => bk.setTargetSection(sectionId)}
+              onDownloadAll={() => {
+                // TODO: Generate ZIP and trigger download
+              }}
+              refiningSectionId={bk.refiningSectionId}
+            />
           ) : bk.logoUrl ? (
             <LogoReadyState />
           ) : (
@@ -51,7 +55,7 @@ export function BrandKitWorkspace({
           value={bk.prompt}
           onChange={bk.setPrompt}
           onSubmit={bk.handleGenerate}
-          isLoading={bk.isGenerating}
+          isLoading={bk.isGenerating || !!bk.refiningSectionId}
           placeholder={promptPlaceholder}
           credits={bk.totalCredits}
           targetContext={
@@ -72,7 +76,6 @@ export function BrandKitWorkspace({
         />
       </div>
 
-      {/* Desktop Sidebar */}
       {!isMobile && (
         <BrandKitSidebar
           logoUrl={bk.logoUrl}
@@ -91,7 +94,6 @@ export function BrandKitWorkspace({
         />
       )}
 
-      {/* Mobile Drawer */}
       {isMobile && (
         <Drawer open={bk.sidebarOpen} onOpenChange={bk.setSidebarOpen}>
           <DrawerContent className="max-h-[85vh] px-0 pb-0">
@@ -125,7 +127,48 @@ export function BrandKitWorkspace({
   );
 }
 
-/** Shown when a logo is uploaded but brand kit hasn't been generated yet */
+function GeneratingState() {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 py-6">
+      <div className="flex flex-col items-center gap-4">
+        <LoadingStatusIndicator label="Generating brand kit..." subtle />
+        <p className="text-muted-foreground/40 font-mono text-[9px] tracking-wider">
+          This may take a moment
+        </p>
+      </div>
+
+      {/* Logo variations skeleton */}
+      <div className="space-y-3">
+        <Skeleton className="h-3 w-28" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="aspect-square w-full" />
+          ))}
+        </div>
+      </div>
+
+      {/* Color palette skeleton */}
+      <div className="space-y-3">
+        <Skeleton className="h-3 w-24" />
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="aspect-[4/3] w-full" />
+          ))}
+        </div>
+      </div>
+
+      {/* Typography skeleton */}
+      <div className="space-y-3">
+        <Skeleton className="h-3 w-32" />
+        <div className="grid gap-3 md:grid-cols-2">
+          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-36 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LogoReadyState() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6">
@@ -147,7 +190,6 @@ function LogoReadyState() {
   );
 }
 
-/** Shown when no logo has been uploaded yet */
 function EmptyState() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6">

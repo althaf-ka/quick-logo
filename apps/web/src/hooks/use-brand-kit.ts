@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { api } from "@/lib/api";
 import { toast } from "@quicklogo/ui/components/sonner";
+import type { BrandKitResultsData } from "@/components/brand-kit/brand-kit-results";
+import { getFontById } from "@/components/brand-kit/brand-kit-fonts";
 
 export interface Deliverables {
   colorPalette: boolean;
@@ -10,37 +12,19 @@ export interface Deliverables {
   favicon: boolean;
 }
 
-export interface BrandKitSection {
-  id: string;
-  type: "logo-variations" | "color-palette" | "typography" | "social-media" | "business-card" | "favicon";
-  label: string;
-  data: unknown;
-}
-
-export interface BrandKitResults {
-  id: string;
-  sections: BrandKitSection[];
-  createdAt: Date;
-}
-
 interface UseBrandKitOptions {
-  /** For create mode: optional platform imageId from search params */
   imageId?: string;
-  /** For view mode: saved brand kit ID to fetch from DB */
   brandKitId?: string;
 }
 
 export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
-  // ── Logo State ──────────────────────────────────────────────
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isLoadingLogo, setIsLoadingLogo] = useState(!!imageId || !!brandKitId);
   const isFromPlatform = !!imageId;
 
-  // ── Brand Identity ──────────────────────────────────────────
   const [brandName, setBrandName] = useState("");
   const [prompt, setPrompt] = useState("");
 
-  // ── Config ──────────────────────────────────────────────────
   const [typography, setTypography] = useState("modern-sans");
   const [deliverables, setDeliverables] = useState<Deliverables>({
     colorPalette: true,
@@ -50,35 +34,25 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     favicon: false,
   });
 
-  // ── Product Images ──────────────────────────────────────────
   const [mockupImages, setMockupImages] = useState<File[]>([]);
   const [extractedColors, setExtractedColors] = useState<string[]>([]);
-
-  // ── Targeting (for section regeneration) ────────────────────
   const [targetSection, setTargetSection] = useState<string | null>(null);
-
-  // ── Generation ──────────────────────────────────────────────
   const [isGenerating, setIsGenerating] = useState(false);
-  const [results] = useState<BrandKitResults | null>(null);
-
-  // ── UI State ────────────────────────────────────────────────
+  const [refiningSectionId, setRefiningSectionId] = useState<string | null>(null);
+  const [results, setResults] = useState<BrandKitResultsData | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // ── Derived: mockup preview URLs ────────────────────────────
   const mockupPreviews = useMemo(() => {
     return mockupImages.map((img) => URL.createObjectURL(img));
   }, [mockupImages]);
 
-  // Cleanup mockup preview URLs
   useEffect(() => {
     return () => {
       mockupPreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-    // Only cleanup on unmount or when mockupImages changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mockupImages]);
 
-  // ── Credit Calculation ──────────────────────────────────────
   const baseCredits = 5;
   const regenerationCredits = 2;
 
@@ -95,7 +69,6 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     [targetSection, extraCredits],
   );
 
-  // ── Fetch Platform Logo (when imageId is provided) ──────────
   useEffect(() => {
     if (!imageId) return;
 
@@ -105,10 +78,8 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
         if (res.ok) {
           res.json().then((data) => {
             setLogoUrl(data.image.imageUrl);
-            // TODO: Extract colors from actual image (use a vision API or canvas-based extraction)
             setExtractedColors(["#10b981", "#047857", "#064e3b", "#ecfdf5"]);
 
-            // Auto-populate brand name if available from the original generation
             const imgData = data.image as Record<string, unknown>;
             if (typeof imgData.brandName === "string" && imgData.brandName) {
               setBrandName(imgData.brandName);
@@ -122,27 +93,12 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
       .finally(() => setIsLoadingLogo(false));
   }, [imageId]);
 
-  // ── Fetch Saved Brand Kit (when brandKitId is provided) ─────
   useEffect(() => {
     if (!brandKitId) return;
-
-    // TODO: Fetch from brand-kit API endpoint when backend is ready
-    // api.brandKit[":id"].$get({ param: { id: brandKitId } })
-    //   .then(res => res.json())
-    //   .then(data => {
-    //     setLogoUrl(data.logoUrl);
-    //     setExtractedColors(data.extractedColors);
-    //     setBrandName(data.brandName);
-    //     setTypography(data.typography);
-    //     setDeliverables(data.deliverables);
-    //     setResults(data.results);
-    //   })
-    //   .finally(() => setIsLoadingLogo(false));
-
+    // TODO: Wire up to brand-kit API endpoint via RPC
     setIsLoadingLogo(false);
   }, [brandKitId]);
 
-  // ── Logo Upload (user uploads their own) ────────────────────
   const handleLogoUpload = useCallback((file: File) => {
     if (file.size > 10 * 1024 * 1024) {
       toast.error("Logo too large", {
@@ -153,7 +109,6 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
 
     const url = URL.createObjectURL(file);
     setLogoUrl(url);
-    // TODO: Replace with real color extraction
     setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
   }, []);
 
@@ -162,7 +117,6 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     setExtractedColors([]);
   }, []);
 
-  // ── Generation Handler ──────────────────────────────────────
   const handleGenerate = useCallback(() => {
     if (!logoUrl) {
       toast.error("Please upload or select a logo first");
@@ -173,38 +127,89 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
       return;
     }
 
-    setIsGenerating(true);
+    if (targetSection) {
+      setRefiningSectionId(targetSection);
+    } else {
+      setIsGenerating(true);
+    }
 
-    // TODO: Wire up to actual AI generation endpoint via RPC
-    // For now, mock the generation
+    // TODO: Wire up to AI generation endpoint via RPC
     setTimeout(() => {
       setIsGenerating(false);
+      setRefiningSectionId(null);
 
       if (targetSection) {
         toast.success(`${getSectionLabel(targetSection)} regenerated`);
         setTargetSection(null);
       } else {
+        const selectedFont = getFontById(typography);
+
+        const mockResults: BrandKitResultsData = {
+          brandName: brandName || "Your Brand",
+          logoUrl: logoUrl,
+          productImages: mockupPreviews.length > 0 ? mockupPreviews : undefined,
+          logoVariations: [
+            { id: "primary", label: "Primary", url: logoUrl, background: "light" },
+            { id: "dark", label: "On Dark", url: logoUrl, background: "dark" },
+            { id: "mono", label: "Monochrome", url: logoUrl, background: "light" },
+            { id: "icon", label: "Icon Only", url: logoUrl, background: "transparent" },
+          ],
+          colorPalette: [
+            { hex: extractedColors[0] || "#3b82f6", role: "Primary", rgb: "59, 130, 246" },
+            { hex: extractedColors[1] || "#1d4ed8", role: "Dark", rgb: "29, 78, 216" },
+            { hex: extractedColors[2] || "#1e3a8a", role: "Accent", rgb: "30, 58, 138" },
+            { hex: extractedColors[3] || "#eff6ff", role: "Light", rgb: "239, 246, 255" },
+            { hex: "#f8fafc", role: "Background", rgb: "248, 250, 252" },
+            { hex: "#0f172a", role: "Text", rgb: "15, 23, 42" },
+          ],
+          typography: {
+            heading: {
+              name: selectedFont.name,
+              family: selectedFont.family,
+              weight: "700",
+            },
+            body: {
+              name: selectedFont.name,
+              family: selectedFont.family,
+              weight: "400",
+            },
+          },
+          ...(deliverables.socialMedia && {
+            socialMedia: [
+              { platform: "Instagram", type: "Profile", dimensions: "320×320", url: logoUrl },
+              { platform: "LinkedIn", type: "Cover", dimensions: "1584×396", url: logoUrl },
+              { platform: "X / Twitter", type: "Header", dimensions: "1500×500", url: logoUrl },
+            ],
+          }),
+          ...(deliverables.businessCard && {
+            businessCard: { frontUrl: logoUrl, backUrl: logoUrl },
+          }),
+          ...(deliverables.favicon && {
+            favicons: [
+              { size: 16, label: "Favicon", url: logoUrl },
+              { size: 32, label: "Favicon 2x", url: logoUrl },
+              { size: 180, label: "Apple Touch", url: logoUrl },
+              { size: 512, label: "App Icon", url: logoUrl },
+            ],
+          }),
+        };
+
+        setResults(mockResults);
         toast.success("Brand Kit generated successfully!");
-        // TODO: Save to DB and redirect to /brand-kit/$id
       }
     }, 2000);
-  }, [logoUrl, prompt, targetSection]);
+  }, [logoUrl, prompt, targetSection, brandName, extractedColors, deliverables, mockupPreviews, typography]);
 
   return {
-    // Logo
     logoUrl,
     isLoadingLogo,
     handleLogoUpload,
     handleLogoRemove,
     isFromPlatform,
-
-    // Brand Identity
     brandName,
     setBrandName,
     prompt,
     setPrompt,
-
-    // Config
     typography,
     setTypography,
     deliverables,
@@ -213,20 +218,13 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     setMockupImages,
     mockupPreviews,
     extractedColors,
-
-    // Targeting
     targetSection,
     setTargetSection,
-
-    // Generation
     isGenerating,
+    refiningSectionId,
     handleGenerate,
     totalCredits,
-
-    // Results
     results,
-
-    // UI
     sidebarOpen,
     setSidebarOpen,
   };
@@ -240,6 +238,7 @@ function getSectionLabel(sectionId: string): string {
     "social-media": "Social Media Kit",
     "business-card": "Business Card",
     "favicon": "Favicon & Icons",
+    "brand-guidelines": "Brand Guidelines",
   };
   return labels[sectionId] ?? sectionId;
 }
