@@ -16,3 +16,6 @@ export * from "./transactions/schema";
 
 // ── System Logs exports ──
 export * from "./system_logs/schema";
+
+// ── Brand Kits exports ──
+export * from "./brand_kits/schema";

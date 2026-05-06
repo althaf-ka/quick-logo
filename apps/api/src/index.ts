@@ -12,6 +12,7 @@ import paymentsRoute from "./routes/payments";
 import projectsRoute from "./routes/projects";
 import adminRoute from "./routes/admin";
 import logsRoute from "./routes/logs";
+import brandKitsRoute from "./routes/brand-kits";
 
 import { Bindings, Variables } from "./types";
 import { globalErrorHandler } from "./lib/error-handler";
@@ -48,7 +49,8 @@ const routes = app
   .route("/api/payments", paymentsRoute)
   .route("/api/projects", projectsRoute)
   .route("/api/admin", adminRoute)
-  .route("/api/logs", logsRoute);
+  .route("/api/logs", logsRoute)
+  .route("/api/brand-kits", brandKitsRoute);
 
 export default app;
 export type AppType = typeof routes;

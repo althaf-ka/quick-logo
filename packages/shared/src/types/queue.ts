@@ -1,4 +1,5 @@
 export interface GenerateImageMessage {
+  type?: "image";
   imageId: string;
   projectId: string;
   userId: string;
@@ -19,3 +20,30 @@ export interface GenerateImageMessage {
     brandName?: string;
   };
 }
+
+export interface GenerateBrandKitMessage {
+  type: "brand-kit-generate";
+  brandKitId: string;
+  sourceImageId?: string;
+  customLogoUrl?: string;
+  brandName: string;
+  prompt: string;
+  typographyStyle: string;
+  productImageUrls?: string[];
+  deliverables: {
+    socialMedia: boolean;
+    businessCard: boolean;
+    favicon: boolean;
+  };
+  extractedColors: string[];
+}
+
+export interface RefineBrandKitMessage {
+  type: "brand-kit-refine";
+  brandKitId: string;
+  sectionId: "logo-variations" | "color-palette" | "typography" | "social-media" | "business-card" | "favicon";
+  refinementPrompt: string;
+  typographyStyle?: string;
+}
+
+export type QueueMessage = GenerateImageMessage | GenerateBrandKitMessage | RefineBrandKitMessage;

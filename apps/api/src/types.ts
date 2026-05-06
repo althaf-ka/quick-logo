@@ -1,10 +1,10 @@
 import type { D1Database, Queue } from "@cloudflare/workers-types";
 import type { Database, User, Session } from "@quicklogo/db";
-import type { GenerateImageMessage } from "@quicklogo/shared";
+import type { QueueMessage } from "@quicklogo/shared";
 
 export type Bindings = {
   DB: D1Database;
-  GENERATION_QUEUE: Queue<GenerateImageMessage>;
+  GENERATION_QUEUE: Queue<QueueMessage>;
   CLIENT_URL: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
