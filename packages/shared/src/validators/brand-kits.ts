@@ -3,7 +3,7 @@ import { z } from "zod";
 export const generateBrandKitSchema = z.object({
   sourceImageId: z.string().optional(),
   customLogoUrl: z.string().optional(),
-  brandName: z.string().min(1, "Brand name is required"),
+  brandName: z.string().optional(),
   prompt: z.string().min(1, "Brand description is required"),
   typographyStyle: z.string(), // Input preference (e.g., "modern-sans")
   productImageUrls: z.array(z.string()).optional(),
@@ -15,6 +15,14 @@ export const generateBrandKitSchema = z.object({
   extractedColors: z.array(z.string()),
 }).refine(data => data.sourceImageId || data.customLogoUrl, {
   message: "Either a generated image ID or custom logo URL must be provided",
+}).refine(data => {
+  if (data.customLogoUrl && !data.sourceImageId && (!data.brandName || data.brandName.trim() === "")) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Brand name is required",
+  path: ["brandName"],
 });
 
 export const refineBrandKitSectionSchema = z.object({

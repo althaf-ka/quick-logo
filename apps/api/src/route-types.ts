@@ -19,3 +19,4 @@ export type { BatchesType } from "./routes/batches";
 export type { ImagesType } from "./routes/images";
 export type { PaymentsType } from "./routes/payments";
 export type { ProjectsType } from "./routes/projects";
+export type { BrandKitsType } from "./routes/brand-kits";

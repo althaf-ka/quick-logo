@@ -30,7 +30,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     await db.insert(brandKits).values({
       id: brandKitId,
       userId: user.id,
-      brandName: data.brandName,
+      brandName: data.brandName || "",
       prompt: data.prompt,
       sourceImageId: data.sourceImageId,
       customLogoUrl: data.customLogoUrl,
@@ -41,7 +41,8 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     await c.env.GENERATION_QUEUE.send({
       type: "brand-kit-generate",
       brandKitId,
-      ...data
+      ...data,
+      brandName: data.brandName || ""
     });
 
     return c.json({ brandKitId }, 202);
@@ -126,24 +127,25 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       newMergedJSON[key] = sourceResults[key];
     }
 
-    await db.transaction(async (tx) => {
-      await tx.update(brandKitRevisions)
+    const [maxRev] = await db.select({ max: sql<number>`MAX(revision_number)` })
+      .from(brandKitRevisions).where(eq(brandKitRevisions.brandKitId, id));
+      
+    await db.batch([
+      db.update(brandKitRevisions)
         .set({ isActive: false })
-        .where(and(eq(brandKitRevisions.brandKitId, id), eq(brandKitRevisions.isActive, true)));
+        .where(and(eq(brandKitRevisions.brandKitId, id), eq(brandKitRevisions.isActive, true))),
         
-      const [maxRev] = await tx.select({ max: sql<number>`MAX(revision_number)` })
-        .from(brandKitRevisions).where(eq(brandKitRevisions.brandKitId, id));
-        
-      await tx.insert(brandKitRevisions).values({
+      db.insert(brandKitRevisions).values({
         brandKitId: id,
         isActive: true,
         revisionNumber: (maxRev.max || 0) + 1,
         triggerType: `restore_${sectionId}`,
         results: newMergedJSON
-      });
-    });
+      })
+    ]);
 
     return c.json({ status: "success" });
   });
 
+export type BrandKitsType = typeof brandKitsRoute;
 export default brandKitsRoute;

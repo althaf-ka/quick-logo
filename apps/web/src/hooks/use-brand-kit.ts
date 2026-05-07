@@ -1,8 +1,15 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { toast } from "@quicklogo/ui/components/sonner";
+import type { InferResponseType } from "@quicklogo/api-client";
 import type { BrandKitResultsData } from "@/components/brand-kit/brand-kit-results";
-import { getFontById } from "@/components/brand-kit/brand-kit-fonts";
+import { toast } from "@quicklogo/ui/components/sonner";
+
+export type BrandKitResponse = InferResponseType<
+  (typeof api.brandKits)[":id"]["$get"],
+  200
+>;
+export type BrandKitRevision = NonNullable<BrandKitResponse>["revisions"][0];
 
 export interface Deliverables {
   colorPalette: boolean;
@@ -17,9 +24,18 @@ interface UseBrandKitOptions {
   brandKitId?: string;
 }
 
-export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
+export function useBrandKit({
+  imageId,
+  brandKitId: initialBrandKitId,
+}: UseBrandKitOptions) {
+  const queryClient = useQueryClient();
+  const [brandKitId, setBrandKitId] = useState<string | null>(
+    initialBrandKitId || null,
+  );
+
+  // Local state for inputs (Initial Generation)
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [isLoadingLogo, setIsLoadingLogo] = useState(!!imageId || !!brandKitId);
+  const [isLoadingLogo, setIsLoadingLogo] = useState(!!imageId);
   const isFromPlatform = !!imageId;
 
   const [brandName, setBrandName] = useState("");
@@ -37,10 +53,222 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
   const [mockupImages, setMockupImages] = useState<File[]>([]);
   const [extractedColors, setExtractedColors] = useState<string[]>([]);
   const [targetSection, setTargetSection] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [refiningSectionId, setRefiningSectionId] = useState<string | null>(null);
-  const [results, setResults] = useState<BrandKitResultsData | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [refiningSectionId, setRefiningSectionId] = useState<string | null>(
+    null,
+  );
+
+  // 1. Unified Query for Fetching & Polling
+  const {
+    data,
+    isLoading: isQueryLoading,
+    error,
+  } = useQuery({
+    queryKey: ["brand-kit", brandKitId],
+    queryFn: async () => {
+      if (!brandKitId) return null;
+      const res = await api.brandKits[":id"].$get({
+        param: { id: brandKitId },
+      });
+      if (!res.ok) throw new Error("Failed to fetch Brand Kit");
+      return res.json();
+    },
+    refetchInterval: (query) => {
+      const status = query.state.data?.brandKit?.status;
+      if (status === "pending" || status === "processing") return 2000;
+      return false; // stop polling
+    },
+    enabled: !!brandKitId,
+  });
+
+  const brandKit = data?.brandKit ?? null;
+  const revisions = useMemo(() => data?.revisions ?? [], [data?.revisions]);
+
+  const results = useMemo(() => {
+    const active = revisions.find((r) => r.isActive);
+    return active ? (active.results as unknown as BrandKitResultsData) : null;
+  }, [revisions]);
+
+  const isGenerating =
+    brandKit?.status === "pending" || brandKit?.status === "processing";
+
+  // Pre-fill logo and brand name if imageId is provided
+  useEffect(() => {
+    if (!imageId) return;
+
+    const fetchImage = async () => {
+      try {
+        const res = await api.images[":id"].$get({ param: { id: imageId } });
+        if (res.ok) {
+          const data = await res.json();
+          setLogoUrl(data.image.imageUrl);
+          // In a real app, colors would be extracted here or passed down
+          setExtractedColors(["#10b981", "#047857", "#064e3b", "#ecfdf5"]);
+          const imgConfig = data.image.config as Record<string, unknown>;
+          if (imgConfig && typeof imgConfig.brandName === "string") {
+            setBrandName(imgConfig.brandName);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch image", err);
+      } finally {
+        setIsLoadingLogo(false);
+      }
+    };
+
+    fetchImage();
+  }, [imageId]);
+
+  // Mutations
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.brandKits.index.$post({
+        json: {
+          sourceImageId: isFromPlatform ? imageId : undefined,
+          customLogoUrl: !isFromPlatform && logoUrl ? logoUrl : undefined,
+          brandName,
+          prompt,
+          typographyStyle: typography,
+          deliverables,
+          extractedColors,
+        },
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        let errorMessage = errData?.error || "Failed to generate";
+        const errJson = errData as Record<string, unknown>;
+        if (errJson?.issues && Array.isArray(errJson.issues) && errJson.issues.length > 0) {
+          errorMessage = (errJson.issues[0] as { message: string }).message;
+        }
+        throw new Error(errorMessage);
+      }
+      return res.json();
+    },
+    onSuccess: (data: unknown) => {
+      const d = data as { brandKitId: string };
+      setBrandKitId(d.brandKitId);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to start generation");
+    },
+  });
+
+  const refineMutation = useMutation({
+    mutationFn: async ({
+      sectionId,
+      refinementPrompt,
+    }: {
+      sectionId: string;
+      refinementPrompt: string;
+    }) => {
+      if (!brandKitId) return;
+      const res = await api.brandKits[":id"].refine.$post({
+        param: { id: brandKitId },
+        json: {
+          sectionId: sectionId as
+            | "logo-variations"
+            | "color-palette"
+            | "typography"
+            | "social-media"
+            | "business-card"
+            | "favicon",
+          refinementPrompt,
+          typographyStyle: typography,
+        },
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        let errorMessage = errData?.error || "Failed to refine";
+        const errJson = errData as Record<string, unknown>;
+        if (errJson?.issues && Array.isArray(errJson.issues) && errJson.issues.length > 0) {
+          errorMessage = (errJson.issues[0] as { message: string }).message;
+        }
+        throw new Error(errorMessage);
+      }
+      return res.json();
+    },
+    onMutate: ({ sectionId }) => {
+      setRefiningSectionId(sectionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
+      setPrompt("");
+      setTargetSection(null);
+      toast.success("Refinement started!");
+    },
+    onError: (err: Error) => {
+      setRefiningSectionId(null);
+      toast.error(err.message || "Failed to start refinement");
+    },
+    onSettled: () => {
+      setRefiningSectionId(null);
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: async ({
+      sectionId,
+      sourceRevisionId,
+    }: {
+      sectionId: string;
+      sourceRevisionId: string;
+    }) => {
+      if (!brandKitId) return;
+      const res = await api.brandKits[":id"]["restore-section"].$post({
+        param: { id: brandKitId },
+        json: {
+          sectionId: sectionId as
+            | "logo-variations"
+            | "color-palette"
+            | "typography"
+            | "social-media"
+            | "business-card"
+            | "favicon",
+          sourceRevisionId,
+        },
+      });
+      if (!res.ok) throw new Error("Failed to restore");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
+      toast.success("Section restored!");
+    },
+    onError: () => {
+      toast.error("Failed to restore section");
+    },
+  });
+
+  const handleLogoUpload = useCallback((file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Logo too large", {
+        description: "Please use an image under 10MB.",
+      });
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setLogoUrl(url);
+    setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
+  }, []);
+
+  const handleLogoRemove = useCallback(() => {
+    setLogoUrl(null);
+    setExtractedColors([]);
+  }, []);
+
+  const getSectionHistory = useCallback(
+    (sectionPrefix: string) => {
+      return revisions.filter((r) => {
+        const type = r.triggerType;
+        return (
+          type === "initial_generation" ||
+          type.startsWith(`refine_${sectionPrefix}`) ||
+          type.startsWith(`restore_${sectionPrefix}`)
+        );
+      });
+    },
+    [revisions],
+  );
 
   const mockupPreviews = useMemo(() => {
     return mockupImages.map((img) => URL.createObjectURL(img));
@@ -53,9 +281,9 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mockupImages]);
 
+  // Credit calculation
   const baseCredits = 5;
   const regenerationCredits = 2;
-
   const extraCredits = useMemo(
     () =>
       (deliverables.socialMedia ? 3 : 0) +
@@ -69,56 +297,12 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     [targetSection, extraCredits],
   );
 
-  useEffect(() => {
-    if (!imageId) return;
+  const mutateGenerate = generateMutation.mutate;
+  const mutateRefine = refineMutation.mutate;
 
-    api.images[":id"]
-      .$get({ param: { id: imageId } })
-      .then((res) => {
-        if (res.ok) {
-          res.json().then((data) => {
-            setLogoUrl(data.image.imageUrl);
-            setExtractedColors(["#10b981", "#047857", "#064e3b", "#ecfdf5"]);
-
-            const imgData = data.image as Record<string, unknown>;
-            if (typeof imgData.brandName === "string" && imgData.brandName) {
-              setBrandName(imgData.brandName);
-            }
-          });
-        } else {
-          toast.error("Failed to load logo");
-        }
-      })
-      .catch(() => toast.error("Failed to load logo"))
-      .finally(() => setIsLoadingLogo(false));
-  }, [imageId]);
-
-  useEffect(() => {
-    if (!brandKitId) return;
-    // TODO: Wire up to brand-kit API endpoint via RPC
-    setIsLoadingLogo(false);
-  }, [brandKitId]);
-
-  const handleLogoUpload = useCallback((file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Logo too large", {
-        description: "Please use an image under 10MB.",
-      });
-      return;
-    }
-
-    const url = URL.createObjectURL(file);
-    setLogoUrl(url);
-    setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
-  }, []);
-
-  const handleLogoRemove = useCallback(() => {
-    setLogoUrl(null);
-    setExtractedColors([]);
-  }, []);
-
+  // Unified submit handler
   const handleGenerate = useCallback(() => {
-    if (!logoUrl) {
+    if (!logoUrl && !brandKitId) {
       toast.error("Please upload or select a logo first");
       return;
     }
@@ -126,85 +310,40 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
       toast.error("Please describe your brand identity");
       return;
     }
-
-    if (targetSection) {
-      setRefiningSectionId(targetSection);
-    } else {
-      setIsGenerating(true);
+    if (!isFromPlatform && !brandName.trim() && !targetSection) {
+      toast.error("Brand name is required");
+      return;
     }
 
-    // TODO: Wire up to AI generation endpoint via RPC
-    setTimeout(() => {
-      setIsGenerating(false);
-      setRefiningSectionId(null);
-
-      if (targetSection) {
-        toast.success(`${getSectionLabel(targetSection)} regenerated`);
-        setTargetSection(null);
-      } else {
-        const selectedFont = getFontById(typography);
-
-        const mockResults: BrandKitResultsData = {
-          brandName: brandName || "Your Brand",
-          logoUrl: logoUrl,
-          productImages: mockupPreviews.length > 0 ? mockupPreviews : undefined,
-          logoVariations: [
-            { id: "primary", label: "Primary", url: logoUrl, background: "light" },
-            { id: "dark", label: "On Dark", url: logoUrl, background: "dark" },
-            { id: "mono", label: "Monochrome", url: logoUrl, background: "light" },
-            { id: "icon", label: "Icon Only", url: logoUrl, background: "transparent" },
-          ],
-          colorPalette: [
-            { hex: extractedColors[0] || "#3b82f6", role: "Primary", rgb: "59, 130, 246" },
-            { hex: extractedColors[1] || "#1d4ed8", role: "Dark", rgb: "29, 78, 216" },
-            { hex: extractedColors[2] || "#1e3a8a", role: "Accent", rgb: "30, 58, 138" },
-            { hex: extractedColors[3] || "#eff6ff", role: "Light", rgb: "239, 246, 255" },
-            { hex: "#f8fafc", role: "Background", rgb: "248, 250, 252" },
-            { hex: "#0f172a", role: "Text", rgb: "15, 23, 42" },
-          ],
-          typography: {
-            heading: {
-              name: selectedFont.name,
-              family: selectedFont.family,
-              weight: "700",
-            },
-            body: {
-              name: selectedFont.name,
-              family: selectedFont.family,
-              weight: "400",
-            },
-          },
-          ...(deliverables.socialMedia && {
-            socialMedia: [
-              { platform: "Instagram", type: "Profile", dimensions: "320×320", url: logoUrl },
-              { platform: "LinkedIn", type: "Cover", dimensions: "1584×396", url: logoUrl },
-              { platform: "X / Twitter", type: "Header", dimensions: "1500×500", url: logoUrl },
-            ],
-          }),
-          ...(deliverables.businessCard && {
-            businessCard: { frontUrl: logoUrl, backUrl: logoUrl },
-          }),
-          ...(deliverables.favicon && {
-            favicons: [
-              { size: 16, label: "Favicon", url: logoUrl },
-              { size: 32, label: "Favicon 2x", url: logoUrl },
-              { size: 180, label: "Apple Touch", url: logoUrl },
-              { size: 512, label: "App Icon", url: logoUrl },
-            ],
-          }),
-        };
-
-        setResults(mockResults);
-        toast.success("Brand Kit generated successfully!");
-      }
-    }, 2000);
-  }, [logoUrl, prompt, targetSection, brandName, extractedColors, deliverables, mockupPreviews, typography]);
+    if (targetSection) {
+      mutateRefine({ sectionId: targetSection, refinementPrompt: prompt });
+    } else {
+      mutateGenerate();
+    }
+  }, [
+    logoUrl,
+    brandKitId,
+    prompt,
+    targetSection,
+    mutateRefine,
+    mutateGenerate,
+    isFromPlatform,
+    brandName,
+  ]);
 
   return {
+    // State
+    brandKitId,
+    brandKit,
+    revisions,
+    results,
+    isGenerating,
+    isQueryLoading,
+    error,
+
+    // Form State
     logoUrl,
     isLoadingLogo,
-    handleLogoUpload,
-    handleLogoRemove,
     isFromPlatform,
     brandName,
     setBrandName,
@@ -218,29 +357,34 @@ export function useBrandKit({ imageId, brandKitId }: UseBrandKitOptions) {
     setMockupImages,
     mockupPreviews,
     extractedColors,
-    targetSection,
-    setTargetSection,
-    isGenerating,
-    refiningSectionId,
-    handleGenerate,
-    totalCredits,
-    results,
     sidebarOpen,
     setSidebarOpen,
+    refiningSectionId,
+    targetSection,
+    setTargetSection,
+    totalCredits,
+
+    // Actions
+    handleLogoUpload,
+    handleLogoRemove,
+    handleGenerate,
+    handleRefine: (sectionId: string, refinementPrompt: string) =>
+      refineMutation.mutate({ sectionId, refinementPrompt }),
+    handleRestore: (sectionId: string, sourceRevisionId: string) =>
+      restoreMutation.mutate({ sectionId, sourceRevisionId }),
+    getSectionHistory,
   };
 }
 
-function getSectionLabel(sectionId: string): string {
+export function getSectionLabel(sectionId: string): string {
   const labels: Record<string, string> = {
     "logo-variations": "Logo Variations",
     "color-palette": "Color Palette",
-    "typography": "Typography System",
+    typography: "Typography System",
     "social-media": "Social Media Kit",
     "business-card": "Business Card",
-    "favicon": "Favicon & Icons",
+    favicon: "Favicon & Icons",
     "brand-guidelines": "Brand Guidelines",
   };
   return labels[sectionId] ?? sectionId;
 }
-
-export { getSectionLabel };
