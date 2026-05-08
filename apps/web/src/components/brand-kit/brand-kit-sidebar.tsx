@@ -270,6 +270,14 @@ export function BrandKitSidebar({
             credits={0}
           />
           <DeliverableToggle
+            label="Logo Variations / Iconography"
+            checked={deliverables.logoVariations}
+            onChange={(v) =>
+              setDeliverables((d) => ({ ...d, logoVariations: v }))
+            }
+            credits={2}
+          />
+          <DeliverableToggle
             label="Social Media Assets"
             checked={deliverables.socialMedia}
             onChange={(v) => setDeliverables((d) => ({ ...d, socialMedia: v }))}

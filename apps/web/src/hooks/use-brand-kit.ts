@@ -12,6 +12,7 @@ export type BrandKitResponse = InferResponseType<
 export type BrandKitRevision = NonNullable<BrandKitResponse>["revisions"][0];
 
 export interface Deliverables {
+  logoVariations: boolean;
   colorPalette: boolean;
   typography: boolean;
   socialMedia: boolean;
@@ -43,6 +44,7 @@ export function useBrandKit({
 
   const [typography, setTypography] = useState("modern-sans");
   const [deliverables, setDeliverables] = useState<Deliverables>({
+    logoVariations: false,
     colorPalette: true,
     typography: true,
     socialMedia: false,
@@ -194,7 +196,6 @@ export function useBrandKit({
       queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
       setPrompt("");
       setTargetSection(null);
-      toast.success("Refinement started!");
     },
     onError: (err: Error) => {
       setRefiningSectionId(null);
@@ -286,6 +287,7 @@ export function useBrandKit({
   const regenerationCredits = 2;
   const extraCredits = useMemo(
     () =>
+      (deliverables.logoVariations ? 2 : 0) +
       (deliverables.socialMedia ? 3 : 0) +
       (deliverables.businessCard ? 2 : 0) +
       (deliverables.favicon ? 1 : 0),

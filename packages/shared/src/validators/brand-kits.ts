@@ -8,6 +8,7 @@ export const generateBrandKitSchema = z.object({
   typographyStyle: z.string(), // Input preference (e.g., "modern-sans")
   productImageUrls: z.array(z.string()).optional(),
   deliverables: z.object({
+    logoVariations: z.boolean().optional(),
     socialMedia: z.boolean(),
     businessCard: z.boolean(),
     favicon: z.boolean()

@@ -24,7 +24,7 @@ import { FaviconSection, type FaviconSize } from "./sections/favicon-section";
 import { BrandGuidelinesSection } from "./sections/brand-guidelines-section";
 
 export interface BrandKitResultsData {
-  logoVariations: LogoVariation[];
+  logoVariations?: LogoVariation[];
   colorPalette: PaletteColor[];
   typography: TypographyPairing;
   socialMedia?: SocialMediaAsset[];
@@ -71,11 +71,13 @@ export function BrandKitResults({
 
       <div className="bg-border h-px" />
 
-      <LogoVariationsSection
-        variations={data.logoVariations}
-        onRefine={onRefine}
-        isRefining={refiningSectionId === "logo-variations"}
-      />
+      {data.logoVariations && data.logoVariations.length > 0 && (
+        <LogoVariationsSection
+          variations={data.logoVariations}
+          onRefine={onRefine}
+          isRefining={refiningSectionId === "logo-variations"}
+        />
+      )}
 
       <ColorPaletteSection
         colors={data.colorPalette}

@@ -31,6 +31,7 @@ export interface GenerateBrandKitMessage {
   typographyStyle: string;
   productImageUrls?: string[];
   deliverables: {
+    logoVariations?: boolean;
     socialMedia: boolean;
     businessCard: boolean;
     favicon: boolean;

@@ -69,14 +69,17 @@ Failure to match the requested style exactly is unacceptable.`;
          brandName,
          colorPalette: aiOutput.colorPalette || [],
          typography: aiOutput.typography || {},
-         logoVariations: [
+         deliverables: deliverables,
+      };
+
+      if (deliverables?.logoVariations) {
+        finalResultsJSON.logoVariations = [
            { id: "primary", label: "Primary", background: "light", url: placeholderLogo },
            { id: "dark", label: "On Dark", background: "dark", url: placeholderLogo },
            { id: "mono", label: "Monochrome", background: "light", url: placeholderLogo },
            { id: "icon", label: "Icon Only", background: "transparent", url: placeholderLogo },
-         ],
-         deliverables: deliverables,
-      };
+        ];
+      }
 
       if (deliverables?.socialMedia) {
         finalResultsJSON.socialMedia = [
@@ -121,11 +124,6 @@ Failure to match the requested style exactly is unacceptable.`;
   async processRefinement(message: RefineBrandKitMessage) {
     const { brandKitId, sectionId, refinementPrompt, typographyStyle } = message;
     
-    // For now we will mock the refinement logic for simplicity since it requires similar LLM parsing
-    // but specific to each section. In a real implementation, you'd fetch the active revision,
-    // prompt the LLM to refine JUST that section, and merge it.
-
-    // Let's implement a basic version that just creates a new revision with identical data to prove the architecture.
     try {
       const activeRevision = await this.db.query.brandKitRevisions.findFirst({
         where: and(eq(brandKitRevisions.brandKitId, brandKitId), eq(brandKitRevisions.isActive, true))
@@ -133,17 +131,57 @@ Failure to match the requested style exactly is unacceptable.`;
 
       if (!activeRevision) throw new Error("No active revision found");
 
-      let newMergedJSON = activeRevision.results as any;
+      let newMergedJSON = { ...activeRevision.results as any };
+      let sectionSchemaStr = "";
+      let systemInstruction = "";
+      const sectionKey = sectionId === "color-palette" ? "colorPalette" : (sectionId === "typography" ? "typography" : null);
 
-      if (sectionId === "typography" && typographyStyle) {
-        // Just mock updating the typography style as a demo
-        newMergedJSON = {
-          ...newMergedJSON,
-          typography: {
-            ...newMergedJSON.typography,
-            heading: { ...newMergedJSON.typography?.heading, family: typographyStyle }
-          }
+      if (sectionId === "color-palette") {
+        sectionSchemaStr = `{ "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }] }`;
+        systemInstruction = "You are refining the color palette of a brand. Keep it cohesive and professional.";
+      } else if (sectionId === "typography") {
+        const fontStyleMap: Record<string, string> = {
+          "modern-sans": "Modern Sans-Serif (e.g. Inter, Roboto, Poppins, Montserrat)",
+          "classic-serif": "Classic Serif (e.g. Merriweather, Playfair Display, Lora)",
+          "playful-display": "Playful Display (e.g. Fredoka One, Righteous, Pacifico)",
+          "elegant-script": "Elegant Script (e.g. Great Vibes, Dancing Script, Allura)",
+          "tech-mono": "Tech Monospace (e.g. JetBrains Mono, Fira Code, Roboto Mono)",
         };
+        const typographyInstruction = typographyStyle ? (fontStyleMap[typographyStyle] || "Modern Sans-Serif") : "Modern Sans-Serif";
+        sectionSchemaStr = `{ "typography": { "heading": { "name": "FontName", "family": "FontFamily", "weight": "700" }, "body": { "name": "FontName", "family": "FontFamily", "weight": "400" } } }`;
+        systemInstruction = `You are refining the typography of a brand. \nCRITICAL INSTRUCTION: You MUST select Google Fonts that perfectly match this typography style: ${typographyInstruction}. Failure to match the requested style exactly is unacceptable.`;
+      }
+
+      if (sectionSchemaStr && sectionKey) {
+        const systemPrompt = `You are an expert brand identity designer.\nOutput ONLY valid JSON matching this schema exactly. Do not include any text outside the JSON.\n${sectionSchemaStr}\n${systemInstruction}`;
+        
+        const response = await this.ai.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Brand Name: ${newMergedJSON.brandName || "Unknown"}\nRefinement Request: ${refinementPrompt}\nOriginal JSON state for context: ${JSON.stringify(newMergedJSON[sectionKey])}` }
+          ],
+          response_format: { type: "json_object" } 
+        });
+
+        const responseText = typeof response === "object" && response !== null && "response" in response
+          ? String((response as { response: string }).response).trim()
+          : "{}";
+
+        let aiOutput;
+        try {
+          aiOutput = JSON.parse(responseText);
+        } catch (e) {
+          console.error("[brand-kit-pipeline] Failed to parse Refinement JSON:", responseText);
+          throw new Error("AI returned invalid JSON on refinement");
+        }
+
+        if (sectionId === "color-palette" && aiOutput.colorPalette) {
+          newMergedJSON.colorPalette = aiOutput.colorPalette;
+        } else if (sectionId === "typography" && aiOutput.typography) {
+          newMergedJSON.typography = aiOutput.typography;
+        }
+      } else {
+        console.log(`[brand-kit-pipeline] Refinement for ${sectionId} is not text-LLM driven yet.`);
       }
 
       const [maxRev] = await this.db.select({ max: sql<number>`MAX(revision_number)` })
