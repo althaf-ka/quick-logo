@@ -29,7 +29,6 @@ interface BuildBrandKitIdentityRequestInput {
   brandName: string;
   description: string;
   extractedColors: string[];
-  typographyStyle: string;
 }
 
 interface BuildBrandKitRefinementRequestInput {
@@ -37,7 +36,6 @@ interface BuildBrandKitRefinementRequestInput {
   sectionId: string;
   refinementPrompt: string;
   currentResults: Record<string, unknown>;
-  typographyStyle?: string;
 }
 
 const TYPOGRAPHY_STYLE_LABELS: Record<string, string> = {
@@ -60,7 +58,6 @@ const REFINEMENT_SECTION_KEYS: Partial<
   Record<string, BrandKitSectionKey>
 > = {
   "color-palette": "colorPalette",
-  typography: "typography",
 };
 
 const LOGO_VARIATION_PROMPTS = {
@@ -72,11 +69,6 @@ const LOGO_VARIATION_PROMPTS = {
   LogoVariationKind,
   (context: LogoVariationPromptContext) => string
 >;
-
-function resolveTypographyInstruction(typographyStyle?: string): string {
-  if (!typographyStyle) return "Modern Sans-Serif";
-  return TYPOGRAPHY_STYLE_LABELS[typographyStyle] ?? "Modern Sans-Serif";
-}
 
 function buildJsonBrandKitRequest(
   systemPrompt: string,
@@ -95,20 +87,12 @@ export function buildBrandKitIdentityRequest({
   brandName,
   description,
   extractedColors,
-  typographyStyle,
 }: BuildBrandKitIdentityRequestInput): BrandKitJsonRequest {
-  const typographyInstruction = resolveTypographyInstruction(typographyStyle);
   const systemPrompt = `You are an expert brand identity designer.
 Output ONLY valid JSON matching this schema exactly. Do not include any text outside the JSON.
 {
-  "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }],
-  "typography": {
-    "heading": { "name": "FontName", "family": "FontFamily", "weight": "700" },
-    "body": { "name": "FontName", "family": "FontFamily", "weight": "400" }
-  }
-}
-CRITICAL INSTRUCTION: You MUST select Google Fonts that perfectly match this typography style: ${typographyInstruction}.
-Failure to match the requested style exactly is unacceptable.`;
+  "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }]
+}`;
 
   return buildJsonBrandKitRequest(
     systemPrompt,
@@ -121,7 +105,6 @@ export function buildBrandKitRefinementRequest({
   sectionId,
   refinementPrompt,
   currentResults,
-  typographyStyle,
 }: BuildBrandKitRefinementRequestInput):
   | { sectionKey: BrandKitSectionKey; request: BrandKitJsonRequest }
   | null {
@@ -129,11 +112,7 @@ export function buildBrandKitRefinementRequest({
   if (!sectionKey) return null;
 
   const sectionSchema = BRAND_KIT_SECTION_SCHEMAS[sectionKey];
-  const typographyInstruction = resolveTypographyInstruction(typographyStyle);
-  const sectionInstruction =
-    sectionKey === "colorPalette"
-      ? "You are refining the color palette of a brand. Keep it cohesive and professional."
-      : `You are refining the typography of a brand.\nCRITICAL INSTRUCTION: You MUST select Google Fonts that perfectly match this typography style: ${typographyInstruction}. Failure to match the requested style exactly is unacceptable.`;
+  const sectionInstruction = "You are refining the color palette of a brand. Keep it cohesive and professional.";
 
   return {
     sectionKey,

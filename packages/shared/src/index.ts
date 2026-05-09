@@ -6,5 +6,6 @@ export * from "./validators/brand-kits";
 export * from "./constants/generate";
 export * from "./constants/billing";
 export * from "./constants/error-codes";
+export * from "./constants/typography";
 
 export * from "./types/index";

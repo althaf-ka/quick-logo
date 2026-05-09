@@ -24,6 +24,7 @@ import type {
   GenerateBrandKitMessage,
   RefineBrandKitMessage,
 } from "@quicklogo/shared";
+import { TYPOGRAPHY_REGISTRY } from "@quicklogo/shared";
 import type { Env } from "./types";
 
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
@@ -57,7 +58,6 @@ export class BrandKitPipeline {
         brandName,
         description: prompt,
         extractedColors,
-        typographyStyle,
       });
 
       const response = await this.ai.run(
@@ -97,10 +97,17 @@ export class BrandKitPipeline {
       const fallbackLogoUrl =
         actualLogoUrl || "https://placehold.co/400x400/000/FFF?text=Logo";
 
+      const selectedTypography =
+        TYPOGRAPHY_REGISTRY[typographyStyle] ||
+        TYPOGRAPHY_REGISTRY["modern-sans"];
+
       const finalResultsJSON: Record<string, any> = {
         brandName,
         colorPalette: aiOutput.colorPalette || [],
-        typography: aiOutput.typography || {},
+        typography: {
+          heading: selectedTypography.heading,
+          body: selectedTypography.body,
+        },
         deliverables: deliverables,
       };
 
@@ -210,8 +217,7 @@ export class BrandKitPipeline {
   }
 
   async processRefinement(message: RefineBrandKitMessage) {
-    const { brandKitId, sectionId, refinementPrompt, typographyStyle } =
-      message;
+    const { brandKitId, sectionId, refinementPrompt } = message;
 
     try {
       const activeRevision = await this.db.query.brandKitRevisions.findFirst({
@@ -229,7 +235,6 @@ export class BrandKitPipeline {
         sectionId,
         refinementPrompt,
         currentResults: newMergedJSON,
-        typographyStyle,
       });
 
       if (refinementRequest) {
@@ -261,11 +266,6 @@ export class BrandKitPipeline {
           aiOutput.colorPalette
         ) {
           newMergedJSON.colorPalette = aiOutput.colorPalette;
-        } else if (
-          refinementRequest.sectionKey === "typography" &&
-          aiOutput.typography
-        ) {
-          newMergedJSON.typography = aiOutput.typography;
         }
       } else {
         console.log(
