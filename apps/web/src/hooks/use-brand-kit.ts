@@ -77,7 +77,7 @@ export function useBrandKit({
     },
     refetchInterval: (query) => {
       const status = query.state.data?.brandKit?.status;
-      if (status === "pending" || status === "processing") return 2000;
+      if (status === "pending" || status === "processing") return 15000;
       return false; // stop polling
     },
     enabled: !!brandKitId,

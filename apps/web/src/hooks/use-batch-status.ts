@@ -24,7 +24,7 @@ export function useBatchStatus(batchId: string | null) {
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return false;
-      return data.status === "processing" ? 5000 : false;
+      return data.status === "processing" ? 15000 : false;
     },
   });
 }

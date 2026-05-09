@@ -110,7 +110,7 @@ export function useEditForm({
     enabled: !!activeEditImageId,
     refetchInterval: (query) => {
       const status = query.state.data?.image?.status;
-      return status === "completed" || status === "failed" ? false : 5000;
+      return status === "completed" || status === "failed" ? false : 15000;
     },
   });
 

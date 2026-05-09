@@ -20,7 +20,7 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
   return (
     <div
       className={cn(
-        "relative flex aspect-square items-center justify-center overflow-hidden p-4",
+        "relative flex aspect-square items-center justify-center overflow-hidden",
         isDark ? "bg-zinc-950" : "bg-white",
         v.background === "transparent" && "bg-transparent",
       )}
@@ -38,7 +38,10 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
       <img
         src={v.url}
         alt={v.label}
-        className="max-h-full max-w-full object-contain transition-all duration-300"
+        className={cn(
+          "max-h-full max-w-full object-contain transition-all duration-300",
+          v.id === "mono" && "grayscale contrast-125",
+        )}
       />
     </div>
   );
@@ -61,12 +64,9 @@ export function LogoVariationsSection({
       <SectionContent isRefining={isRefining}>
         <div className="relative grid grid-cols-2 gap-3 md:grid-cols-4">
           {variations.map((v) => (
-            <div
-              key={v.id}
-              className="group hover:border-primary/30 border transition-colors flex flex-col"
-            >
+            <div key={v.id} className="group flex flex-col">
               <LogoVariationImage v={v} />
-              <div className="border-t px-3 py-2 mt-auto">
+              <div className="mt-auto px-3 py-2">
                 <span className="text-muted-foreground font-mono text-[9px] tracking-wider uppercase">
                   {v.label}
                 </span>

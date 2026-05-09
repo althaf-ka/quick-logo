@@ -1,7 +1,7 @@
 import { createDb } from "@quicklogo/db";
 import type { QueueMessage } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
-import { GenerationPipeline } from "./pipeline";
+import { ImageGenerationPipeline } from "./image-generation-pipeline";
 import { BrandKitPipeline } from "./brand-kit-pipeline";
 import type { Env } from "./types";
 
@@ -12,8 +12,13 @@ export default {
   ): Promise<void> {
     const db = createDb(env.DB);
     const storage = new ImageKitProvider(env.IMAGEKIT_PRIVATE_KEY);
-    const pipeline = new GenerationPipeline(env.AI, db, storage, env);
-    const brandKitPipeline = new BrandKitPipeline(env.AI, db, env);
+    const imageGenerationPipeline = new ImageGenerationPipeline(
+      env.AI,
+      db,
+      storage,
+      env,
+    );
+    const brandKitPipeline = new BrandKitPipeline(env.AI, db, storage, env);
 
     for (const message of batch.messages) {
       try {
@@ -23,7 +28,7 @@ export default {
         } else if (body.type === "brand-kit-refine") {
           await brandKitPipeline.processRefinement(body);
         } else {
-          await pipeline.process(body);
+          await imageGenerationPipeline.process(body);
         }
         message.ack();
       } catch (error) {

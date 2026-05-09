@@ -10,7 +10,7 @@ import type { GenerationParams } from "@quicklogo/ai-providers/types";
 import { PromptEnhancer } from "@quicklogo/ai-providers/prompt";
 import type { Env } from "./types";
 
-export class GenerationPipeline {
+export class ImageGenerationPipeline {
   private promptEnhancer: PromptEnhancer;
 
   constructor(
@@ -87,12 +87,15 @@ export class GenerationPipeline {
       ]);
 
       console.log(
-        `[pipeline] Completed imageId=${imageId} in ${result.metadata?.duration}ms`,
+        `[image-generation-pipeline] Completed imageId=${imageId} in ${result.metadata?.duration}ms`,
       );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error(`[pipeline] Failed imageId=${imageId}:`, error);
+      console.error(
+        `[image-generation-pipeline] Failed imageId=${imageId}:`,
+        error,
+      );
 
       await this.updateImageStatus(imageId, "failed", errorMessage);
       throw error;
