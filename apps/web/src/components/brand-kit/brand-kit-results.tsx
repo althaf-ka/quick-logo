@@ -12,6 +12,7 @@ import {
   TypographySection,
   type TypographyPairing,
 } from "./sections/typography-section";
+import { useGoogleFontLoader } from "@/hooks/use-google-font-loader";
 import {
   SocialMediaSection,
   type SocialMediaAsset,
@@ -38,6 +39,7 @@ export interface BrandKitResultsData {
 interface BrandKitResultsProps {
   data: BrandKitResultsData;
   onRefine: (sectionId: string) => void;
+  onFontChange?: (role: "heading" | "body", family: string) => void;
   onDownloadAll?: () => void;
   refiningSectionId?: string | null;
 }
@@ -45,9 +47,13 @@ interface BrandKitResultsProps {
 export function BrandKitResults({
   data,
   onRefine,
+  onFontChange,
   onDownloadAll,
   refiningSectionId,
 }: BrandKitResultsProps) {
+  useGoogleFontLoader(data.typography?.heading?.family);
+  useGoogleFontLoader(data.typography?.body?.family);
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 pb-4">
       <div className="flex items-center justify-between">
@@ -88,7 +94,7 @@ export function BrandKitResults({
       <TypographySection
         pairing={data.typography}
         brandName={data.brandName}
-        onRefine={onRefine}
+        onFontChange={onFontChange}
         isRefining={refiningSectionId === "typography"}
       />
 

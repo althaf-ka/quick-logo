@@ -18,6 +18,7 @@ export const brandKits = sqliteTable("brand_kit", {
   prompt: text("prompt").notNull(),
   productImageUrls: text("product_image_urls", { mode: "json" }), // Optional uploaded mockups
   extractedColors: text("extracted_colors", { mode: "json" }).notNull(),
+  typographyStyle: text("typography_style").notNull().default("modern-sans"),
   status: text("status", {
     enum: ["pending", "processing", "completed", "failed"],
   })

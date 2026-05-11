@@ -1,45 +1,39 @@
-export interface FontConfig {
-  name: string;
-  family: string;
-  weight: string;
-}
-
-export interface TypographyPairing {
+export interface TypographyStyleHint {
   label: string;
   description: string;
-  heading: FontConfig;
-  body: FontConfig;
 }
 
-export const TYPOGRAPHY_REGISTRY: Record<string, TypographyPairing> = {
+export const TYPOGRAPHY_REGISTRY: Record<string, TypographyStyleHint> = {
   "modern-sans": {
     label: "Modern Sans",
-    description: "Clean, minimal, and highly legible.",
-    heading: { name: "Inter", family: "Inter", weight: "700" },
-    body: { name: "Roboto", family: "Roboto", weight: "400" },
+    description: "Clean, minimal, and highly legible",
   },
   "classic-serif": {
     label: "Classic Serif",
-    description: "Elegant, traditional, and professional.",
-    heading: { name: "Playfair Display", family: "Playfair Display", weight: "700" },
-    body: { name: "Lora", family: "Lora", weight: "400" },
+    description: "Elegant, traditional, and professional",
   },
   "playful-display": {
     label: "Playful Display",
-    description: "Fun, energetic, and eye-catching.",
-    heading: { name: "Fredoka One", family: "Fredoka One", weight: "400" },
-    body: { name: "Nunito", family: "Nunito", weight: "400" },
+    description: "Fun, energetic, and eye-catching",
   },
   "elegant-script": {
     label: "Elegant Script",
-    description: "Sophisticated, artistic, and flowing.",
-    heading: { name: "Dancing Script", family: "Dancing Script", weight: "700" },
-    body: { name: "Raleway", family: "Raleway", weight: "400" },
+    description: "Sophisticated, artistic, and flowing",
   },
   "tech-mono": {
     label: "Tech Monospace",
-    description: "Structured, digital, and modern.",
-    heading: { name: "JetBrains Mono", family: "JetBrains Mono", weight: "700" },
-    body: { name: "Fira Code", family: "Fira Code", weight: "400" },
+    description: "Structured, digital, and modern",
+  },
+  "bold-impact": {
+    label: "Bold Impact",
+    description: "Strong, powerful, and attention-grabbing",
+  },
+  "friendly-round": {
+    label: "Friendly Rounded",
+    description: "Warm, approachable, and inviting",
+  },
+  "luxury-minimal": {
+    label: "Luxury Minimal",
+    description: "Premium, refined, and understated",
   },
 };

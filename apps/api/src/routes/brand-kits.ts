@@ -36,6 +36,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       customLogoUrl: data.customLogoUrl,
       productImageUrls: data.productImageUrls,
       extractedColors: data.extractedColors,
+      typographyStyle: data.typographyStyle,
     });
 
     await c.env.GENERATION_QUEUE.send({

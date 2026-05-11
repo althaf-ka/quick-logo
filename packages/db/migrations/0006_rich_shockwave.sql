@@ -1,0 +1,1 @@
+ALTER TABLE `brand_kit` ADD `typography_style` text DEFAULT 'modern-sans' NOT NULL;

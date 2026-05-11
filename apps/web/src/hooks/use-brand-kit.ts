@@ -13,8 +13,6 @@ export type BrandKitRevision = NonNullable<BrandKitResponse>["revisions"][0];
 
 export interface Deliverables {
   logoVariations: boolean;
-  colorPalette: boolean;
-  typography: boolean;
   socialMedia: boolean;
   businessCard: boolean;
   favicon: boolean;
@@ -45,8 +43,6 @@ export function useBrandKit({
   const [typography, setTypography] = useState("modern-sans");
   const [deliverables, setDeliverables] = useState<Deliverables>({
     logoVariations: false,
-    colorPalette: true,
-    typography: true,
     socialMedia: false,
     businessCard: false,
     favicon: false,
@@ -122,7 +118,7 @@ export function useBrandKit({
   }, [imageId]);
 
   // Mutations
-  const generateMutation = useMutation({
+  const { mutate: mutateGenerate } = useMutation({
     mutationFn: async () => {
       const res = await api.brandKits.index.$post({
         json: {
@@ -155,7 +151,7 @@ export function useBrandKit({
     },
   });
 
-  const refineMutation = useMutation({
+  const { mutate: mutateRefine } = useMutation({
     mutationFn: async ({
       sectionId,
       refinementPrompt,
@@ -189,15 +185,22 @@ export function useBrandKit({
       }
       return res.json();
     },
-    onMutate: ({ sectionId }) => {
-      setRefiningSectionId(sectionId);
+    onMutate: ({ sectionId, refinementPrompt }) => {
+      if (!refinementPrompt.startsWith("__FONT_OVERRIDE__")) {
+        setRefiningSectionId(sectionId);
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // Font overrides use optimistic updates — skip refetch to prevent reverting
+      if (variables.refinementPrompt.startsWith("__FONT_OVERRIDE__")) return;
       queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
       setPrompt("");
       setTargetSection(null);
     },
-    onError: (err: Error) => {
+    onError: (err: Error, variables) => {
+      if (variables.refinementPrompt.startsWith("__FONT_OVERRIDE__")) {
+        queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
+      }
       setRefiningSectionId(null);
       toast.error(err.message || "Failed to start refinement");
     },
@@ -257,6 +260,50 @@ export function useBrandKit({
     setExtractedColors([]);
   }, []);
 
+  const handleFontChange = useCallback(
+    (role: "heading" | "body", family: string) => {
+      if (!brandKitId || !results) return;
+
+      queryClient.setQueryData<BrandKitResponse | null>(
+        ["brand-kit", brandKitId],
+        (current) => {
+          if (!current) return current;
+
+          return {
+            ...current,
+            revisions: current.revisions.map((revision) => {
+              if (!revision.isActive) return revision;
+
+              const revisionResults =
+                revision.results as unknown as BrandKitResultsData;
+
+              return {
+                ...revision,
+                results: {
+                  ...revisionResults,
+                  typography: {
+                    ...revisionResults.typography,
+                    [role]: {
+                      ...revisionResults.typography[role],
+                      family,
+                      name: family,
+                    },
+                  },
+                },
+              };
+            }),
+          };
+        },
+      );
+
+      mutateRefine({
+        sectionId: "typography",
+        refinementPrompt: `__FONT_OVERRIDE__:${role}:${family}`,
+      });
+    },
+    [brandKitId, queryClient, mutateRefine, results],
+  );
+
   const getSectionHistory = useCallback(
     (sectionPrefix: string) => {
       return revisions.filter((r) => {
@@ -298,9 +345,6 @@ export function useBrandKit({
     () => (targetSection ? regenerationCredits : baseCredits + extraCredits),
     [targetSection, extraCredits],
   );
-
-  const mutateGenerate = generateMutation.mutate;
-  const mutateRefine = refineMutation.mutate;
 
   // Unified submit handler
   const handleGenerate = useCallback(() => {
@@ -369,9 +413,10 @@ export function useBrandKit({
     // Actions
     handleLogoUpload,
     handleLogoRemove,
+    handleFontChange,
     handleGenerate,
     handleRefine: (sectionId: string, refinementPrompt: string) =>
-      refineMutation.mutate({ sectionId, refinementPrompt }),
+      mutateRefine({ sectionId, refinementPrompt }),
     handleRestore: (sectionId: string, sourceRevisionId: string) =>
       restoreMutation.mutate({ sectionId, sourceRevisionId }),
     getSectionHistory,

@@ -1,7 +1,7 @@
 import type { GenerationParams } from "../types";
 
 type LogoVariationKind = "dark-mode" | "icon-only";
-type BrandKitSectionKey = "colorPalette" | "typography";
+type BrandKitSectionKey = "colorPalette";
 
 interface BrandKitMessage {
   role: "system" | "user";
@@ -11,6 +11,21 @@ interface BrandKitMessage {
 interface BrandKitJsonRequest {
   messages: BrandKitMessage[];
   response_format: { type: "json_object" };
+}
+
+interface BrandKitVisionMessage {
+  role: "system" | "user";
+  content:
+    | string
+    | Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string } }
+      >;
+}
+
+interface BrandKitVisionRequest {
+  messages: BrandKitVisionMessage[];
+  max_tokens?: number;
 }
 
 interface LogoVariationPromptContext {
@@ -31,6 +46,13 @@ interface BuildBrandKitIdentityRequestInput {
   extractedColors: string[];
 }
 
+interface BuildTypographyRequestInput {
+  brandName: string;
+  description: string;
+  typographyStyleHint: string;
+  logoUrl: string;
+}
+
 interface BuildBrandKitRefinementRequestInput {
   brandName: string;
   sectionId: string;
@@ -38,20 +60,9 @@ interface BuildBrandKitRefinementRequestInput {
   currentResults: Record<string, unknown>;
 }
 
-const TYPOGRAPHY_STYLE_LABELS: Record<string, string> = {
-  "modern-sans": "Modern Sans-Serif (e.g. Inter, Roboto, Poppins, Montserrat)",
-  "classic-serif": "Classic Serif (e.g. Merriweather, Playfair Display, Lora)",
-  "playful-display":
-    "Playful Display (e.g. Fredoka One, Righteous, Pacifico)",
-  "elegant-script": "Elegant Script (e.g. Great Vibes, Dancing Script, Allura)",
-  "tech-mono": "Tech Monospace (e.g. JetBrains Mono, Fira Code, Roboto Mono)",
-};
-
 const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
   colorPalette:
     '{ "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }] }',
-  typography:
-    '{ "typography": { "heading": { "name": "FontName", "family": "FontFamily", "weight": "700" }, "body": { "name": "FontName", "family": "FontFamily", "weight": "400" } } }',
 };
 
 const REFINEMENT_SECTION_KEYS: Partial<
@@ -98,6 +109,41 @@ Output ONLY valid JSON matching this schema exactly. Do not include any text out
     systemPrompt,
     `Brand Name: ${brandName}\nDescription: ${description}\nBase Colors: ${extractedColors.join(", ")}`,
   );
+}
+
+export function buildBrandKitTypographyRequest({
+  brandName,
+  description,
+  typographyStyleHint,
+  logoUrl,
+}: BuildTypographyRequestInput): BrandKitVisionRequest {
+  return {
+    messages: [
+      {
+        role: "system",
+        content: `You are an expert brand identity typographer.
+Analyse the provided logo image. Based on its visual style, shapes, and weight, suggest TWO complementary Google Fonts.
+Output ONLY valid JSON. No markdown. No explanation.
+Only use fonts that exist on fonts.google.com.
+Schema:
+{
+  "heading": { "family": "ExactGoogleFontName", "weight": "700" },
+  "body": { "family": "ExactGoogleFontName", "weight": "400" }
+}`,
+      },
+      {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: logoUrl } },
+          {
+            type: "text",
+            text: `Brand: "${brandName}"\nDescription: ${description}\nDesired typography style: "${typographyStyleHint}"\n\nAnalyse this logo and pick the best matching Google Fonts.`,
+          },
+        ],
+      },
+    ],
+    max_tokens: 256,
+  };
 }
 
 export function buildBrandKitRefinementRequest({

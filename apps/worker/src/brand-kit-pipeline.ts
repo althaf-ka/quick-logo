@@ -16,6 +16,7 @@ import {
 import {
   buildBrandKitIdentityRequest,
   buildBrandKitRefinementRequest,
+  buildBrandKitTypographyRequest,
   buildLogoVariationGenerationParams,
 } from "@quicklogo/ai-providers/prompt";
 import type { GenerationParams } from "@quicklogo/ai-providers/types";
@@ -28,10 +29,79 @@ import { TYPOGRAPHY_REGISTRY } from "@quicklogo/shared";
 import type { Env } from "./types";
 
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
+const FALLBACK_TYPOGRAPHY = {
+  heading: { name: "Inter", family: "Inter", weight: "700" },
+  body: { name: "Roboto", family: "Roboto", weight: "400" },
+};
+
+/**
+ * Cloudflare Workers AI requires accepting the Meta Community License
+ * for Llama 3.2 Vision before the model can be used.
+ * This flag ensures the agreement is sent only once per worker lifecycle.
+ */
+let visionModelLicenseAccepted = false;
 
 interface LogoVariationResult {
   id: string;
   url: string;
+}
+
+function extractWorkersAiResponseText(response: unknown): string {
+  if (typeof response === "string") {
+    return response.trim();
+  }
+
+  if (
+    typeof response === "object" &&
+    response !== null &&
+    "response" in response
+  ) {
+    return String((response as { response: string }).response).trim();
+  }
+
+  return "{}";
+}
+
+function normalizeTypographyOutput(response: unknown) {
+  const parsed = response as {
+    heading?: { family?: unknown; weight?: unknown; name?: unknown };
+    body?: { family?: unknown; weight?: unknown; name?: unknown };
+  };
+
+  if (
+    typeof parsed.heading?.family !== "string" ||
+    typeof parsed.body?.family !== "string"
+  ) {
+    return FALLBACK_TYPOGRAPHY;
+  }
+
+  const headingFamily = parsed.heading.family.trim();
+  const bodyFamily = parsed.body.family.trim();
+
+  if (!headingFamily || !bodyFamily) {
+    return FALLBACK_TYPOGRAPHY;
+  }
+
+  return {
+    heading: {
+      name:
+        typeof parsed.heading.name === "string"
+          ? parsed.heading.name
+          : headingFamily,
+      family: headingFamily,
+      weight:
+        typeof parsed.heading.weight === "string"
+          ? parsed.heading.weight
+          : "700",
+    },
+    body: {
+      name:
+        typeof parsed.body.name === "string" ? parsed.body.name : bodyFamily,
+      family: bodyFamily,
+      weight:
+        typeof parsed.body.weight === "string" ? parsed.body.weight : "400",
+    },
+  };
 }
 
 export class BrandKitPipeline {
@@ -60,29 +130,6 @@ export class BrandKitPipeline {
         extractedColors,
       });
 
-      const response = await this.ai.run(
-        "@cf/meta/llama-3.1-8b-instruct-fp8",
-        requestConfig,
-      );
-
-      const responseText =
-        typeof response === "object" &&
-        response !== null &&
-        "response" in response
-          ? String((response as { response: string }).response).trim()
-          : "{}";
-
-      let aiOutput;
-      try {
-        aiOutput = JSON.parse(responseText);
-      } catch (e) {
-        console.error(
-          "[brand-kit-pipeline] Failed to parse JSON:",
-          responseText,
-        );
-        throw new Error("AI returned invalid JSON");
-      }
-
       let actualLogoUrl = message.customLogoUrl;
 
       if (!actualLogoUrl && message.sourceImageId) {
@@ -94,20 +141,54 @@ export class BrandKitPipeline {
         }
       }
 
+      const styleHint =
+        TYPOGRAPHY_REGISTRY[typographyStyle]?.description ??
+        "Clean, minimal, and highly legible";
+
+      const [colorResponse, typographyResponse] = await Promise.all([
+        this.ai.run("@cf/meta/llama-3.1-8b-instruct-fp8", requestConfig),
+        actualLogoUrl
+          ? this.runVisionTypographyRequest({
+              brandName,
+              description: prompt,
+              typographyStyleHint: styleHint,
+              logoUrl: actualLogoUrl,
+            })
+          : Promise.resolve(null),
+      ]);
+
+      const colorText = extractWorkersAiResponseText(colorResponse);
+
+      let colorOutput;
+      try {
+        colorOutput = JSON.parse(colorText);
+      } catch (e) {
+        console.error("[brand-kit-pipeline] Failed to parse JSON:", colorText);
+        throw new Error("AI returned invalid JSON");
+      }
+
+      let typographyOutput = FALLBACK_TYPOGRAPHY;
+      if (typographyResponse) {
+        const typographyText = extractWorkersAiResponseText(typographyResponse);
+
+        try {
+          typographyOutput = normalizeTypographyOutput(
+            JSON.parse(typographyText),
+          );
+        } catch {
+          console.warn(
+            "[brand-kit-pipeline] Vision typography parse failed; using fallback",
+          );
+        }
+      }
+
       const fallbackLogoUrl =
         actualLogoUrl || "https://placehold.co/400x400/000/FFF?text=Logo";
 
-      const selectedTypography =
-        TYPOGRAPHY_REGISTRY[typographyStyle] ||
-        TYPOGRAPHY_REGISTRY["modern-sans"];
-
       const finalResultsJSON: Record<string, any> = {
         brandName,
-        colorPalette: aiOutput.colorPalette || [],
-        typography: {
-          heading: selectedTypography.heading,
-          body: selectedTypography.body,
-        },
+        colorPalette: colorOutput.colorPalette || [],
+        typography: typographyOutput,
         deliverables: deliverables,
       };
 
@@ -230,47 +311,99 @@ export class BrandKitPipeline {
       if (!activeRevision) throw new Error("No active revision found");
 
       let newMergedJSON = { ...(activeRevision.results as any) };
-      const refinementRequest = buildBrandKitRefinementRequest({
-        brandName: newMergedJSON.brandName || "Unknown",
-        sectionId,
-        refinementPrompt,
-        currentResults: newMergedJSON,
-      });
 
-      if (refinementRequest) {
-        const response = await this.ai.run(
-          "@cf/meta/llama-3.1-8b-instruct-fp8",
-          refinementRequest.request,
-        );
+      if (
+        sectionId === "typography" &&
+        refinementPrompt.startsWith("__FONT_OVERRIDE__")
+      ) {
+        const [, role, family] = refinementPrompt.split(":");
 
-        const responseText =
-          typeof response === "object" &&
-          response !== null &&
-          "response" in response
-            ? String((response as { response: string }).response).trim()
-            : "{}";
-
-        let aiOutput;
-        try {
-          aiOutput = JSON.parse(responseText);
-        } catch (e) {
-          console.error(
-            "[brand-kit-pipeline] Failed to parse Refinement JSON:",
-            responseText,
-          );
-          throw new Error("AI returned invalid JSON on refinement");
+        if ((role === "heading" || role === "body") && family) {
+          newMergedJSON.typography = {
+            ...newMergedJSON.typography,
+            [role]: {
+              ...newMergedJSON.typography?.[role],
+              family,
+              name: family,
+            },
+          };
         }
+      } else if (
+        sectionId === "typography" &&
+        refinementPrompt === "__AI_SUGGEST_TYPOGRAPHY__"
+      ) {
+        // Re-run vision model to get fresh AI font suggestions
+        const brandKit = await this.db.query.brandKits.findFirst({
+          where: eq(brandKits.id, brandKitId),
+        });
 
-        if (
-          refinementRequest.sectionKey === "colorPalette" &&
-          aiOutput.colorPalette
-        ) {
-          newMergedJSON.colorPalette = aiOutput.colorPalette;
+        const logoUrl =
+          newMergedJSON.logoVariations?.[0]?.url || brandKit?.customLogoUrl;
+
+        if (logoUrl) {
+          const styleHint =
+            TYPOGRAPHY_REGISTRY[brandKit?.typographyStyle ?? ""]?.description ??
+            "Clean, minimal, and highly legible";
+
+          const visionResponse = await this.runVisionTypographyRequest({
+            brandName: newMergedJSON.brandName || "Brand",
+            description: styleHint,
+            typographyStyleHint: styleHint,
+            logoUrl,
+          });
+
+          if (visionResponse) {
+            const typographyText = extractWorkersAiResponseText(visionResponse);
+            try {
+              const newTypography = normalizeTypographyOutput(
+                JSON.parse(typographyText),
+              );
+              newMergedJSON.typography = newTypography;
+            } catch {
+              console.warn(
+                "[brand-kit-pipeline] AI suggest typography parse failed; keeping current",
+              );
+            }
+          }
         }
       } else {
-        console.log(
-          `[brand-kit-pipeline] Refinement for ${sectionId} is not text-LLM driven yet.`,
-        );
+        const refinementRequest = buildBrandKitRefinementRequest({
+          brandName: newMergedJSON.brandName || "Unknown",
+          sectionId,
+          refinementPrompt,
+          currentResults: newMergedJSON,
+        });
+
+        if (!refinementRequest) {
+          console.log(
+            `[brand-kit-pipeline] Refinement for ${sectionId} is not text-LLM driven yet.`,
+          );
+        } else {
+          const response = await this.ai.run(
+            "@cf/meta/llama-3.1-8b-instruct-fp8",
+            refinementRequest.request,
+          );
+
+          const responseText = extractWorkersAiResponseText(response);
+
+          let aiOutput;
+          try {
+            aiOutput = JSON.parse(responseText);
+          } catch (e) {
+            console.error(
+              "[brand-kit-pipeline] Failed to parse Refinement JSON:",
+              responseText,
+            );
+            throw new Error("AI returned invalid JSON on refinement");
+          }
+
+          if (
+            refinementRequest.sectionKey === "colorPalette" &&
+            aiOutput.colorPalette
+          ) {
+            newMergedJSON.colorPalette = aiOutput.colorPalette;
+          }
+        }
       }
 
       const [maxRev] = await this.db
@@ -305,6 +438,42 @@ export class BrandKitPipeline {
         `[brand-kit-pipeline] Refinement failed brandKitId=${brandKitId}:`,
         error,
       );
+    }
+  }
+
+  /**
+   * Runs the vision model typography request with automatic license acceptance.
+   * Cloudflare Workers AI requires accepting the Meta Community License
+   * by sending "agree" as the first prompt before the model can be used.
+   */
+  private async runVisionTypographyRequest(params: {
+    brandName: string;
+    description: string;
+    typographyStyleHint: string;
+    logoUrl: string;
+  }): Promise<unknown | null> {
+    try {
+      if (!visionModelLicenseAccepted) {
+        await this.ai.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+          messages: [{ role: "user", content: "agree" }],
+          max_tokens: 1,
+        });
+        visionModelLicenseAccepted = true;
+        console.log(
+          "[brand-kit-pipeline] Llama 3.2 Vision license accepted",
+        );
+      }
+
+      return await this.ai.run(
+        "@cf/meta/llama-3.2-11b-vision-instruct",
+        buildBrandKitTypographyRequest(params),
+      );
+    } catch (error) {
+      console.warn(
+        "[brand-kit-pipeline] Vision typography generation failed; using fallback",
+        error,
+      );
+      return null;
     }
   }
 

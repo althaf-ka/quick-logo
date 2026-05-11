@@ -39,6 +39,7 @@ export function BrandKitWorkspace({
             <BrandKitResults
               data={bk.results}
               onRefine={(sectionId) => bk.setTargetSection(sectionId)}
+              onFontChange={bk.handleFontChange}
               onDownloadAll={() => {
                 // TODO: Generate ZIP and trigger download
               }}

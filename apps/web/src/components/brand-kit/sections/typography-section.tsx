@@ -1,4 +1,9 @@
-import { SectionHeader, SectionContent } from "./section-header";
+import { useState } from "react";
+import { Button } from "@quicklogo/ui/components/button";
+import { PencilSimpleIcon, CheckIcon } from "@phosphor-icons/react";
+import { FontPicker } from "../font-picker";
+import { useGoogleFontLoader } from "@/hooks/use-google-font-loader";
+import { SectionContent } from "./section-header";
 
 export interface TypographyPairing {
   heading: {
@@ -18,31 +23,79 @@ export interface TypographyPairing {
 interface TypographySectionProps {
   pairing: TypographyPairing;
   brandName?: string;
-  onRefine?: (sectionId: string) => void;
   isRefining?: boolean;
+  onFontChange?: (role: "heading" | "body", family: string) => void;
 }
 
 export function TypographySection({
   pairing,
   brandName,
-  onRefine,
   isRefining,
+  onFontChange,
 }: TypographySectionProps) {
+  const [isEditing, setIsEditing] = useState(false);
   const headingSample =
     pairing.heading.sampleText || brandName || "Your Brand Name";
   const bodySample =
     pairing.body.sampleText ||
     "A brand identity that speaks to your audience with clarity and confidence. Every detail matters.";
 
+  useGoogleFontLoader(pairing.heading.family);
+  useGoogleFontLoader(pairing.body.family);
+
   return (
     <div>
-      <SectionHeader
-        title="Typography System"
-        sectionId="typography"
-        onRefine={onRefine}
-        isRefining={isRefining}
-      />
+      <div className="flex items-center justify-between pb-3">
+        <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
+          Typography System
+        </h3>
+        {onFontChange && (
+          <Button
+            variant={isEditing ? "default" : "ghost"}
+            size="sm"
+            className={
+              isEditing
+                ? "h-auto cursor-pointer gap-1.5 px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase"
+                : "text-foreground/70 hover:text-primary hover:bg-primary/10 h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all"
+            }
+            onClick={() => setIsEditing((current) => !current)}
+          >
+            {isEditing ? (
+              <>
+                <CheckIcon weight="bold" className="size-3" />
+                Done
+              </>
+            ) : (
+              <>
+                <PencilSimpleIcon weight="bold" className="size-3" />
+                Edit Fonts
+              </>
+            )}
+          </Button>
+        )}
+      </div>
       <SectionContent isRefining={isRefining}>
+        {isEditing && onFontChange && (
+          <div className="bg-muted/20 mb-4 space-y-3 border border-dashed p-4">
+            <p className="text-muted-foreground/50 font-mono text-[9px] leading-relaxed tracking-wide">
+              Select a font for each role. Your brand kit uses two fonts — one
+              for headlines and one for body text.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <FontPicker
+                label="Heading Font"
+                value={pairing.heading.family}
+                onValueChange={(family) => onFontChange("heading", family)}
+              />
+              <FontPicker
+                label="Body Font"
+                value={pairing.body.family}
+                onValueChange={(family) => onFontChange("body", family)}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-3 md:grid-cols-2">
           <div className="border p-5">
             <p className="text-muted-foreground/50 mb-3 font-mono text-[9px] tracking-widest uppercase">

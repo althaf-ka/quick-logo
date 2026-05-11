@@ -25,6 +25,7 @@ import {
 import { cn } from "@quicklogo/ui/lib/utils";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
+import { TYPOGRAPHY_REGISTRY } from "@quicklogo/shared";
 import type { Deliverables } from "@/hooks/use-brand-kit";
 
 function ConfigField({
@@ -64,8 +65,6 @@ function ConfigField({
   );
 }
 
-import { BRAND_KIT_FONTS as FONTS } from "./brand-kit-fonts";
-
 export interface BrandKitSidebarProps {
   // Logo
   logoUrl: string | null;
@@ -104,14 +103,13 @@ export function BrandKitSidebar({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedFont = FONTS.find((f) => f.id === typography);
+  const typographyOptions = Object.entries(TYPOGRAPHY_REGISTRY);
+  const selectedTypography = TYPOGRAPHY_REGISTRY[typography];
 
   return (
     <div
       className={cn(
-        "bg-background flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto border-l p-4",
-        "[&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent",
-        "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/60",
+        "bg-background scrollbar-subtle flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto border-l p-4",
         className,
       )}
     >
@@ -222,7 +220,7 @@ export function BrandKitSidebar({
 
       <ConfigField
         label="Typography"
-        tooltip="Primary font family for your brand"
+        tooltip="Style direction for AI-assisted font selection"
       >
         <Combobox
           value={typography}
@@ -233,23 +231,33 @@ export function BrandKitSidebar({
           <ComboboxInput
             placeholder="Select typography..."
             className="cursor-pointer text-xs [&_input]:cursor-pointer [&_input]:caret-transparent"
-            style={{ fontFamily: selectedFont?.family }}
           />
-          <ComboboxContent>
-            <ComboboxList>
-              {FONTS.map((font) => (
-                <ComboboxItem key={font.id} value={font.id}>
-                  <span
-                    className="text-xs font-medium"
-                    style={{ fontFamily: font.family }}
-                  >
-                    {font.name}
+          <ComboboxContent className="border-border/50 shadow-lg ring-0">
+            <ComboboxList className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {typographyOptions.map(([id, styleHint]) => (
+                <ComboboxItem
+                  key={id}
+                  value={id}
+                  className="data-[highlighted]:bg-primary/10 transition-none"
+                >
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-xs font-semibold">
+                      {styleHint.label}
+                    </span>
+                    <span className="text-muted-foreground/60 truncate text-[10px]">
+                      {styleHint.description}
+                    </span>
                   </span>
                 </ComboboxItem>
               ))}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
+        {selectedTypography && (
+          <p className="text-muted-foreground/50 text-[10px] leading-relaxed">
+            {selectedTypography.description}
+          </p>
+        )}
       </ConfigField>
 
       <ConfigField
@@ -259,13 +267,13 @@ export function BrandKitSidebar({
         <div className="flex flex-col gap-2">
           <DeliverableToggle
             label="Color Palette & Usage"
-            checked={deliverables.colorPalette}
+            checked
             disabled
             credits={0}
           />
           <DeliverableToggle
             label="Typography System"
-            checked={deliverables.typography}
+            checked
             disabled
             credits={0}
           />
