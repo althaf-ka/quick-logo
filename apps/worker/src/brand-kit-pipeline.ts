@@ -18,6 +18,7 @@ import {
   buildBrandKitRefinementRequest,
   buildBrandKitTypographyRequest,
   buildLogoVariationGenerationParams,
+  buildLogoStyleAnalysisRequest,
 } from "@quicklogo/ai-providers/prompt";
 import type { GenerationParams } from "@quicklogo/ai-providers/types";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -46,20 +47,96 @@ interface LogoVariationResult {
   url: string;
 }
 
+/**
+ * Robustly extracts the JSON or text content from various Workers AI response formats.
+ * Handles legacy formats, OpenAI-compatible formats, and "thinking" models 
+ * that use 'reasoning' or 'reasoning_content' fields.
+ */
 function extractWorkersAiResponseText(response: unknown): string {
+  if (!response) return "{}";
+
   if (typeof response === "string") {
-    return response.trim();
+    return cleanAiResponse(response);
   }
 
-  if (
-    typeof response === "object" &&
-    response !== null &&
-    "response" in response
-  ) {
-    return String((response as { response: string }).response).trim();
+  if (typeof response === "object" && response !== null) {
+    const res = response as Record<string, any>;
+
+    // 1. OpenAI-compatible format (choices array)
+    if (Array.isArray(res.choices) && res.choices.length > 0) {
+      const message = res.choices[0].message || {};
+      
+      // Check content, reasoning_content, and reasoning (some gemma models use this)
+      const rawContent = message.content || message.reasoning_content || message.reasoning || "";
+
+      if (typeof rawContent === "string" && rawContent.length > 0) {
+        return cleanAiResponse(rawContent);
+      }
+    }
+
+    // 2. Standard legacy Workers AI format
+    if ("response" in res && typeof res.response === "string") {
+      return cleanAiResponse(res.response);
+    }
+    
+    if ("result" in res && typeof res.result === "string") {
+      return cleanAiResponse(res.result);
+    }
   }
 
   return "{}";
+}
+
+/**
+ * Cleans an AI response string by removing markdown code blocks and 
+ * extracting the first valid JSON object if present.
+ */
+function cleanAiResponse(text: string): string {
+  let cleaned = text.trim();
+
+  // Remove markdown code blocks if present (e.g., ```json ... ```)
+  cleaned = cleaned.replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/g, "$1");
+
+  // If the string still contains potential JSON, try to extract the outermost {} block
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    return jsonMatch[0].trim();
+  }
+
+  return cleaned;
+}
+
+const STYLE_ALIASES: Record<string, string> = {
+  playful: "playful-display",
+  tech: "tech-mono",
+  mono: "tech-mono",
+  modern: "modern-sans",
+  classic: "classic-serif",
+  serif: "classic-serif",
+  elegant: "elegant-script",
+  script: "elegant-script",
+  bold: "bold-impact",
+  impact: "bold-impact",
+  round: "friendly-round",
+  luxury: "luxury-minimal",
+  premium: "luxury-minimal",
+};
+
+function resolveTypographyStyle(style: string): {
+  key: string;
+  hint: string;
+} {
+  const key = Object.entries(STYLE_ALIASES).reduce<string>(
+    (acc, [alias, resolved]) => style.toLowerCase().includes(alias) ? resolved : acc,
+    "modern-sans",
+  );
+
+  const entry = TYPOGRAPHY_REGISTRY[key];
+  const hint = entry
+    ? `${entry.label}: ${entry.description}`
+    : "Clean, minimal, and highly legible";
+
+  return { key, hint };
 }
 
 function normalizeTypographyOutput(response: unknown) {
@@ -141,9 +218,7 @@ export class BrandKitPipeline {
         }
       }
 
-      const styleHint =
-        TYPOGRAPHY_REGISTRY[typographyStyle]?.description ??
-        "Clean, minimal, and highly legible";
+      const { key: resolvedStyle, hint: styleHint } = resolveTypographyStyle(typographyStyle);
 
       const [colorResponse, typographyResponse] = await Promise.all([
         this.ai.run("@cf/meta/llama-3.1-8b-instruct-fp8", requestConfig),
@@ -152,6 +227,7 @@ export class BrandKitPipeline {
               brandName,
               description: prompt,
               typographyStyleHint: styleHint,
+              typographyStyleKey: resolvedStyle,
               logoUrl: actualLogoUrl,
             })
           : Promise.resolve(null),
@@ -341,14 +417,14 @@ export class BrandKitPipeline {
           newMergedJSON.logoVariations?.[0]?.url || brandKit?.customLogoUrl;
 
         if (logoUrl) {
-          const styleHint =
-            TYPOGRAPHY_REGISTRY[brandKit?.typographyStyle ?? ""]?.description ??
-            "Clean, minimal, and highly legible";
+          const typographyStyle = brandKit?.typographyStyle ?? "";
+          const { key: resolvedStyle, hint: styleHint } = resolveTypographyStyle(typographyStyle);
 
           const visionResponse = await this.runVisionTypographyRequest({
-            brandName: newMergedJSON.brandName || "Brand",
-            description: styleHint,
+            brandName: brandKit?.brandName || newMergedJSON.brandName || "Brand",
+            description: brandKit?.prompt || newMergedJSON.brandName || "Brand identity",
             typographyStyleHint: styleHint,
+            typographyStyleKey: resolvedStyle,
             logoUrl,
           });
 
@@ -441,36 +517,91 @@ export class BrandKitPipeline {
     }
   }
 
-  /**
-   * Runs the vision model typography request with automatic license acceptance.
-   * Cloudflare Workers AI requires accepting the Meta Community License
-   * by sending "agree" as the first prompt before the model can be used.
-   */
+  private async analyzeLogoStyle(params: {
+    brandName: string;
+    description: string;
+    logoUrl: string;
+  }): Promise<string | null> {
+    const MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
+
+    if (!visionModelLicenseAccepted) {
+      try {
+        await this.ai.run(MODEL as any, {
+          messages: [{ role: "user", content: "agree" }],
+          max_tokens: 1,
+        } as any);
+      } catch {
+        // Already accepted or other error — proceed
+      }
+      visionModelLicenseAccepted = true;
+    }
+
+    try {
+      const logoResponse = await fetch(params.logoUrl);
+      if (!logoResponse.ok) throw new Error("Failed to fetch logo for AI analysis");
+      const blob = await logoResponse.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      
+      let binary = "";
+      const bytes = new Uint8Array(arrayBuffer);
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+      }
+      
+      const base64 = btoa(binary);
+      const dataUrl = `data:${blob.type};base64,${base64}`;
+
+      const response = await this.ai.run(
+        MODEL as any,
+        buildLogoStyleAnalysisRequest({
+          brandName: params.brandName,
+          description: params.description,
+          logoUrl: dataUrl,
+        }),
+      );
+      const text = extractWorkersAiResponseText(response);
+      console.log("[brand-kit-pipeline] Logo style analysis:", text);
+      return text;
+    } catch (error) {
+      console.warn("[brand-kit-pipeline] Logo style analysis failed:", error);
+      return null;
+    }
+  }
+
   private async runVisionTypographyRequest(params: {
     brandName: string;
     description: string;
     typographyStyleHint: string;
+    typographyStyleKey?: string;
     logoUrl: string;
   }): Promise<unknown | null> {
     try {
-      if (!visionModelLicenseAccepted) {
-        await this.ai.run("@cf/meta/llama-3.2-11b-vision-instruct", {
-          messages: [{ role: "user", content: "agree" }],
-          max_tokens: 1,
-        });
-        visionModelLicenseAccepted = true;
-        console.log(
-          "[brand-kit-pipeline] Llama 3.2 Vision license accepted",
-        );
-      }
+      // Step 1: Analyze logo style via vision model
+      const visualAnalysis = await this.analyzeLogoStyle({
+        brandName: params.brandName,
+        description: params.description,
+        logoUrl: params.logoUrl,
+      });
 
-      return await this.ai.run(
-        "@cf/meta/llama-3.2-11b-vision-instruct",
-        buildBrandKitTypographyRequest(params),
+      // Step 2: Suggest fonts via text LLM with JSON mode
+      const fontRequest = buildBrandKitTypographyRequest({
+        ...params,
+        visualAnalysis: visualAnalysis ?? undefined,
+      });
+
+      const fontResponse = await this.ai.run(
+        "@cf/meta/llama-3.1-8b-instruct-fp8",
+        fontRequest,
       );
+
+      const extractedText = extractWorkersAiResponseText(fontResponse);
+      console.log("[brand-kit-pipeline] Font suggestion JSON:", extractedText);
+
+      return fontResponse;
     } catch (error) {
       console.warn(
-        "[brand-kit-pipeline] Vision typography generation failed; using fallback",
+        "[brand-kit-pipeline] Typography generation failed; using fallback",
         error,
       );
       return null;
