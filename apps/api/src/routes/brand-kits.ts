@@ -15,6 +15,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const data = c.req.valid("json");
 
     let cost = 5;
+    if (data.deliverables.logoVariations) cost += 2;
     if (data.deliverables.socialMedia) cost += 3;
     if (data.deliverables.businessCard) cost += 2;
     if (data.deliverables.favicon) cost += 1;

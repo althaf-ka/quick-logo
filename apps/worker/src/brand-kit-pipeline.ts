@@ -19,6 +19,8 @@ import {
   buildBrandKitTypographyRequest,
   buildLogoVariationGenerationParams,
   buildLogoStyleAnalysisRequest,
+  buildSocialMediaGenerationParams,
+  buildBusinessCardGenerationParams,
 } from "@quicklogo/ai-providers/prompt";
 import type { GenerationParams } from "@quicklogo/ai-providers/types";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -49,7 +51,7 @@ interface LogoVariationResult {
 
 /**
  * Robustly extracts the JSON or text content from various Workers AI response formats.
- * Handles legacy formats, OpenAI-compatible formats, and "thinking" models 
+ * Handles legacy formats, OpenAI-compatible formats, and "thinking" models
  * that use 'reasoning' or 'reasoning_content' fields.
  */
 function extractWorkersAiResponseText(response: unknown): string {
@@ -65,9 +67,10 @@ function extractWorkersAiResponseText(response: unknown): string {
     // 1. OpenAI-compatible format (choices array)
     if (Array.isArray(res.choices) && res.choices.length > 0) {
       const message = res.choices[0].message || {};
-      
+
       // Check content, reasoning_content, and reasoning (some gemma models use this)
-      const rawContent = message.content || message.reasoning_content || message.reasoning || "";
+      const rawContent =
+        message.content || message.reasoning_content || message.reasoning || "";
 
       if (typeof rawContent === "string" && rawContent.length > 0) {
         return cleanAiResponse(rawContent);
@@ -78,7 +81,7 @@ function extractWorkersAiResponseText(response: unknown): string {
     if ("response" in res && typeof res.response === "string") {
       return cleanAiResponse(res.response);
     }
-    
+
     if ("result" in res && typeof res.result === "string") {
       return cleanAiResponse(res.result);
     }
@@ -88,7 +91,7 @@ function extractWorkersAiResponseText(response: unknown): string {
 }
 
 /**
- * Cleans an AI response string by removing markdown code blocks and 
+ * Cleans an AI response string by removing markdown code blocks and
  * extracting the first valid JSON object if present.
  */
 function cleanAiResponse(text: string): string {
@@ -127,7 +130,8 @@ function resolveTypographyStyle(style: string): {
   hint: string;
 } {
   const key = Object.entries(STYLE_ALIASES).reduce<string>(
-    (acc, [alias, resolved]) => style.toLowerCase().includes(alias) ? resolved : acc,
+    (acc, [alias, resolved]) =>
+      style.toLowerCase().includes(alias) ? resolved : acc,
     "modern-sans",
   );
 
@@ -218,7 +222,8 @@ export class BrandKitPipeline {
         }
       }
 
-      const { key: resolvedStyle, hint: styleHint } = resolveTypographyStyle(typographyStyle);
+      const { key: resolvedStyle, hint: styleHint } =
+        resolveTypographyStyle(typographyStyle);
 
       const [colorResponse, typographyResponse] = await Promise.all([
         this.ai.run("@cf/meta/llama-3.1-8b-instruct-fp8", requestConfig),
@@ -268,15 +273,18 @@ export class BrandKitPipeline {
         deliverables: deliverables,
       };
 
-      if (deliverables?.logoVariations) {
-        const darkAndIconUrls = actualLogoUrl
+      let darkAndIconUrls: { darkModeUrl: string; iconOnlyUrl: string } | null = null;
+      if (deliverables?.logoVariations || deliverables?.favicon) {
+        darkAndIconUrls = actualLogoUrl
           ? await this.generateLogoVariations({
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
             })
           : null;
+      }
 
+      if (deliverables?.logoVariations) {
         finalResultsJSON.logoVariations = [
           {
             id: "primary",
@@ -306,43 +314,60 @@ export class BrandKitPipeline {
       }
 
       if (deliverables?.socialMedia) {
+        const socialMediaUrls = actualLogoUrl
+          ? await this.generateSocialMediaAssets({
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+            })
+          : null;
+
         finalResultsJSON.socialMedia = [
           {
             platform: "Instagram",
             type: "Profile",
             dimensions: "1080x1080",
-            url: "https://placehold.co/1080x1080/000/FFF?text=IG",
+            url: socialMediaUrls?.instagramUrl ?? "https://placehold.co/1080x1080/000/FFF?text=IG",
           },
           {
             platform: "Twitter",
             type: "Header",
             dimensions: "1500x500",
-            url: "https://placehold.co/1500x500/000/FFF?text=TW",
+            url: socialMediaUrls?.twitterUrl ?? "https://placehold.co/1500x500/000/FFF?text=TW",
           },
         ];
       }
       if (deliverables?.businessCard) {
+        const businessCardUrls = actualLogoUrl
+          ? await this.generateBusinessCardAssets({
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+            })
+          : null;
+
         finalResultsJSON.businessCard = {
-          frontUrl: "https://placehold.co/1050x600/000/FFF?text=Front",
-          backUrl: "https://placehold.co/1050x600/FFF/000?text=Back",
+          frontUrl: businessCardUrls?.frontUrl ?? "https://placehold.co/1050x600/000/FFF?text=Front",
+          backUrl: businessCardUrls?.backUrl ?? "https://placehold.co/1050x600/FFF/000?text=Back",
         };
       }
       if (deliverables?.favicon) {
+        const iconUrl = darkAndIconUrls?.iconOnlyUrl ?? fallbackLogoUrl;
         finalResultsJSON.favicons = [
           {
             size: 16,
             label: "Web",
-            url: "https://placehold.co/16x16/000/FFF?text=16",
+            url: iconUrl,
           },
           {
             size: 32,
             label: "Web HD",
-            url: "https://placehold.co/32x32/000/FFF?text=32",
+            url: iconUrl,
           },
           {
             size: 180,
             label: "Apple",
-            url: "https://placehold.co/180x180/000/FFF?text=180",
+            url: iconUrl,
           },
         ];
       }
@@ -418,11 +443,14 @@ export class BrandKitPipeline {
 
         if (logoUrl) {
           const typographyStyle = brandKit?.typographyStyle ?? "";
-          const { key: resolvedStyle, hint: styleHint } = resolveTypographyStyle(typographyStyle);
+          const { key: resolvedStyle, hint: styleHint } =
+            resolveTypographyStyle(typographyStyle);
 
           const visionResponse = await this.runVisionTypographyRequest({
-            brandName: brandKit?.brandName || newMergedJSON.brandName || "Brand",
-            description: brandKit?.prompt || newMergedJSON.brandName || "Brand identity",
+            brandName:
+              brandKit?.brandName || newMergedJSON.brandName || "Brand",
+            description:
+              brandKit?.prompt || newMergedJSON.brandName || "Brand identity",
             typographyStyleHint: styleHint,
             typographyStyleKey: resolvedStyle,
             logoUrl,
@@ -526,10 +554,13 @@ export class BrandKitPipeline {
 
     if (!visionModelLicenseAccepted) {
       try {
-        await this.ai.run(MODEL as any, {
-          messages: [{ role: "user", content: "agree" }],
-          max_tokens: 1,
-        } as any);
+        await this.ai.run(
+          MODEL as any,
+          {
+            messages: [{ role: "user", content: "agree" }],
+            max_tokens: 1,
+          } as any,
+        );
       } catch {
         // Already accepted or other error — proceed
       }
@@ -538,17 +569,18 @@ export class BrandKitPipeline {
 
     try {
       const logoResponse = await fetch(params.logoUrl);
-      if (!logoResponse.ok) throw new Error("Failed to fetch logo for AI analysis");
+      if (!logoResponse.ok)
+        throw new Error("Failed to fetch logo for AI analysis");
       const blob = await logoResponse.blob();
       const arrayBuffer = await blob.arrayBuffer();
-      
+
       let binary = "";
       const bytes = new Uint8Array(arrayBuffer);
       const chunkSize = 8192;
       for (let i = 0; i < bytes.length; i += chunkSize) {
         binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
       }
-      
+
       const base64 = btoa(binary);
       const dataUrl = `data:${blob.type};base64,${base64}`;
 
@@ -594,9 +626,6 @@ export class BrandKitPipeline {
         "@cf/meta/llama-3.1-8b-instruct-fp8",
         fontRequest,
       );
-
-      const extractedText = extractWorkersAiResponseText(fontResponse);
-      console.log("[brand-kit-pipeline] Font suggestion JSON:", extractedText);
 
       return fontResponse;
     } catch (error) {
@@ -672,6 +701,94 @@ export class BrandKitPipeline {
     ]);
 
     return { darkModeUrl, iconOnlyUrl };
+  }
+
+  private async generateSocialMediaAssets({
+    brandKitId,
+    brandName,
+    sourceLogoUrl,
+  }: {
+    brandKitId: string;
+    brandName: string;
+    sourceLogoUrl: string;
+  }): Promise<{ instagramUrl: string; twitterUrl: string }> {
+    const mapping = getModelMapping("quick-nano-banana");
+    const provider = createProvider(mapping, { ai: this.ai, env: this.env });
+
+    const [instagramUrl, twitterUrl] = await Promise.all([
+      this.generateVariationWithFallback({
+        provider,
+        params: buildSocialMediaGenerationParams({
+          variation: "instagram-profile",
+          brandName,
+          sourceLogoUrl,
+          backendModel: mapping.backendModel,
+          defaultParams: mapping.defaultParams,
+        }),
+        brandKitId,
+        suffix: "social-instagram",
+        fallbackUrl: sourceLogoUrl,
+      }),
+      this.generateVariationWithFallback({
+        provider,
+        params: buildSocialMediaGenerationParams({
+          variation: "twitter-header",
+          brandName,
+          sourceLogoUrl,
+          backendModel: mapping.backendModel,
+          defaultParams: mapping.defaultParams,
+        }),
+        brandKitId,
+        suffix: "social-twitter",
+        fallbackUrl: sourceLogoUrl,
+      }),
+    ]);
+
+    return { instagramUrl, twitterUrl };
+  }
+
+  private async generateBusinessCardAssets({
+    brandKitId,
+    brandName,
+    sourceLogoUrl,
+  }: {
+    brandKitId: string;
+    brandName: string;
+    sourceLogoUrl: string;
+  }): Promise<{ frontUrl: string; backUrl: string }> {
+    const mapping = getModelMapping("quick-nano-banana");
+    const provider = createProvider(mapping, { ai: this.ai, env: this.env });
+
+    const [frontUrl, backUrl] = await Promise.all([
+      this.generateVariationWithFallback({
+        provider,
+        params: buildBusinessCardGenerationParams({
+          variation: "front",
+          brandName,
+          sourceLogoUrl,
+          backendModel: mapping.backendModel,
+          defaultParams: mapping.defaultParams,
+        }),
+        brandKitId,
+        suffix: "business-card-front",
+        fallbackUrl: sourceLogoUrl,
+      }),
+      this.generateVariationWithFallback({
+        provider,
+        params: buildBusinessCardGenerationParams({
+          variation: "back",
+          brandName,
+          sourceLogoUrl,
+          backendModel: mapping.backendModel,
+          defaultParams: mapping.defaultParams,
+        }),
+        brandKitId,
+        suffix: "business-card-back",
+        fallbackUrl: sourceLogoUrl,
+      }),
+    ]);
+
+    return { frontUrl, backUrl };
   }
 
   private async findReusableLogoVariationUrls({

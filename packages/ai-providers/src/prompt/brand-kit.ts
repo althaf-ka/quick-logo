@@ -1,6 +1,8 @@
 import type { GenerationParams } from "../types";
 
 type LogoVariationKind = "dark-mode" | "icon-only";
+type SocialMediaVariationKind = "instagram-profile" | "twitter-header";
+type BusinessCardVariationKind = "front" | "back";
 type BrandKitSectionKey = "colorPalette";
 
 interface BrandKitMessage {
@@ -36,6 +38,22 @@ interface LogoVariationPromptContext {
 
 interface BuildLogoVariationParamsInput {
   variation: LogoVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+}
+
+interface BuildSocialMediaParamsInput {
+  variation: SocialMediaVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+}
+
+interface BuildBusinessCardParamsInput {
+  variation: BusinessCardVariationKind;
   brandName: string;
   sourceLogoUrl: string;
   backendModel: string;
@@ -87,6 +105,26 @@ const LOGO_VARIATION_PROMPTS = {
     "You are an expert graphic designer. Create an icon-only logomark from this image. Completely remove all typography, text, and words if they exist. Preserve the symbol's original proportions, colors, and art style. If removing text leaves the symbol visually too small, scale the symbol up tastefully to use the freed space while keeping comfortable margins. If the input is already icon-only or has no typography, preserve the original symbol scale or make only a subtle professional sizing adjustment. Do not shrink the symbol, crop, distort, or add new elements.",
 } satisfies Record<
   LogoVariationKind,
+  (context: LogoVariationPromptContext) => string
+>;
+
+const SOCIAL_MEDIA_PROMPTS = {
+  "instagram-profile": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert social media designer. Take the provided logo for "${brandName}" and create an optimized Instagram profile picture. Ensure the logo is perfectly centered and scaled to fit within a circular crop, leaving enough breathing room (padding) around the edges. The background should be a solid color or subtle gradient that complements the brand. Do not alter the logo itself.`,
+  "twitter-header": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert social media designer. Create a striking Twitter header image (3:1 aspect ratio) for "${brandName}". Use the provided logo as a base to derive a cohesive background pattern, gradient, or minimalistic atmospheric scene. The composition must be balanced, avoiding the bottom-left area where the profile picture overlaps. It should look like a premium, professional brand banner.`,
+} satisfies Record<
+  SocialMediaVariationKind,
+  (context: LogoVariationPromptContext) => string
+>;
+
+const BUSINESS_CARD_PROMPTS = {
+  "front": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert graphic designer. Create a minimalist and elegant front design for a business card for "${brandName}". Center the logo beautifully with lots of negative space. Use a clean background (solid color or very subtle texture) that matches the brand identity. Do not add any text other than the logo itself.`,
+  "back": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert graphic designer. Create a matching minimalist back design for a business card for "${brandName}". Create an abstract background, pattern, or gradient derived from the brand's style, leaving room for contact details. The design should feel premium and cohesive with the front.`,
+} satisfies Record<
+  BusinessCardVariationKind,
   (context: LogoVariationPromptContext) => string
 >;
 
@@ -243,5 +281,41 @@ export function buildLogoVariationGenerationParams({
     prompt: LOGO_VARIATION_PROMPTS[variation]({ brandName }),
     referenceImage: sourceLogoUrl,
     referenceStrength: 75,
+  };
+}
+
+export function buildSocialMediaGenerationParams({
+  variation,
+  brandName,
+  sourceLogoUrl,
+  backendModel,
+  defaultParams,
+}: BuildSocialMediaParamsInput): GenerationParams {
+  return {
+    ...defaultParams,
+    backendModel,
+    prompt: SOCIAL_MEDIA_PROMPTS[variation]({ brandName }),
+    referenceImage: sourceLogoUrl,
+    referenceStrength: variation === "instagram-profile" ? 90 : 40,
+    width: variation === "twitter-header" ? 1536 : 1024,
+    height: variation === "twitter-header" ? 512 : 1024,
+  };
+}
+
+export function buildBusinessCardGenerationParams({
+  variation,
+  brandName,
+  sourceLogoUrl,
+  backendModel,
+  defaultParams,
+}: BuildBusinessCardParamsInput): GenerationParams {
+  return {
+    ...defaultParams,
+    backendModel,
+    prompt: BUSINESS_CARD_PROMPTS[variation]({ brandName }),
+    referenceImage: sourceLogoUrl,
+    referenceStrength: variation === "front" ? 90 : 40,
+    width: 1050,
+    height: 600,
   };
 }
