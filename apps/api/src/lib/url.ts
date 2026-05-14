@@ -1,7 +1,10 @@
-export function isAllowedRedirect(targetUrl: string, allowedOrigins: string[]): boolean {
+export function isAllowedRedirect(
+  targetUrl: string,
+  allowedOrigins: string[],
+): boolean {
   try {
     const parsedTarget = new URL(targetUrl);
-    
+
     return allowedOrigins.some((origin) => {
       try {
         const parsedAllowed = new URL(origin);

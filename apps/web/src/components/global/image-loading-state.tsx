@@ -19,9 +19,7 @@ export function ImageLoadingState({
     <div
       className={cn(
         "flex flex-col items-center justify-center",
-        isOverlay
-          ? "absolute inset-0 z-10 gap-4"
-          : "flex-1 gap-6 p-6",
+        isOverlay ? "absolute inset-0 z-10 gap-4" : "flex-1 gap-6 p-6",
         className,
       )}
     >

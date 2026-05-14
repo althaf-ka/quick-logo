@@ -1,7 +1,4 @@
-import {
-  createLazyFileRoute,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";

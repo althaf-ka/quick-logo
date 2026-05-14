@@ -92,7 +92,7 @@ export function PromptInput({
     [onSubmit],
   );
 
-  const canSubmit = (!isLoading) && (allowEmptySubmit || value.trim().length > 0);
+  const canSubmit = !isLoading && (allowEmptySubmit || value.trim().length > 0);
 
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
@@ -226,7 +226,6 @@ export function PromptInput({
                   <TooltipContent side="top">Settings</TooltipContent>
                 </Tooltip>
               )}
-
             </div>
 
             <div className="flex items-center gap-2.5">

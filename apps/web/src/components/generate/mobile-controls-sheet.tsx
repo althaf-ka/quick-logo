@@ -14,7 +14,7 @@ interface MobileControlsSheetProps {
   config: GenerateConfig;
   onConfigChange: <K extends keyof GenerateConfig>(
     key: K,
-    value: GenerateConfig[K]
+    value: GenerateConfig[K],
   ) => void;
   onReferenceImageChange?: (file: File | null) => void;
 }

@@ -42,7 +42,7 @@ export function ColorPaletteSection({
           {colors.map((color, i) => (
             <div
               key={i}
-              className="group border transition-colors hover:border-primary/30"
+              className="group hover:border-primary/30 border transition-colors"
             >
               <Tooltip>
                 <TooltipTrigger

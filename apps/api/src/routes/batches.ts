@@ -36,7 +36,6 @@ const batches = new Hono<{ Bindings: Bindings; Variables: Variables }>().get(
       eq(images.projectId, projectIds[0]!),
     );
 
-    
     if (projectIds.length > 1) {
       for (const pid of projectIds.slice(1)) {
         const moreImages = await db

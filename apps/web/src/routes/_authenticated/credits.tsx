@@ -62,7 +62,10 @@ export const Route = createFileRoute("/_authenticated/credits")({
   head: () => ({
     meta: [
       { title: "Credits & Billing | QuickLogo" },
-      { name: "description", content: "Manage your credits and view your billing history." },
+      {
+        name: "description",
+        content: "Manage your credits and view your billing history.",
+      },
     ],
   }),
 });
@@ -212,9 +215,9 @@ function CreditsPage() {
       </div>
 
       {isVerifying && (
-        <Card className="border-blue-500/30 bg-blue-500/5 mb-8 shadow-none">
+        <Card className="mb-8 border-blue-500/30 bg-blue-500/5 shadow-none">
           <div className="flex items-center gap-3 p-4">
-            <SpinnerGapIcon className="text-blue-500 size-5 animate-spin" />
+            <SpinnerGapIcon className="size-5 animate-spin text-blue-500" />
             <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
               Verifying your payment status...
             </p>

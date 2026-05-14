@@ -64,7 +64,8 @@ export function createAuth(db: Database, env: AuthEnv) {
       admin({
         defaultRole: "user",
         adminRoles: ["admin"],
-        bannedUserMessage: "Your account has been suspended. Please contact support.",
+        bannedUserMessage:
+          "Your account has been suspended. Please contact support.",
       }),
     ],
 

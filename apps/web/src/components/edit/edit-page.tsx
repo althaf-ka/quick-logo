@@ -238,7 +238,7 @@ export function EditPage({
               <Button
                 variant="outline"
                 className={cn(
-                  "group flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-none border-primary/40 bg-primary/10 text-primary transition-all hover:bg-primary/20",
+                  "group border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-none transition-all",
                   areActionsDisabled && "cursor-not-allowed opacity-50",
                 )}
                 disabled={areActionsDisabled}
@@ -266,7 +266,7 @@ export function EditPage({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "w-full cursor-pointer justify-start gap-2 rounded-none border-border/60 text-[11px] font-medium transition-colors hover:bg-muted/50",
+                  "border-border/60 hover:bg-muted/50 w-full cursor-pointer justify-start gap-2 rounded-none text-[11px] font-medium transition-colors",
                   areActionsDisabled && "cursor-not-allowed opacity-60",
                 )}
                 disabled={areActionsDisabled}
@@ -283,7 +283,7 @@ export function EditPage({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "w-full cursor-pointer justify-start gap-2 rounded-none border-border/60 text-[11px] font-medium transition-colors hover:bg-muted/50",
+                  "border-border/60 hover:bg-muted/50 w-full cursor-pointer justify-start gap-2 rounded-none text-[11px] font-medium transition-colors",
                   areActionsDisabled && "cursor-not-allowed opacity-60",
                 )}
                 disabled={areActionsDisabled}

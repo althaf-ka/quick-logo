@@ -40,7 +40,7 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
         alt={v.label}
         className={cn(
           "max-h-full max-w-full object-contain transition-all duration-300",
-          v.id === "mono" && "grayscale contrast-125",
+          v.id === "mono" && "contrast-125 grayscale",
         )}
       />
     </div>

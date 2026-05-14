@@ -29,11 +29,15 @@ app.notFound((c) =>
 );
 
 app.use("/api/*", async (c, next) => {
-  const allowedOrigins = (c.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim());
+  const allowedOrigins = (c.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim());
   const origin = c.req.header("Origin") || "";
 
   const corsMiddleware = cors({
-    origin: allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || c.env.CLIENT_URL,
+    origin: allowedOrigins.includes(origin)
+      ? origin
+      : allowedOrigins[0] || c.env.CLIENT_URL,
     credentials: true,
   });
   return corsMiddleware(c, next);

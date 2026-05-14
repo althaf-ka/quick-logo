@@ -8,7 +8,10 @@ export const Route = createFileRoute("/_authenticated/brand-kit/")({
   head: () => ({
     meta: [
       { title: "Brand Kits | QuickLogo" },
-      { name: "description", content: "View and manage your generated brand kits." },
+      {
+        name: "description",
+        content: "View and manage your generated brand kits.",
+      },
     ],
   }),
 });
@@ -16,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/brand-kit/")({
 function BrandKitIndexPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-mono text-xl font-black tracking-tight">
             Brand Kits
@@ -25,8 +28,14 @@ function BrandKitIndexPage() {
             Your generated professional brand identities
           </p>
         </div>
-        <Link to="/brand-kit/create" className={cn(buttonVariants(), "rounded-none font-mono text-[11px] font-black tracking-widest uppercase")}>
-          <PlusIcon weight="bold" className="size-3.5 mr-2" />
+        <Link
+          to="/brand-kit/create"
+          className={cn(
+            buttonVariants(),
+            "rounded-none font-mono text-[11px] font-black tracking-widest uppercase",
+          )}
+        >
+          <PlusIcon weight="bold" className="mr-2 size-3.5" />
           Create Brand Kit
         </Link>
       </div>
@@ -42,9 +51,17 @@ function BrandKitIndexPage() {
           No brand kits yet
         </p>
         <p className="text-muted-foreground/40 mt-1.5 max-w-md font-mono text-[10px] tracking-wide">
-          Create your first brand kit by uploading a logo or choosing an existing logo generated from QuickLogo. We'll generate color palettes, typography guidelines, and social media assets.
+          Create your first brand kit by uploading a logo or choosing an
+          existing logo generated from QuickLogo. We'll generate color palettes,
+          typography guidelines, and social media assets.
         </p>
-        <Link to="/brand-kit/create" className={cn(buttonVariants({ variant: "outline" }), "mt-6 rounded-none font-mono text-[10px] font-black tracking-widest uppercase")}>
+        <Link
+          to="/brand-kit/create"
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "mt-6 rounded-none font-mono text-[10px] font-black tracking-widest uppercase",
+          )}
+        >
           Get Started
         </Link>
       </div>

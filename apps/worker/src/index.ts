@@ -1,15 +1,12 @@
 import { createDb } from "@quicklogo/db";
 import type { QueueMessage } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
-import { ImageGenerationPipeline } from "./image-generation-pipeline";
+import { ImageGenerationPipeline } from "./pipelines/image-generation";
 import { BrandKitPipeline } from "./brand-kit-pipeline";
 import type { Env } from "./types";
 
 export default {
-  async queue(
-    batch: MessageBatch<QueueMessage>,
-    env: Env,
-  ): Promise<void> {
+  async queue(batch: MessageBatch<QueueMessage>, env: Env): Promise<void> {
     const db = createDb(env.DB);
     const storage = new ImageKitProvider(env.IMAGEKIT_PRIVATE_KEY);
     const imageGenerationPipeline = new ImageGenerationPipeline(

@@ -10,10 +10,7 @@ export const AUTH_KEYS = {
   user: ["auth", "user"] as const,
 };
 
-export type CurrentUser = InferResponseType<
-  typeof api.user.profile.$get,
-  200
->;
+export type CurrentUser = InferResponseType<typeof api.user.profile.$get, 200>;
 
 function isCurrentUser(value: unknown): value is CurrentUser {
   if (typeof value !== "object" || value === null) return false;
@@ -61,7 +58,7 @@ export function useGoogleLogin() {
   return useMutation({
     mutationFn: async ({ redirect }: { redirect?: string } = {}) => {
       let callbackURL = redirect || `${window.location.origin}/generate`;
-      if (callbackURL.startsWith('/')) {
+      if (callbackURL.startsWith("/")) {
         callbackURL = `${window.location.origin}${callbackURL}`;
       }
 

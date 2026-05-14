@@ -7,7 +7,12 @@ export class ApiError extends Error {
   readonly status: number;
   readonly details: Record<string, unknown>;
 
-  constructor(code: string, message: string, status: number, details: Record<string, unknown> = {}) {
+  constructor(
+    code: string,
+    message: string,
+    status: number,
+    details: Record<string, unknown> = {},
+  ) {
     super(message);
     this.code = code;
     this.status = status;
@@ -26,6 +31,10 @@ export async function parseApiError(res: Response): Promise<ApiError> {
       body,
     );
   } catch {
-    return new ApiError(ERROR_CODES.INTERNAL_ERROR, "Something went wrong", status);
+    return new ApiError(
+      ERROR_CODES.INTERNAL_ERROR,
+      "Something went wrong",
+      status,
+    );
   }
 }

@@ -42,9 +42,18 @@ export interface GenerateBrandKitMessage {
 export interface RefineBrandKitMessage {
   type: "brand-kit-refine";
   brandKitId: string;
-  sectionId: "logo-variations" | "color-palette" | "typography" | "social-media" | "business-card" | "favicon";
+  sectionId:
+    | "logo-variations"
+    | "color-palette"
+    | "typography"
+    | "social-media"
+    | "business-card"
+    | "favicon";
   refinementPrompt: string;
   typographyStyle?: string;
 }
 
-export type QueueMessage = GenerateImageMessage | GenerateBrandKitMessage | RefineBrandKitMessage;
+export type QueueMessage =
+  | GenerateImageMessage
+  | GenerateBrandKitMessage
+  | RefineBrandKitMessage;

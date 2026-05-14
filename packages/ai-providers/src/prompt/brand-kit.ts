@@ -119,9 +119,9 @@ const SOCIAL_MEDIA_PROMPTS = {
 >;
 
 const BUSINESS_CARD_PROMPTS = {
-  "front": ({ brandName }: LogoVariationPromptContext) =>
+  front: ({ brandName }: LogoVariationPromptContext) =>
     `You are an expert graphic designer. Create a minimalist and elegant front design for a business card for "${brandName}". Center the logo beautifully with lots of negative space. Use a clean background (solid color or very subtle texture) that matches the brand identity. Do not add any text other than the logo itself.`,
-  "back": ({ brandName }: LogoVariationPromptContext) =>
+  back: ({ brandName }: LogoVariationPromptContext) =>
     `You are an expert graphic designer. Create a matching minimalist back design for a business card for "${brandName}". Create an abstract background, pattern, or gradient derived from the brand's style, leaving room for contact details. The design should feel premium and cohesive with the front.`,
 } satisfies Record<
   BusinessCardVariationKind,
@@ -194,14 +194,22 @@ Keep your response under 4 sentences.`,
 }
 
 const STYLE_FONT_GUIDANCE: Record<string, string> = {
-  "modern-sans": "Select clean, geometric SANS-SERIF fonts. Examples: Inter, Montserrat, DM Sans, Outfit.",
-  "classic-serif": "Select elegant SERIF fonts. Examples: Merriweather, Playfair Display, Lora, PT Serif.",
-  "playful-display": "Select rounded, decorative DISPLAY fonts. Examples: Fredoka, Baloo 2, Bangers, Bubblegum Sans.",
-  "elegant-script": "Select flowing SCRIPT or handwriting fonts. Examples: Pacifico, Dancing Script, Alex Brush, Great Vibes.",
-  "tech-mono": "Select MONOSPACE or techy sans-serif fonts. Examples: JetBrains Mono, Fira Code, Space Mono, IBM Plex Mono.",
-  "bold-impact": "Select bold, high-weight SANS-SERIF or display fonts. Examples: Bebas Neue, Oswald, Anton, Rubik Dirt.",
-  "friendly-round": "Select warm, ROUNDED sans-serif fonts. Examples: Nunito, Quicksand, Varela Round, M PLUS Rounded 1c.",
-  "luxury-minimal": "Select refined, light-weight SERIF or SANS-SERIF fonts. Examples: Cormorant Garamond, Cinzel, Prata.",
+  "modern-sans":
+    "Select clean, geometric SANS-SERIF fonts. Examples: Inter, Montserrat, DM Sans, Outfit.",
+  "classic-serif":
+    "Select elegant SERIF fonts. Examples: Merriweather, Playfair Display, Lora, PT Serif.",
+  "playful-display":
+    "Select rounded, decorative DISPLAY fonts. Examples: Fredoka, Baloo 2, Bangers, Bubblegum Sans.",
+  "elegant-script":
+    "Select flowing SCRIPT or handwriting fonts. Examples: Pacifico, Dancing Script, Alex Brush, Great Vibes.",
+  "tech-mono":
+    "Select MONOSPACE or techy sans-serif fonts. Examples: JetBrains Mono, Fira Code, Space Mono, IBM Plex Mono.",
+  "bold-impact":
+    "Select bold, high-weight SANS-SERIF or display fonts. Examples: Bebas Neue, Oswald, Anton, Rubik Dirt.",
+  "friendly-round":
+    "Select warm, ROUNDED sans-serif fonts. Examples: Nunito, Quicksand, Varela Round, M PLUS Rounded 1c.",
+  "luxury-minimal":
+    "Select refined, light-weight SERIF or SANS-SERIF fonts. Examples: Cormorant Garamond, Cinzel, Prata.",
 };
 
 export function buildBrandKitTypographyRequest({

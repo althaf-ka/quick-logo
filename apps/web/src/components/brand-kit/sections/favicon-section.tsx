@@ -39,7 +39,7 @@ export function FaviconSection({
           {icons.map((icon, i) => (
             <div
               key={i}
-              className="group flex flex-col items-center gap-3 border p-4 transition-colors hover:border-primary/30"
+              className="group hover:border-primary/30 flex flex-col items-center gap-3 border p-4 transition-colors"
             >
               <div
                 className="flex items-center justify-center"

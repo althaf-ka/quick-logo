@@ -59,7 +59,11 @@ export function buildBasePrompt(
   const styleVal = style ? STYLE_MODIFIERS[style] : undefined;
   if (styleVal) parts.push(styleVal);
 
-  if (message.config.brandName && message.config.brandName.trim().length > 0 && !message.isEdit) {
+  if (
+    message.config.brandName &&
+    message.config.brandName.trim().length > 0 &&
+    !message.isEdit
+  ) {
     parts.push(`incorporating the text "${message.config.brandName.trim()}"`);
   }
 

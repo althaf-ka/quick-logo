@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 
-
 export const validationHook = (
   result:
     | { success: true }

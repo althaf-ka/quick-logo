@@ -26,7 +26,7 @@ export function BusinessCardSection({
       />
       <SectionContent isRefining={isRefining}>
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="group border transition-colors hover:border-primary/30">
+          <div className="group hover:border-primary/30 border transition-colors">
             <div className="bg-muted/10 overflow-hidden">
               <img
                 src={card.frontUrl}
@@ -42,7 +42,7 @@ export function BusinessCardSection({
           </div>
 
           {card.backUrl && (
-            <div className="group border transition-colors hover:border-primary/30">
+            <div className="group hover:border-primary/30 border transition-colors">
               <div className="bg-muted/10 overflow-hidden">
                 <img
                   src={card.backUrl}

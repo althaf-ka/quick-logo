@@ -135,7 +135,11 @@ export function useBrandKit({
         const errData = await res.json().catch(() => null);
         let errorMessage = errData?.error || "Failed to generate";
         const errJson = errData as Record<string, unknown>;
-        if (errJson?.issues && Array.isArray(errJson.issues) && errJson.issues.length > 0) {
+        if (
+          errJson?.issues &&
+          Array.isArray(errJson.issues) &&
+          errJson.issues.length > 0
+        ) {
           errorMessage = (errJson.issues[0] as { message: string }).message;
         }
         throw new Error(errorMessage);
@@ -178,7 +182,11 @@ export function useBrandKit({
         const errData = await res.json().catch(() => null);
         let errorMessage = errData?.error || "Failed to refine";
         const errJson = errData as Record<string, unknown>;
-        if (errJson?.issues && Array.isArray(errJson.issues) && errJson.issues.length > 0) {
+        if (
+          errJson?.issues &&
+          Array.isArray(errJson.issues) &&
+          errJson.issues.length > 0
+        ) {
           errorMessage = (errJson.issues[0] as { message: string }).message;
         }
         throw new Error(errorMessage);

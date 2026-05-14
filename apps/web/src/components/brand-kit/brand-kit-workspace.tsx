@@ -60,9 +60,7 @@ export function BrandKitWorkspace({
           placeholder={promptPlaceholder}
           credits={bk.totalCredits}
           targetContext={
-            bk.targetSection
-              ? getSectionLabel(bk.targetSection)
-              : undefined
+            bk.targetSection ? getSectionLabel(bk.targetSection) : undefined
           }
           onClearTarget={() => bk.setTargetSection(null)}
           {...(!bk.isFromPlatform && {
@@ -182,8 +180,8 @@ function LogoReadyState() {
             Ready to Create
           </p>
           <p className="text-muted-foreground/60 mt-1 font-mono text-[10px] leading-relaxed tracking-wide">
-            Configure your settings in the sidebar and describe
-            your brand below to generate your kit.
+            Configure your settings in the sidebar and describe your brand below
+            to generate your kit.
           </p>
         </div>
       </div>
@@ -196,15 +194,18 @@ function EmptyState() {
     <div className="flex flex-1 flex-col items-center justify-center gap-6">
       <div className="border-border/30 flex max-w-sm flex-col items-center gap-4 border border-dashed p-10 text-center">
         <div className="bg-muted/30 flex size-14 items-center justify-center">
-          <SparkleIcon weight="duotone" className="text-muted-foreground/30 size-7" />
+          <SparkleIcon
+            weight="duotone"
+            className="text-muted-foreground/30 size-7"
+          />
         </div>
         <div>
           <p className="font-mono text-sm font-black uppercase">
             Upload Your Logo
           </p>
           <p className="text-muted-foreground/60 mt-1 font-mono text-[10px] leading-relaxed tracking-wide">
-            Upload a logo in the sidebar to get started, or select
-            one from your existing projects.
+            Upload a logo in the sidebar to get started, or select one from your
+            existing projects.
           </p>
         </div>
       </div>

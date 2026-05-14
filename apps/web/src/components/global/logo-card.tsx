@@ -21,10 +21,10 @@ export function LogoCard({ logo, onClick, className }: LogoCardProps) {
       onClick={() => onClick?.(logo)}
       className={cn(
         "group/card relative cursor-pointer overflow-hidden border ring-0 transition-all duration-300 ease-out",
-        "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        "hover:border-primary/50 hover:shadow-primary/5 hover:shadow-lg",
+        "focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none",
         "active:scale-[0.98]",
-        className
+        className,
       )}
     >
       <div className="relative aspect-square w-full" style={CHECKER_STYLE}>

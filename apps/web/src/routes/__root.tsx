@@ -19,7 +19,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "QuickLogo | Create Professional Logos Instantly" },
-      { name: "description", content: "QuickLogo helps you create stunning, professional logos in seconds using AI." },
+      {
+        name: "description",
+        content:
+          "QuickLogo helps you create stunning, professional logos in seconds using AI.",
+      },
     ],
   }),
   pendingComponent: () => <LogoLoader />,

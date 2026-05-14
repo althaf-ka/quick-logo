@@ -36,7 +36,6 @@ interface LeonardoV2Payload {
     width: number;
     height: number;
     prompt: string;
-    negative_prompt: string;
     quantity: number;
     mode?: string;
     prompt_enhance?: "ON" | "OFF";
@@ -274,7 +273,6 @@ export class LeonardoProvider implements AIProvider {
         width: params.width ?? 1024,
         height: params.height ?? 1024,
         prompt: params.prompt,
-        negative_prompt: params.negativePrompt || "",
         quantity: 1,
       },
       public: false,

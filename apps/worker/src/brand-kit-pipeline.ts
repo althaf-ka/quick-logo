@@ -273,7 +273,8 @@ export class BrandKitPipeline {
         deliverables: deliverables,
       };
 
-      let darkAndIconUrls: { darkModeUrl: string; iconOnlyUrl: string } | null = null;
+      let darkAndIconUrls: { darkModeUrl: string; iconOnlyUrl: string } | null =
+        null;
       if (deliverables?.logoVariations || deliverables?.favicon) {
         darkAndIconUrls = actualLogoUrl
           ? await this.generateLogoVariations({
@@ -327,13 +328,17 @@ export class BrandKitPipeline {
             platform: "Instagram",
             type: "Profile",
             dimensions: "1080x1080",
-            url: socialMediaUrls?.instagramUrl ?? "https://placehold.co/1080x1080/000/FFF?text=IG",
+            url:
+              socialMediaUrls?.instagramUrl ??
+              "https://placehold.co/1080x1080/000/FFF?text=IG",
           },
           {
             platform: "Twitter",
             type: "Header",
             dimensions: "1500x500",
-            url: socialMediaUrls?.twitterUrl ?? "https://placehold.co/1500x500/000/FFF?text=TW",
+            url:
+              socialMediaUrls?.twitterUrl ??
+              "https://placehold.co/1500x500/000/FFF?text=TW",
           },
         ];
       }
@@ -347,8 +352,12 @@ export class BrandKitPipeline {
           : null;
 
         finalResultsJSON.businessCard = {
-          frontUrl: businessCardUrls?.frontUrl ?? "https://placehold.co/1050x600/000/FFF?text=Front",
-          backUrl: businessCardUrls?.backUrl ?? "https://placehold.co/1050x600/FFF/000?text=Back",
+          frontUrl:
+            businessCardUrls?.frontUrl ??
+            "https://placehold.co/1050x600/000/FFF?text=Front",
+          backUrl:
+            businessCardUrls?.backUrl ??
+            "https://placehold.co/1050x600/FFF/000?text=Back",
         };
       }
       if (deliverables?.favicon) {

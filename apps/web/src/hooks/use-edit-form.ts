@@ -51,9 +51,11 @@ export function useEditForm({
   const activeEditImageId = useMemo(() => {
     if (manualActiveId) return manualActiveId;
 
-    return fetchResult?.history?.find(
-      (h) => h.status === "pending" || h.status === "processing",
-    )?.id ?? null;
+    return (
+      fetchResult?.history?.find(
+        (h) => h.status === "pending" || h.status === "processing",
+      )?.id ?? null
+    );
   }, [manualActiveId, fetchResult?.history]);
 
   const serverHistory = useMemo(() => {

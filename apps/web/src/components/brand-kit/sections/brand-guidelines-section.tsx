@@ -48,7 +48,7 @@ export function BrandGuidelinesSection({
                   Brand Identity
                 </p>
                 <p
-                  className="mt-1 text-base font-bold leading-tight sm:text-lg"
+                  className="mt-1 text-base leading-tight font-bold sm:text-lg"
                   style={{ fontFamily: data.typography.heading.family }}
                 >
                   {data.brandName}

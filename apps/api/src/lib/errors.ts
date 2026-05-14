@@ -5,7 +5,12 @@ export class AppError extends Error {
   readonly code: string;
   readonly details?: Record<string, unknown>;
 
-  constructor(statusCode: number, code: string, message: string, details?: Record<string, unknown>) {
+  constructor(
+    statusCode: number,
+    code: string,
+    message: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = "AppError";
     this.statusCode = statusCode;
@@ -35,7 +40,11 @@ export class InsufficientCreditsError extends AppError {
 
 export class UserNotFoundError extends AppError {
   constructor() {
-    super(404, ERROR_CODES.USER_NOT_FOUND, "Account not found. Please sign in again.");
+    super(
+      404,
+      ERROR_CODES.USER_NOT_FOUND,
+      "Account not found. Please sign in again.",
+    );
   }
 }
 
@@ -47,12 +56,20 @@ export class NotFoundError extends AppError {
 
 export class ForbiddenError extends AppError {
   constructor() {
-    super(403, ERROR_CODES.FORBIDDEN, "You do not have access to this resource.");
+    super(
+      403,
+      ERROR_CODES.FORBIDDEN,
+      "You do not have access to this resource.",
+    );
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor() {
-    super(401, ERROR_CODES.UNAUTHORIZED, "Please sign in to access this resource.");
+    super(
+      401,
+      ERROR_CODES.UNAUTHORIZED,
+      "Please sign in to access this resource.",
+    );
   }
 }

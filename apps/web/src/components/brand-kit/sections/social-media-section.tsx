@@ -31,7 +31,7 @@ export function SocialMediaSection({
           {assets.map((asset, i) => (
             <div
               key={i}
-              className="group border transition-colors hover:border-primary/30"
+              className="group hover:border-primary/30 border transition-colors"
             >
               <div className="bg-muted/20 flex items-center justify-center overflow-hidden">
                 <img

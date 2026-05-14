@@ -233,7 +233,7 @@ export function BrandKitSidebar({
             className="cursor-pointer text-xs [&_input]:cursor-pointer [&_input]:caret-transparent"
           />
           <ComboboxContent className="border-border/50 shadow-lg ring-0">
-            <ComboboxList className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <ComboboxList className="[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {typographyOptions.map(([id, styleHint]) => (
                 <ComboboxItem
                   key={id}

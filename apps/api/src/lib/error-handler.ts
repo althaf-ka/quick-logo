@@ -34,7 +34,10 @@ export function globalErrorHandler(err: Error, c: ApiContext) {
   });
 
   return c.json(
-    { error: "Something went wrong. Please try again.", code: ERROR_CODES.INTERNAL_ERROR },
+    {
+      error: "Something went wrong. Please try again.",
+      code: ERROR_CODES.INTERNAL_ERROR,
+    },
     500,
   );
 }
@@ -50,7 +53,13 @@ function safeGetUserId(c: ApiContext): string | null {
 
 function persistErrorLog(
   c: ApiContext,
-  data: { method: string; path: string; userId: string | null; message: string; stack?: string },
+  data: {
+    method: string;
+    path: string;
+    userId: string | null;
+    message: string;
+    stack?: string;
+  },
 ) {
   try {
     const db = c.get("db");
@@ -80,5 +89,14 @@ function persistErrorLog(
   }
 }
 
-
-type ContentfulStatusCode = 200 | 201 | 202 | 400 | 401 | 402 | 403 | 404 | 409 | 500;
+type ContentfulStatusCode =
+  | 200
+  | 201
+  | 202
+  | 400
+  | 401
+  | 402
+  | 403
+  | 404
+  | 409
+  | 500;

@@ -84,7 +84,6 @@ function ConfigField({
   );
 }
 
-
 const STYLE_GRADIENTS: Record<string, string> = {
   minimal: "from-slate-200 to-slate-400",
   abstract: "from-violet-400 to-fuchsia-500",
