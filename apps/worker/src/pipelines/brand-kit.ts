@@ -1,0 +1,285 @@
+import type { Database } from "@quicklogo/db";
+
+import { buildBrandKitIdentityRequest } from "@quicklogo/ai-providers/prompt";
+import type { StorageProvider } from "@quicklogo/storage";
+import type {
+  GenerateBrandKitMessage,
+  RefineBrandKitMessage,
+} from "@quicklogo/shared";
+import type { Env } from "../types";
+import { extractWorkersAiResponseText } from "../core/ai-response-parser";
+import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
+import {
+  normalizeTypographyOutput,
+  FALLBACK_TYPOGRAPHY,
+} from "../services/brand-kit/typography-normalizer";
+import { runVisionTypographyRequest } from "../services/brand-kit/vision-analysis";
+import { mergeRevisionResults } from "../services/brand-kit/revision-merger";
+import {
+  generateLogoVariations,
+  generateSocialMediaAssets,
+  generateBusinessCardAssets,
+} from "../services/brand-kit/asset-generator";
+import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
+
+export class BrandKitPipeline {
+  private repository: BrandKitRepository;
+
+  constructor(
+    private ai: Ai,
+    private db: Database,
+    private storage: StorageProvider,
+    private env: Env,
+  ) {
+    this.repository = new BrandKitRepository(this.db);
+  }
+
+  async processGeneration(message: GenerateBrandKitMessage) {
+    const {
+      brandKitId,
+      prompt,
+      brandName,
+      extractedColors,
+      typographyStyle,
+      deliverables,
+    } = message;
+
+    await this.repository.updateStatus(brandKitId, "processing");
+
+    try {
+      const requestConfig = buildBrandKitIdentityRequest({
+        brandName,
+        description: prompt,
+        extractedColors,
+      });
+
+      let actualLogoUrl = message.customLogoUrl;
+
+      if (!actualLogoUrl && message.sourceImageId) {
+        const sourceImageUrl = await this.repository.getSourceImageUrl(
+          message.sourceImageId,
+        );
+        if (sourceImageUrl) {
+          actualLogoUrl = sourceImageUrl;
+        }
+      }
+
+      const { key: resolvedStyle, hint: styleHint } =
+        resolveTypographyStyle(typographyStyle);
+
+      const [colorResponse, typographyResponse] = await Promise.all([
+        this.ai.run("@cf/meta/llama-3.1-8b-instruct-fp8", requestConfig),
+        actualLogoUrl
+          ? runVisionTypographyRequest({
+              ai: this.ai,
+              brandName,
+              description: prompt,
+              typographyStyleHint: styleHint,
+              typographyStyleKey: resolvedStyle,
+              logoUrl: actualLogoUrl,
+            })
+          : Promise.resolve(null),
+      ]);
+
+      const colorText = extractWorkersAiResponseText(colorResponse);
+
+      let colorOutput;
+      try {
+        colorOutput = JSON.parse(colorText);
+      } catch (e) {
+        console.error("[brand-kit-pipeline] Failed to parse JSON:", colorText);
+        throw new Error("AI returned invalid JSON");
+      }
+
+      let typographyOutput = FALLBACK_TYPOGRAPHY;
+      if (typographyResponse) {
+        const typographyText = extractWorkersAiResponseText(typographyResponse);
+
+        try {
+          typographyOutput = normalizeTypographyOutput(
+            JSON.parse(typographyText),
+          );
+        } catch {
+          console.warn(
+            "[brand-kit-pipeline] Vision typography parse failed; using fallback",
+          );
+        }
+      }
+
+      const fallbackLogoUrl =
+        actualLogoUrl || "https://placehold.co/400x400/000/FFF?text=Logo";
+
+      const finalResultsJSON: Record<string, any> = {
+        brandName,
+        colorPalette: colorOutput.colorPalette || [],
+        typography: typographyOutput,
+        deliverables: deliverables,
+      };
+
+      let darkAndIconUrls: { darkModeUrl: string; iconOnlyUrl: string } | null =
+        null;
+      if (deliverables?.logoVariations || deliverables?.favicon) {
+        darkAndIconUrls = actualLogoUrl
+          ? await generateLogoVariations({
+              ai: this.ai,
+              db: this.db,
+              env: this.env,
+              storage: this.storage,
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+            })
+          : null;
+      }
+
+      if (deliverables?.logoVariations) {
+        finalResultsJSON.logoVariations = [
+          {
+            id: "primary",
+            label: "Primary",
+            background: "light",
+            url: fallbackLogoUrl,
+          },
+          {
+            id: "dark",
+            label: "On Dark",
+            background: "dark",
+            url: darkAndIconUrls?.darkModeUrl ?? fallbackLogoUrl,
+          },
+          {
+            id: "mono",
+            label: "Monochrome",
+            background: "light",
+            url: fallbackLogoUrl,
+          },
+          {
+            id: "icon",
+            label: "Icon Only",
+            background: "transparent",
+            url: darkAndIconUrls?.iconOnlyUrl ?? fallbackLogoUrl,
+          },
+        ];
+      }
+
+      if (deliverables?.socialMedia) {
+        const socialMediaUrls = actualLogoUrl
+          ? await generateSocialMediaAssets({
+              ai: this.ai,
+              env: this.env,
+              storage: this.storage,
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+            })
+          : null;
+
+        finalResultsJSON.socialMedia = [
+          {
+            platform: "Instagram",
+            type: "Profile",
+            dimensions: "1080x1080",
+            url:
+              socialMediaUrls?.instagramUrl ??
+              "https://placehold.co/1080x1080/000/FFF?text=IG",
+          },
+          {
+            platform: "Twitter",
+            type: "Header",
+            dimensions: "1500x500",
+            url:
+              socialMediaUrls?.twitterUrl ??
+              "https://placehold.co/1500x500/000/FFF?text=TW",
+          },
+        ];
+      }
+      if (deliverables?.businessCard) {
+        const businessCardUrls = actualLogoUrl
+          ? await generateBusinessCardAssets({
+              ai: this.ai,
+              env: this.env,
+              storage: this.storage,
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+            })
+          : null;
+
+        finalResultsJSON.businessCard = {
+          frontUrl:
+            businessCardUrls?.frontUrl ??
+            "https://placehold.co/1050x600/000/FFF?text=Front",
+          backUrl:
+            businessCardUrls?.backUrl ??
+            "https://placehold.co/1050x600/FFF/000?text=Back",
+        };
+      }
+      if (deliverables?.favicon) {
+        const iconUrl = darkAndIconUrls?.iconOnlyUrl ?? fallbackLogoUrl;
+        finalResultsJSON.favicons = [
+          {
+            size: 16,
+            label: "Web",
+            url: iconUrl,
+          },
+          {
+            size: 32,
+            label: "Web HD",
+            url: iconUrl,
+          },
+          {
+            size: 180,
+            label: "Apple",
+            url: iconUrl,
+          },
+        ];
+      }
+
+      await this.repository.saveInitialGeneration(brandKitId, finalResultsJSON);
+
+      console.log(`[brand-kit-pipeline] Completed brandKitId=${brandKitId}`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        `[brand-kit-pipeline] Failed brandKitId=${brandKitId}:`,
+        error,
+      );
+      await this.repository.updateStatus(brandKitId, "failed", errorMessage);
+    }
+  }
+
+  async processRefinement(message: RefineBrandKitMessage) {
+    const { brandKitId, sectionId, refinementPrompt } = message;
+
+    try {
+      const activeRevision =
+        await this.repository.getActiveRevision(brandKitId);
+
+      if (!activeRevision) throw new Error("No active revision found");
+
+      const currentBrandKit = await this.repository.getBrandKit(brandKitId);
+
+      const newMergedJSON = await mergeRevisionResults({
+        ai: this.ai,
+        sectionId,
+        refinementPrompt,
+        currentBrandKit,
+        activeRevisionResults: activeRevision.results,
+      });
+
+      await this.repository.saveRefinement(
+        brandKitId,
+        sectionId,
+        newMergedJSON,
+      );
+      console.log(
+        `[brand-kit-pipeline] Completed refinement for brandKitId=${brandKitId}`,
+      );
+    } catch (error) {
+      console.error(
+        `[brand-kit-pipeline] Refinement failed brandKitId=${brandKitId}:`,
+        error,
+      );
+    }
+  }
+}

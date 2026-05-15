@@ -7,3 +7,6 @@ dist
 .turbo
 .next
 pnpm-lock.yaml
+
+# TanStack Router
+routeTree.gen.ts

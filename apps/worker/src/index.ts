@@ -2,7 +2,7 @@ import { createDb } from "@quicklogo/db";
 import type { QueueMessage } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
 import { ImageGenerationPipeline } from "./pipelines/image-generation";
-import { BrandKitPipeline } from "./brand-kit-pipeline";
+import { BrandKitPipeline } from "./pipelines/brand-kit";
 import type { Env } from "./types";
 
 export default {

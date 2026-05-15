@@ -37,3 +37,33 @@ export async function withTimeout<T>(
     ),
   ]);
 }
+
+/**
+ * Executes a Promise-based operation with a timeout and fallback value.
+ * Logs if the operation fails or times out.
+ */
+export async function generateWithFallback<T>(
+  operation: () => Promise<T>,
+  fallbackValue: T,
+  timeoutMs: number,
+  loggerPrefix: string,
+): Promise<T> {
+  const opPromise = operation().catch((error) => {
+    console.error(`[${loggerPrefix}] Operation failed:`, error);
+    return fallbackValue;
+  });
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(`[${loggerPrefix}] Operation timed out; using fallback`);
+      resolve(fallbackValue);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([opPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
