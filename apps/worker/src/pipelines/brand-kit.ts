@@ -6,6 +6,7 @@ import type {
   GenerateBrandKitMessage,
   RefineBrandKitMessage,
 } from "@quicklogo/shared";
+import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
 import type { Env } from "../types";
 import { extractWorkersAiResponseText } from "../core/ai-response-parser";
 import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
@@ -83,9 +84,19 @@ export class BrandKitPipeline {
 
       const colorText = extractWorkersAiResponseText(colorResponse);
 
-      let colorOutput;
+      let colorOutput: { colorPalette: any[] } = { colorPalette: [] };
       try {
-        colorOutput = JSON.parse(colorText);
+        const parsedJson = JSON.parse(colorText);
+        const validated =
+          brandKitColorPaletteResponseSchema.safeParse(parsedJson);
+        if (validated.success) {
+          colorOutput = validated.data;
+        } else {
+          console.warn(
+            "[brand-kit-pipeline] Color palette schema validation failed, using empty array",
+            validated.error,
+          );
+        }
       } catch (e) {
         console.error("[brand-kit-pipeline] Failed to parse JSON:", colorText);
         throw new Error("AI returned invalid JSON");
@@ -240,11 +251,13 @@ export class BrandKitPipeline {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
+      const stack = error instanceof Error ? error.stack : undefined;
       console.error(
         `[brand-kit-pipeline] Failed brandKitId=${brandKitId}:`,
         error,
       );
       await this.repository.updateStatus(brandKitId, "failed", errorMessage);
+      await this.repository.logSystemError(brandKitId, errorMessage, stack);
     }
   }
 
@@ -276,9 +289,17 @@ export class BrandKitPipeline {
         `[brand-kit-pipeline] Completed refinement for brandKitId=${brandKitId}`,
       );
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const stack = error instanceof Error ? error.stack : undefined;
       console.error(
         `[brand-kit-pipeline] Refinement failed brandKitId=${brandKitId}:`,
         error,
+      );
+      await this.repository.logSystemError(
+        brandKitId,
+        `Refinement failed (${sectionId}): ${errorMessage}`,
+        stack,
       );
     }
   }

@@ -1,3 +1,5 @@
+import { clearTimeout, setTimeout as safeTimeout } from "node:timers";
+import { setTimeout } from "node:timers/promises";
 import { PipelineError } from "./errors";
 
 export async function withRetry<T>(
@@ -17,7 +19,7 @@ export async function withRetry<T>(
       }
       const delay = baseDelayMs * Math.pow(2, attempt - 1);
       // Wait for the delay
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await setTimeout(delay);
     }
   }
   throw new Error("Unreachable");
@@ -27,19 +29,22 @@ export async function withTimeout<T>(
   operation: () => Promise<T>,
   timeoutMs: number,
 ): Promise<T> {
-  return Promise.race([
-    operation(),
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new PipelineError("Operation timed out", true)),
-        timeoutMs,
-      ),
-    ),
-  ]);
+  let timeoutId: ReturnType<typeof safeTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = safeTimeout(
+      () => reject(new PipelineError("Operation timed out", true)),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([operation(), timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 /**
- * Executes a Promise-based operation with a timeout and fallback value.
+ * Executes a Promise-based operation with a timeout and fallback value using AbortController.
  * Logs if the operation fails or times out.
  */
 export async function generateWithFallback<T>(
@@ -48,22 +53,32 @@ export async function generateWithFallback<T>(
   timeoutMs: number,
   loggerPrefix: string,
 ): Promise<T> {
-  const opPromise = operation().catch((error) => {
-    console.error(`[${loggerPrefix}] Operation failed:`, error);
-    return fallbackValue;
-  });
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof safeTimeout> | undefined;
 
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<T>((resolve) => {
-    timeoutId = setTimeout(() => {
-      console.warn(`[${loggerPrefix}] Operation timed out; using fallback`);
+    timeoutId = safeTimeout(() => {
+      controller.abort();
+      console.warn(
+        `[${loggerPrefix}] Operation timed out (${timeoutMs}ms); using fallback`,
+      );
       resolve(fallbackValue);
     }, timeoutMs);
   });
 
-  try {
-    return await Promise.race([opPromise, timeoutPromise]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
+  const opPromise = operation()
+    .then((result) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      return result;
+    })
+    .catch((error) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (controller.signal.aborted) {
+        return fallbackValue;
+      }
+      console.error(`[${loggerPrefix}] Operation failed:`, error);
+      return fallbackValue;
+    });
+
+  return Promise.race([opPromise, timeoutPromise]);
 }

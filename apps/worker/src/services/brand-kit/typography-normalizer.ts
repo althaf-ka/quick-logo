@@ -1,21 +1,18 @@
+import { brandKitTypographyResponseSchema } from "@quicklogo/shared";
+
 export const FALLBACK_TYPOGRAPHY = {
   heading: { name: "Inter", family: "Inter", weight: "700" },
   body: { name: "Roboto", family: "Roboto", weight: "400" },
 };
 
 export function normalizeTypographyOutput(response: unknown) {
-  const parsed = response as {
-    heading?: { family?: unknown; weight?: unknown; name?: unknown };
-    body?: { family?: unknown; weight?: unknown; name?: unknown };
-  };
+  const result = brandKitTypographyResponseSchema.safeParse(response);
 
-  if (
-    typeof parsed.heading?.family !== "string" ||
-    typeof parsed.body?.family !== "string"
-  ) {
+  if (!result.success) {
     return FALLBACK_TYPOGRAPHY;
   }
 
+  const parsed = result.data;
   const headingFamily = parsed.heading.family.trim();
   const bodyFamily = parsed.body.family.trim();
 
@@ -25,22 +22,14 @@ export function normalizeTypographyOutput(response: unknown) {
 
   return {
     heading: {
-      name:
-        typeof parsed.heading.name === "string"
-          ? parsed.heading.name
-          : headingFamily,
+      name: parsed.heading.name?.trim() || headingFamily,
       family: headingFamily,
-      weight:
-        typeof parsed.heading.weight === "string"
-          ? parsed.heading.weight
-          : "700",
+      weight: parsed.heading.weight?.trim() || "700",
     },
     body: {
-      name:
-        typeof parsed.body.name === "string" ? parsed.body.name : bodyFamily,
+      name: parsed.body.name?.trim() || bodyFamily,
       family: bodyFamily,
-      weight:
-        typeof parsed.body.weight === "string" ? parsed.body.weight : "400",
+      weight: parsed.body.weight?.trim() || "400",
     },
   };
 }

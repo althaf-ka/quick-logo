@@ -60,3 +60,26 @@ export const restoreSectionSchema = z.object({
     "favicon",
   ]),
 });
+
+export const brandKitColorPaletteResponseSchema = z.object({
+  colorPalette: z.array(
+    z.object({
+      hex: z.string(),
+      role: z.string(),
+      rgb: z.string().optional(),
+    }),
+  ),
+});
+
+export const brandKitTypographyResponseSchema = z.object({
+  heading: z.object({
+    family: z.string(),
+    weight: z.string().optional(),
+    name: z.string().optional(),
+  }),
+  body: z.object({
+    family: z.string(),
+    weight: z.string().optional(),
+    name: z.string().optional(),
+  }),
+});

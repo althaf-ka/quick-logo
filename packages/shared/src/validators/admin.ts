@@ -6,7 +6,7 @@ export const paginationSchema = z.object({
 
 export const adminLogsQuerySchema = paginationSchema.extend({
   level: z.enum(["info", "warn", "error", "fatal"]).optional(),
-  source: z.enum(["web", "admin", "api"]).optional(),
+  source: z.enum(["web", "admin", "api", "worker"]).optional(),
 });
 
 export type PaginationQuery = z.infer<typeof paginationSchema>;

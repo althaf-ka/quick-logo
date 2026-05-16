@@ -3,6 +3,7 @@ import { resolveTypographyStyle } from "./typography-resolver";
 import { normalizeTypographyOutput } from "./typography-normalizer";
 import { runVisionTypographyRequest } from "./vision-analysis";
 import { extractWorkersAiResponseText } from "../../core/ai-response-parser";
+import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
 
 export async function mergeRevisionResults({
   ai,
@@ -94,22 +95,28 @@ export async function mergeRevisionResults({
 
       const responseText = extractWorkersAiResponseText(response);
 
-      let aiOutput;
       try {
-        aiOutput = JSON.parse(responseText);
+        const parsedJson = JSON.parse(responseText);
+        if (refinementRequest.sectionKey === "colorPalette") {
+          const validated =
+            brandKitColorPaletteResponseSchema.safeParse(parsedJson);
+          if (validated.success) {
+            newMergedJSON.colorPalette = validated.data.colorPalette;
+          } else {
+            console.warn(
+              "[revision-merger] Color palette refinement validation failed",
+              validated.error,
+            );
+            throw new Error("AI returned invalid color palette schema");
+          }
+        }
       } catch (e) {
         console.error(
-          "[revision-merger] Failed to parse Refinement JSON:",
+          "[revision-merger] Failed to parse/validate Refinement JSON:",
           responseText,
+          e,
         );
         throw new Error("AI returned invalid JSON on refinement");
-      }
-
-      if (
-        refinementRequest.sectionKey === "colorPalette" &&
-        aiOutput.colorPalette
-      ) {
-        newMergedJSON.colorPalette = aiOutput.colorPalette;
       }
     }
   }

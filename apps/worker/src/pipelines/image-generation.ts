@@ -14,6 +14,7 @@ import { uploadAndSyncThumbnail } from "../services/image/thumbnail-sync";
 import {
   updateImageStatus,
   finalizeImageGeneration,
+  logSystemImageError,
 } from "../services/image/image-repository";
 import { withRetry, withTimeout } from "../core/pipeline-helpers";
 import { parseAndValidateAiResponse } from "../core/ai-response-parser";
@@ -104,12 +105,14 @@ export class ImageGenerationPipeline {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
+      const stack = error instanceof Error ? error.stack : undefined;
       console.error(
         `[image-generation-pipeline] Failed imageId=${imageId}:`,
         error,
       );
 
       await updateImageStatus(this.db, imageId, "failed", errorMessage);
+      await logSystemImageError(this.db, imageId, errorMessage, stack);
       throw error;
     }
   }

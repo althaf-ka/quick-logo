@@ -4,9 +4,6 @@ import {
 } from "@quicklogo/ai-providers/prompt";
 import { extractWorkersAiResponseText } from "../../core/ai-response-parser";
 
-// We'll manage the license flag using a global scope in the worker to avoid repetitive agreements
-let visionModelLicenseAccepted = false;
-
 export async function analyzeLogoStyle({
   ai,
   brandName,
@@ -20,19 +17,16 @@ export async function analyzeLogoStyle({
 }): Promise<string | null> {
   const MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
-  if (!visionModelLicenseAccepted) {
-    try {
-      await ai.run(
-        MODEL as any,
-        {
-          messages: [{ role: "user", content: "agree" }],
-          max_tokens: 1,
-        } as any,
-      );
-    } catch {
-      // Already accepted or other error — proceed
-    }
-    visionModelLicenseAccepted = true;
+  try {
+    await ai.run(
+      MODEL as any,
+      {
+        messages: [{ role: "user", content: "agree" }],
+        max_tokens: 1,
+      } as any,
+    );
+  } catch {
+    // Already accepted or other error — proceed
   }
 
   try {
