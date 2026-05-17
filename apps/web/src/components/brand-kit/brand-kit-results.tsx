@@ -23,6 +23,7 @@ import {
 } from "./sections/business-card-section";
 import { FaviconSection, type FaviconSize } from "./sections/favicon-section";
 import { BrandGuidelinesSection } from "./sections/brand-guidelines-section";
+import { BrandedBackdropsSection } from "./sections/branded-backdrops-section";
 
 export interface BrandKitResultsData {
   logoVariations?: LogoVariation[];
@@ -34,6 +35,7 @@ export interface BrandKitResultsData {
   brandName?: string;
   logoUrl?: string;
   productImages?: string[];
+  brandedBackdrops?: { feedUrl: string; storyUrl: string };
 }
 
 interface BrandKitResultsProps {
@@ -119,6 +121,14 @@ export function BrandKitResults({
           icons={data.favicons}
           onRefine={onRefine}
           isRefining={refiningSectionId === "favicon"}
+        />
+      )}
+
+      {data.brandedBackdrops && (
+        <BrandedBackdropsSection
+          data={data.brandedBackdrops}
+          onRefine={onRefine}
+          isRefining={refiningSectionId === "branded-backdrops"}
         />
       )}
 

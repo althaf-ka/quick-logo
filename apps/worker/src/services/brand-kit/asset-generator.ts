@@ -6,6 +6,7 @@ import {
   buildLogoVariationGenerationParams,
   buildSocialMediaGenerationParams,
   buildBusinessCardGenerationParams,
+  buildBackdropGenerationParams,
 } from "@quicklogo/ai-providers/prompt";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
@@ -112,6 +113,7 @@ export async function generateSocialMediaAssets({
   brandKitId,
   brandName,
   sourceLogoUrl,
+  refinementPrompt,
 }: {
   ai: Ai;
   env: Env;
@@ -119,29 +121,143 @@ export async function generateSocialMediaAssets({
   brandKitId: string;
   brandName: string;
   sourceLogoUrl: string;
-}): Promise<{ instagramUrl: string; twitterUrl: string }> {
+  refinementPrompt?: string;
+}): Promise<{
+  socialProfileUrl: string;
+  masterBannerUrl: string;
+  facebookBannerUrl: string;
+}> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
 
-  const [instagramUrl, twitterUrl] = await Promise.all([
+  const [socialProfileUrl, masterBannerUrl, facebookBannerUrl] =
+    await Promise.all([
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildSocialMediaGenerationParams({
+              variation: "social-profile",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: mapping.defaultParams,
+              refinementPrompt,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ?? `Variation generation failed for social-profile`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/social-profile.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ),
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildSocialMediaGenerationParams({
+              variation: "master-banner",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: mapping.defaultParams,
+              refinementPrompt,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ?? `Variation generation failed for master-banner`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/social-master-banner.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ),
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildSocialMediaGenerationParams({
+              variation: "facebook-banner",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: mapping.defaultParams,
+              refinementPrompt,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ?? `Variation generation failed for facebook-banner`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/social-facebook-banner.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ),
+    ]);
+
+  return { socialProfileUrl, masterBannerUrl, facebookBannerUrl };
+}
+
+export async function generateBrandedBackdrops({
+  ai,
+  env,
+  storage,
+  brandKitId,
+  brandName,
+  sourceLogoUrl,
+  refinementPrompt,
+}: {
+  ai: Ai;
+  env: Env;
+  storage: StorageProvider;
+  brandKitId: string;
+  brandName: string;
+  sourceLogoUrl: string;
+  refinementPrompt?: string;
+}): Promise<{ feedUrl: string; storyUrl: string }> {
+  const mapping = getModelMapping("quick-nano-banana");
+  const provider = createProvider(mapping, { ai, env });
+
+  const [feedUrl, storyUrl] = await Promise.all([
     generateWithFallback(
       async () => {
         const result = await provider.generate(
-          buildSocialMediaGenerationParams({
-            variation: "instagram-profile",
+          buildBackdropGenerationParams({
+            variation: "feed-backdrop",
             brandName,
             sourceLogoUrl,
             backendModel: mapping.backendModel,
             defaultParams: mapping.defaultParams,
+            refinementPrompt,
           }),
         );
         if (!result.success || !result.imageData) {
           throw new Error(
-            result.error ?? `Variation generation failed for social-instagram`,
+            result.error ?? `Variation generation failed for feed-backdrop`,
           );
         }
         const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/social-instagram.${result.format ?? "png"}`,
+          `quick-logo/brand-kits/${brandKitId}/backdrop-feed.${result.format ?? "png"}`,
           result.imageData,
         );
         return uploaded.url;
@@ -153,21 +269,22 @@ export async function generateSocialMediaAssets({
     generateWithFallback(
       async () => {
         const result = await provider.generate(
-          buildSocialMediaGenerationParams({
-            variation: "twitter-header",
+          buildBackdropGenerationParams({
+            variation: "story-backdrop",
             brandName,
             sourceLogoUrl,
             backendModel: mapping.backendModel,
             defaultParams: mapping.defaultParams,
+            refinementPrompt,
           }),
         );
         if (!result.success || !result.imageData) {
           throw new Error(
-            result.error ?? `Variation generation failed for social-twitter`,
+            result.error ?? `Variation generation failed for story-backdrop`,
           );
         }
         const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/social-twitter.${result.format ?? "png"}`,
+          `quick-logo/brand-kits/${brandKitId}/backdrop-story.${result.format ?? "png"}`,
           result.imageData,
         );
         return uploaded.url;
@@ -178,7 +295,7 @@ export async function generateSocialMediaAssets({
     ),
   ]);
 
-  return { instagramUrl, twitterUrl };
+  return { feedUrl, storyUrl };
 }
 
 export async function generateBusinessCardAssets({

@@ -13,6 +13,7 @@ export const generateBrandKitSchema = z
       socialMedia: z.boolean(),
       businessCard: z.boolean(),
       favicon: z.boolean(),
+      brandedBackdrops: z.boolean().optional(),
     }),
     extractedColors: z.array(z.string()),
   })
@@ -44,6 +45,7 @@ export const refineBrandKitSectionSchema = z.object({
     "social-media",
     "business-card",
     "favicon",
+    "branded-backdrops",
   ]),
   refinementPrompt: z.string().min(1, "Refinement instruction is required"),
   typographyStyle: z.string().optional(), // In case they are refining typography and changed the dropdown
@@ -58,6 +60,7 @@ export const restoreSectionSchema = z.object({
     "social-media",
     "business-card",
     "favicon",
+    "branded-backdrops",
   ]),
 });
 

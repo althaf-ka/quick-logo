@@ -16,6 +16,7 @@ export interface Deliverables {
   socialMedia: boolean;
   businessCard: boolean;
   favicon: boolean;
+  brandedBackdrops: boolean;
 }
 
 interface UseBrandKitOptions {
@@ -46,6 +47,7 @@ export function useBrandKit({
     socialMedia: false,
     businessCard: false,
     favicon: false,
+    brandedBackdrops: false,
   });
 
   const [mockupImages, setMockupImages] = useState<File[]>([]);
@@ -173,7 +175,8 @@ export function useBrandKit({
             | "typography"
             | "social-media"
             | "business-card"
-            | "favicon",
+            | "favicon"
+            | "branded-backdrops",
           refinementPrompt,
           typographyStyle: typography,
         },
@@ -235,7 +238,8 @@ export function useBrandKit({
             | "typography"
             | "social-media"
             | "business-card"
-            | "favicon",
+            | "favicon"
+            | "branded-backdrops",
           sourceRevisionId,
         },
       });
@@ -345,7 +349,8 @@ export function useBrandKit({
       (deliverables.logoVariations ? 2 : 0) +
       (deliverables.socialMedia ? 3 : 0) +
       (deliverables.businessCard ? 2 : 0) +
-      (deliverables.favicon ? 1 : 0),
+      (deliverables.favicon ? 1 : 0) +
+      (deliverables.brandedBackdrops ? 2 : 0),
     [deliverables],
   );
 

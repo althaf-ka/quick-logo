@@ -35,6 +35,7 @@ export interface GenerateBrandKitMessage {
     socialMedia: boolean;
     businessCard: boolean;
     favicon: boolean;
+    brandedBackdrops?: boolean;
   };
   extractedColors: string[];
 }
@@ -48,7 +49,8 @@ export interface RefineBrandKitMessage {
     | "typography"
     | "social-media"
     | "business-card"
-    | "favicon";
+    | "favicon"
+    | "branded-backdrops";
   refinementPrompt: string;
   typographyStyle?: string;
 }

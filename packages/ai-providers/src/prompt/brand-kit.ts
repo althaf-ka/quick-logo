@@ -1,8 +1,12 @@
 import type { GenerationParams } from "../types";
 
 type LogoVariationKind = "dark-mode" | "icon-only";
-type SocialMediaVariationKind = "instagram-profile" | "twitter-header";
+type SocialMediaVariationKind =
+  | "social-profile"
+  | "master-banner"
+  | "facebook-banner";
 type BusinessCardVariationKind = "front" | "back";
+type BackdropVariationKind = "feed-backdrop" | "story-backdrop";
 type BrandKitSectionKey = "colorPalette";
 
 interface BrandKitMessage {
@@ -60,6 +64,14 @@ interface BuildBusinessCardParamsInput {
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
 }
 
+interface BuildBackdropParamsInput {
+  variation: BackdropVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+}
+
 interface BuildBrandKitIdentityRequestInput {
   brandName: string;
   description: string;
@@ -109,12 +121,24 @@ const LOGO_VARIATION_PROMPTS = {
 >;
 
 const SOCIAL_MEDIA_PROMPTS = {
-  "instagram-profile": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert social media designer. Take the provided logo for "${brandName}" and create an optimized Instagram profile picture. Ensure the logo is perfectly centered and scaled to fit within a circular crop, leaving enough breathing room (padding) around the edges. The background should be a solid color or subtle gradient that complements the brand. Do not alter the logo itself.`,
-  "twitter-header": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert social media designer. Create a striking Twitter header image (3:1 aspect ratio) for "${brandName}". Use the provided logo as a base to derive a cohesive background pattern, gradient, or minimalistic atmospheric scene. The composition must be balanced, avoiding the bottom-left area where the profile picture overlaps. It should look like a premium, professional brand banner.`,
+  "social-profile": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert social media designer. Take the logo for "${brandName}" and center it perfectly for a circular profile crop, leaving enough breathing room (padding) around the edges. CRITICAL: The background MUST be a solid, opaque color (not transparent) so it renders correctly on dark mode interfaces.`,
+  "master-banner": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert social media designer. Create a striking wide panoramic banner background for "${brandName}" for X/LinkedIn. Use the provided logo to derive a cohesive background pattern or atmospheric scene. CRITICAL: Keep the bottom-left area minimal/empty as the profile picture will overlap there. Place primary visual weight and subtle watermarks on the right side.`,
+  "facebook-banner": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert social media designer. Create a Facebook cover photo for "${brandName}". Use the provided logo to derive a cohesive background pattern. CRITICAL: Keep the left side clean for the profile picture, and place visual weight on the right side.`,
 } satisfies Record<
   SocialMediaVariationKind,
+  (context: LogoVariationPromptContext) => string
+>;
+
+const BACKDROP_PROMPTS = {
+  "feed-backdrop": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert graphic designer. Create a beautiful abstract background or gradient derived from the brand's color palette for "${brandName}". It should be suitable as an Instagram feed post backdrop for writing text or quotes over. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.`,
+  "story-backdrop": ({ brandName }: LogoVariationPromptContext) =>
+    `You are an expert graphic designer. Create a 9:16 vertical story backdrop for "${brandName}". Create a beautiful abstract background or gradient derived from the brand's color palette. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.`,
+} satisfies Record<
+  BackdropVariationKind,
   (context: LogoVariationPromptContext) => string
 >;
 
@@ -298,15 +322,50 @@ export function buildSocialMediaGenerationParams({
   sourceLogoUrl,
   backendModel,
   defaultParams,
-}: BuildSocialMediaParamsInput): GenerationParams {
+  refinementPrompt,
+}: BuildSocialMediaParamsInput & {
+  refinementPrompt?: string;
+}): GenerationParams {
+  const basePrompt = SOCIAL_MEDIA_PROMPTS[variation]({ brandName });
+  const finalPrompt = refinementPrompt
+    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
+    : basePrompt;
+
+  const width = 1024;
+  const height = 1024;
+
   return {
     ...defaultParams,
     backendModel,
-    prompt: SOCIAL_MEDIA_PROMPTS[variation]({ brandName }),
+    prompt: finalPrompt,
     referenceImage: sourceLogoUrl,
-    referenceStrength: variation === "instagram-profile" ? 90 : 40,
-    width: variation === "twitter-header" ? 1536 : 1024,
-    height: variation === "twitter-header" ? 512 : 1024,
+    referenceStrength: variation === "social-profile" ? 90 : 40,
+    width,
+    height,
+  };
+}
+
+export function buildBackdropGenerationParams({
+  variation,
+  brandName,
+  sourceLogoUrl,
+  backendModel,
+  defaultParams,
+  refinementPrompt,
+}: BuildBackdropParamsInput & { refinementPrompt?: string }): GenerationParams {
+  const basePrompt = BACKDROP_PROMPTS[variation]({ brandName });
+  const finalPrompt = refinementPrompt
+    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
+    : basePrompt;
+
+  return {
+    ...defaultParams,
+    backendModel,
+    prompt: finalPrompt,
+    referenceImage: sourceLogoUrl,
+    referenceStrength: 40,
+    width: 1024,
+    height: 1024,
   };
 }
 
@@ -323,7 +382,7 @@ export function buildBusinessCardGenerationParams({
     prompt: BUSINESS_CARD_PROMPTS[variation]({ brandName }),
     referenceImage: sourceLogoUrl,
     referenceStrength: variation === "front" ? 90 : 40,
-    width: 1050,
-    height: 600,
+    width: 1024,
+    height: 1024,
   };
 }

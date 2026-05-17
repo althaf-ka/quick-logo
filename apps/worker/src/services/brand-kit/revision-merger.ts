@@ -4,15 +4,27 @@ import { normalizeTypographyOutput } from "./typography-normalizer";
 import { runVisionTypographyRequest } from "./vision-analysis";
 import { extractWorkersAiResponseText } from "../../core/ai-response-parser";
 import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
+import {
+  generateSocialMediaAssets,
+  generateBrandedBackdrops,
+} from "./asset-generator";
+import type { StorageProvider } from "@quicklogo/storage";
+import type { Env } from "../../types";
 
 export async function mergeRevisionResults({
   ai,
+  env,
+  storage,
+  brandKitId,
   sectionId,
   refinementPrompt,
   currentBrandKit,
   activeRevisionResults,
 }: {
   ai: Ai;
+  env: Env;
+  storage: StorageProvider;
+  brandKitId: string;
   sectionId: string;
   refinementPrompt: string;
   currentBrandKit: any;
@@ -20,7 +32,73 @@ export async function mergeRevisionResults({
 }) {
   let newMergedJSON = { ...activeRevisionResults };
 
-  if (
+  if (sectionId === "social-media") {
+    const actualLogoUrl =
+      currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
+    if (actualLogoUrl) {
+      const socialMediaUrls = await generateSocialMediaAssets({
+        ai,
+        env,
+        storage,
+        brandKitId,
+        brandName:
+          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+        sourceLogoUrl: actualLogoUrl,
+        refinementPrompt,
+      });
+      newMergedJSON.socialMedia = [
+        {
+          platform: "Instagram",
+          type: "Profile",
+          dimensions: "1080x1080",
+          url: socialMediaUrls.socialProfileUrl,
+        },
+        {
+          platform: "Twitter",
+          type: "Header",
+          dimensions: "1500x500",
+          url: socialMediaUrls.masterBannerUrl,
+        },
+        {
+          platform: "LinkedIn",
+          type: "Header",
+          dimensions: "1584x396",
+          url: socialMediaUrls.masterBannerUrl,
+        },
+        {
+          platform: "Facebook",
+          type: "Header",
+          dimensions: "820x360",
+          url: socialMediaUrls.facebookBannerUrl,
+        },
+        {
+          platform: "YouTube",
+          type: "Channel Art",
+          dimensions: "2560x1440",
+          url: socialMediaUrls.masterBannerUrl,
+        },
+      ];
+    }
+  } else if (sectionId === "branded-backdrops") {
+    const actualLogoUrl =
+      currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
+    if (actualLogoUrl) {
+      const backdropUrls = await generateBrandedBackdrops({
+        ai,
+        env,
+        storage,
+        brandKitId,
+        brandName:
+          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+        sourceLogoUrl: actualLogoUrl,
+        refinementPrompt,
+      });
+      newMergedJSON.brandedBackdrops = {
+        feedUrl: backdropUrls.feedUrl,
+        storyUrl: backdropUrls.storyUrl,
+      };
+    }
+  } else if (
     sectionId === "typography" &&
     refinementPrompt.startsWith("__FONT_OVERRIDE__")
   ) {

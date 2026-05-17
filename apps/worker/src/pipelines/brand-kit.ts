@@ -20,6 +20,7 @@ import {
   generateLogoVariations,
   generateSocialMediaAssets,
   generateBusinessCardAssets,
+  generateBrandedBackdrops,
 } from "../services/brand-kit/asset-generator";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
 
@@ -190,7 +191,7 @@ export class BrandKitPipeline {
             type: "Profile",
             dimensions: "1080x1080",
             url:
-              socialMediaUrls?.instagramUrl ??
+              socialMediaUrls?.socialProfileUrl ??
               "https://placehold.co/1080x1080/000/FFF?text=IG",
           },
           {
@@ -198,10 +199,55 @@ export class BrandKitPipeline {
             type: "Header",
             dimensions: "1500x500",
             url:
-              socialMediaUrls?.twitterUrl ??
+              socialMediaUrls?.masterBannerUrl ??
               "https://placehold.co/1500x500/000/FFF?text=TW",
           },
+          {
+            platform: "LinkedIn",
+            type: "Header",
+            dimensions: "1584x396",
+            url:
+              socialMediaUrls?.masterBannerUrl ??
+              "https://placehold.co/1584x396/000/FFF?text=LI",
+          },
+          {
+            platform: "Facebook",
+            type: "Header",
+            dimensions: "820x360",
+            url:
+              socialMediaUrls?.facebookBannerUrl ??
+              "https://placehold.co/820x360/000/FFF?text=FB",
+          },
+          {
+            platform: "YouTube",
+            type: "Channel Art",
+            dimensions: "2560x1440",
+            url:
+              socialMediaUrls?.masterBannerUrl ??
+              "https://placehold.co/2560x1440/000/FFF?text=YT",
+          },
         ];
+      }
+      if (deliverables?.brandedBackdrops) {
+        const backdropUrls = actualLogoUrl
+          ? await generateBrandedBackdrops({
+              ai: this.ai,
+              env: this.env,
+              storage: this.storage,
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+            })
+          : null;
+
+        finalResultsJSON.brandedBackdrops = {
+          feedUrl:
+            backdropUrls?.feedUrl ??
+            "https://placehold.co/1080x1080/000/FFF?text=Feed",
+          storyUrl:
+            backdropUrls?.storyUrl ??
+            "https://placehold.co/1080x1920/000/FFF?text=Story",
+        };
       }
       if (deliverables?.businessCard) {
         const businessCardUrls = actualLogoUrl
@@ -274,6 +320,9 @@ export class BrandKitPipeline {
 
       const newMergedJSON = await mergeRevisionResults({
         ai: this.ai,
+        env: this.env,
+        storage: this.storage,
+        brandKitId,
         sectionId,
         refinementPrompt,
         currentBrandKit,

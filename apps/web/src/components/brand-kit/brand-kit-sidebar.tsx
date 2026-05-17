@@ -305,6 +305,14 @@ export function BrandKitSidebar({
             onChange={(v) => setDeliverables((d) => ({ ...d, favicon: v }))}
             credits={1}
           />
+          <DeliverableToggle
+            label="Branded Backdrops"
+            checked={deliverables.brandedBackdrops}
+            onChange={(v) =>
+              setDeliverables((d) => ({ ...d, brandedBackdrops: v }))
+            }
+            credits={2}
+          />
         </div>
       </ConfigField>
 
