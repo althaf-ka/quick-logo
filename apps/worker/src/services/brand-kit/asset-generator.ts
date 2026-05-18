@@ -305,6 +305,7 @@ export async function generateBusinessCardAssets({
   brandKitId,
   brandName,
   sourceLogoUrl,
+  refinementPrompt,
 }: {
   ai: Ai;
   env: Env;
@@ -312,6 +313,7 @@ export async function generateBusinessCardAssets({
   brandKitId: string;
   brandName: string;
   sourceLogoUrl: string;
+  refinementPrompt?: string;
 }): Promise<{ frontUrl: string; backUrl: string }> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
@@ -325,7 +327,14 @@ export async function generateBusinessCardAssets({
             brandName,
             sourceLogoUrl,
             backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
+            defaultParams: {
+              ...mapping.defaultParams,
+              providerOptions: {
+                ...mapping.defaultParams?.providerOptions,
+                styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
+              },
+            },
+            refinementPrompt,
           }),
         );
         if (!result.success || !result.imageData) {
@@ -352,7 +361,14 @@ export async function generateBusinessCardAssets({
             brandName,
             sourceLogoUrl,
             backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
+            defaultParams: {
+              ...mapping.defaultParams,
+              providerOptions: {
+                ...mapping.defaultParams?.providerOptions,
+                styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
+              },
+            },
+            refinementPrompt,
           }),
         );
         if (!result.success || !result.imageData) {

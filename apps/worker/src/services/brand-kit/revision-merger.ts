@@ -7,6 +7,7 @@ import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
 import {
   generateSocialMediaAssets,
   generateBrandedBackdrops,
+  generateBusinessCardAssets,
 } from "./asset-generator";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
@@ -96,6 +97,25 @@ export async function mergeRevisionResults({
       newMergedJSON.brandedBackdrops = {
         feedUrl: backdropUrls.feedUrl,
         storyUrl: backdropUrls.storyUrl,
+      };
+    }
+  } else if (sectionId === "business-card") {
+    const actualLogoUrl =
+      currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
+    if (actualLogoUrl) {
+      const businessCardUrls = await generateBusinessCardAssets({
+        ai,
+        env,
+        storage,
+        brandKitId,
+        brandName:
+          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+        sourceLogoUrl: actualLogoUrl,
+        refinementPrompt,
+      });
+      newMergedJSON.businessCard = {
+        frontUrl: businessCardUrls.frontUrl,
+        backUrl: businessCardUrls.backUrl,
       };
     }
   } else if (

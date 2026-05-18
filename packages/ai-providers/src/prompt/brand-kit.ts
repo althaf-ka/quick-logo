@@ -144,9 +144,9 @@ const BACKDROP_PROMPTS = {
 
 const BUSINESS_CARD_PROMPTS = {
   front: ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Create a minimalist and elegant front design for a business card for "${brandName}". Center the logo beautifully with lots of negative space. Use a clean background (solid color or very subtle texture) that matches the brand identity. Do not add any text other than the logo itself.`,
+    `You are an expert graphic designer. Create a premium standalone business card front for "${brandName}". Center the provided logo beautifully. CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card on a background. Clean brand-colored background. Print-ready quality.`,
   back: ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Create a matching minimalist back design for a business card for "${brandName}". Create an abstract background, pattern, or gradient derived from the brand's style, leaving room for contact details. The design should feel premium and cohesive with the front.`,
+    `You are an expert graphic designer. Create a premium standalone business card back for "${brandName}". Matching minimalist back, abstract pattern/gradient from brand palette. CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card on a background. Clean center space. Print-ready quality.`,
 } satisfies Record<
   BusinessCardVariationKind,
   (context: LogoVariationPromptContext) => string
@@ -375,14 +375,22 @@ export function buildBusinessCardGenerationParams({
   sourceLogoUrl,
   backendModel,
   defaultParams,
-}: BuildBusinessCardParamsInput): GenerationParams {
+  refinementPrompt,
+}: BuildBusinessCardParamsInput & {
+  refinementPrompt?: string;
+}): GenerationParams {
+  const basePrompt = BUSINESS_CARD_PROMPTS[variation]({ brandName });
+  const finalPrompt = refinementPrompt
+    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
+    : basePrompt;
+
   return {
     ...defaultParams,
     backendModel,
-    prompt: BUSINESS_CARD_PROMPTS[variation]({ brandName }),
+    prompt: finalPrompt,
     referenceImage: sourceLogoUrl,
     referenceStrength: variation === "front" ? 90 : 40,
-    width: 1024,
-    height: 1024,
+    width: 1376,
+    height: 768,
   };
 }

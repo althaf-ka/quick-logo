@@ -264,10 +264,10 @@ export class BrandKitPipeline {
         finalResultsJSON.businessCard = {
           frontUrl:
             businessCardUrls?.frontUrl ??
-            "https://placehold.co/1050x600/000/FFF?text=Front",
+            "https://placehold.co/1376x768/000/FFF?text=Front",
           backUrl:
             businessCardUrls?.backUrl ??
-            "https://placehold.co/1050x600/FFF/000?text=Back",
+            "https://placehold.co/1376x768/FFF/000?text=Back",
         };
       }
       if (deliverables?.favicon) {
