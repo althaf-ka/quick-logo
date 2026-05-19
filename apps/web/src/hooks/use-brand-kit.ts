@@ -4,6 +4,8 @@ import { api } from "@/lib/api";
 import type { InferResponseType } from "@quicklogo/api-client";
 import type { BrandKitResultsData } from "@/components/brand-kit/brand-kit-results";
 import { toast } from "@quicklogo/ui/components/sonner";
+import { uploadFileToImageKit } from "@/lib/imagekit";
+import { useAuth } from "@/hooks/use-auth";
 
 export type BrandKitResponse = InferResponseType<
   (typeof api.brandKits)[":id"]["$get"],
@@ -29,12 +31,14 @@ export function useBrandKit({
   brandKitId: initialBrandKitId,
 }: UseBrandKitOptions) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [brandKitId, setBrandKitId] = useState<string | null>(
     initialBrandKitId || null,
   );
 
   // Local state for inputs (Initial Generation)
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isLoadingLogo, setIsLoadingLogo] = useState(!!imageId);
   const isFromPlatform = !!imageId;
 
@@ -122,15 +126,28 @@ export function useBrandKit({
   // Mutations
   const { mutate: mutateGenerate } = useMutation({
     mutationFn: async () => {
+      let finalLogoUrl = !isFromPlatform && logoUrl ? logoUrl : undefined;
+      if (!isFromPlatform && logoFile) {
+        finalLogoUrl = await uploadFileToImageKit(logoFile, user?.id);
+      }
+
+      const uploadedProductImageUrls =
+        mockupImages.length > 0
+          ? await Promise.all(
+              mockupImages.map((file) => uploadFileToImageKit(file, user?.id)),
+            )
+          : undefined;
+
       const res = await api.brandKits.index.$post({
         json: {
           sourceImageId: isFromPlatform ? imageId : undefined,
-          customLogoUrl: !isFromPlatform && logoUrl ? logoUrl : undefined,
+          customLogoUrl: finalLogoUrl,
           brandName,
           prompt,
           typographyStyle: typography,
           deliverables,
           extractedColors,
+          productImageUrls: uploadedProductImageUrls,
         },
       });
       if (!res.ok) {
@@ -264,11 +281,13 @@ export function useBrandKit({
     }
     const url = URL.createObjectURL(file);
     setLogoUrl(url);
+    setLogoFile(file);
     setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
   }, []);
 
   const handleLogoRemove = useCallback(() => {
     setLogoUrl(null);
+    setLogoFile(null);
     setExtractedColors([]);
   }, []);
 

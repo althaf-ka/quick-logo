@@ -50,7 +50,7 @@ export const generateApiConfigSchema = z.object({
     .optional()
     .default("white"),
   customBgColor: z.string().optional().default("#ffffff"),
-  referenceImageUrl: z.string().url().optional(),
+  referenceImageUrl: z.url().optional(),
   referenceStrength: z.number().min(0).max(100).optional().default(50),
   magicPrompt: z.boolean().optional().default(true),
 });

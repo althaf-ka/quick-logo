@@ -3,11 +3,16 @@ import { z } from "zod";
 export const generateBrandKitSchema = z
   .object({
     sourceImageId: z.string().optional(),
-    customLogoUrl: z.string().optional(),
+    customLogoUrl: z
+      .url({ error: "Invalid custom logo URL" })
+      .optional()
+      .or(z.literal("")),
     brandName: z.string().optional(),
     prompt: z.string().min(1, "Brand description is required"),
     typographyStyle: z.string(), // Input preference (e.g., "modern-sans")
-    productImageUrls: z.array(z.string()).optional(),
+    productImageUrls: z
+      .array(z.url({ error: "Invalid product image URL" }))
+      .optional(),
     deliverables: z.object({
       logoVariations: z.boolean().optional(),
       socialMedia: z.boolean(),

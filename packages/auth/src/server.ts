@@ -17,17 +17,34 @@ type AuthEnv = {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   ALLOWED_ORIGINS: string;
+  CLIENT_URL?: string;
 };
 
 export function createAuth(db: Database, env: AuthEnv) {
+  const allowedOrigins = (env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  if (env.CLIENT_URL && !allowedOrigins.includes(env.CLIENT_URL)) {
+    allowedOrigins.push(env.CLIENT_URL);
+  }
+
+  const primaryClientUrl = allowedOrigins[0] || env.CLIENT_URL || "";
+
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()),
+    trustedOrigins: allowedOrigins,
+
+    advanced: {
+      cookiePrefix: env.BETTER_AUTH_URL.startsWith("https://")
+        ? "__Host-"
+        : undefined,
+    },
 
     onAPIError: {
-      errorURL:
-        ((env.ALLOWED_ORIGINS || "").split(",")[0] || "").trim() + "/login",
+      errorURL: primaryClientUrl ? `${primaryClientUrl}/login` : "/login",
     },
 
     user: {

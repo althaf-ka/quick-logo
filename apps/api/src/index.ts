@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { dbMiddleware } from "./middleware/db";
 import authRoute from "./routes/auth";
@@ -28,19 +29,44 @@ app.notFound((c) =>
   c.json({ error: "Not found", code: ERROR_CODES.NOT_FOUND }, 404),
 );
 
-app.use("/api/*", async (c, next) => {
-  const allowedOrigins = (c.env.ALLOWED_ORIGINS || "")
+const parseOrigins = (raw: string | undefined): string[] => {
+  if (!raw) return [];
+  return raw
     .split(",")
-    .map((o) => o.trim());
+    .map((o) => o.trim())
+    .filter(Boolean);
+};
+
+app.use("/api/*", async (c, next) => {
+  const allowedOrigins = parseOrigins(c.env.ALLOWED_ORIGINS);
+  if (c.env.CLIENT_URL && !allowedOrigins.includes(c.env.CLIENT_URL)) {
+    allowedOrigins.push(c.env.CLIENT_URL);
+  }
   const origin = c.req.header("Origin") || "";
 
   const corsMiddleware = cors({
-    origin: allowedOrigins.includes(origin)
-      ? origin
-      : allowedOrigins[0] || c.env.CLIENT_URL,
+    origin: allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "",
     credentials: true,
   });
   return corsMiddleware(c, next);
+});
+
+app.use("/api/*", async (c, next) => {
+  const path = c.req.path;
+  if (path === "/api/payments/webhook" || path.startsWith("/api/auth/")) {
+    return next();
+  }
+
+  const allowedOrigins = parseOrigins(c.env.ALLOWED_ORIGINS);
+  if (c.env.CLIENT_URL && !allowedOrigins.includes(c.env.CLIENT_URL)) {
+    allowedOrigins.push(c.env.CLIENT_URL);
+  }
+
+  const csrfMiddleware = csrf({
+    origin: allowedOrigins,
+  });
+
+  return csrfMiddleware(c, next);
 });
 
 const routes = app
