@@ -5,6 +5,7 @@ import { BrandKitResults } from "@/components/brand-kit/brand-kit-results";
 import { useBrandKit, getSectionLabel } from "@/hooks/use-brand-kit";
 import { LoadingStatusIndicator } from "@/components/global/loading-status-indicator";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
+import { downloadBrandKit } from "@/utils/download-kit";
 import { SlidersHorizontalIcon, SparkleIcon } from "@phosphor-icons/react";
 import {
   Drawer,
@@ -41,7 +42,7 @@ export function BrandKitWorkspace({
               onRefine={(sectionId) => bk.setTargetSection(sectionId)}
               onFontChange={bk.handleFontChange}
               onDownloadAll={() => {
-                // TODO: Generate ZIP and trigger download
+                downloadBrandKit(bk.results!);
               }}
               refiningSectionId={bk.refiningSectionId}
             />

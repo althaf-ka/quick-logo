@@ -1,9 +1,12 @@
 import { SectionHeader, SectionContent } from "./section-header";
+import { WarningCircleIcon } from "@phosphor-icons/react";
+import { cn } from "@quicklogo/ui/lib/utils";
 
 export interface FaviconSize {
   size: number;
   label: string;
   url: string;
+  type?: string;
 }
 
 interface FaviconSectionProps {
@@ -12,14 +15,98 @@ interface FaviconSectionProps {
   isRefining?: boolean;
 }
 
-const CHECKER_BG = {
-  backgroundImage:
-    "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
-  backgroundSize: "8px 8px",
-  backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
-} as const;
+function BrowserTabMockup({
+  url,
+  label,
+  size,
+}: {
+  url: string;
+  label: string;
+  size: number;
+}) {
+  const isPlaceholder = url.includes("placehold.co");
 
-const DISPLAY_SIZE = 80;
+  return (
+    <div className="flex h-full flex-col rounded-none border-2 border-border/50 bg-transparent relative">
+      <div className="bg-background border-border/50 flex w-full flex-col overflow-hidden rounded-none border-b-2">
+        <div className="bg-muted/20 border-border/50 flex h-6 items-center gap-1.5 border-b-2 px-2">
+          <div className="bg-destructive/80 size-2 rounded-none" />
+          <div className="bg-warning/80 size-2 rounded-none" />
+          <div className="bg-success/80 size-2 rounded-none" />
+        </div>
+        <div className="bg-background flex items-end px-2 pt-4">
+          <div className="bg-muted/10 border-border/50 flex w-[65%] translate-y-[2px] items-center gap-2.5 overflow-hidden rounded-none border-x-2 border-t-2 px-3 py-2 mt-auto">
+            <img
+              src={url}
+              alt="Favicon"
+              style={{ width: 48, height: 48, imageRendering: "pixelated" }}
+              className={cn("shrink-0 rounded-none", isPlaceholder && "opacity-40 grayscale filter")}
+            />
+            <div className="text-foreground/80 truncate text-[10px] font-medium">
+              Brand Page
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="bg-muted/5 mt-auto p-3 text-center">
+        <p className="font-mono text-[11px] font-bold uppercase">
+          {size}×{size}
+        </p>
+        <p className="text-muted-foreground/60 mt-1 font-mono text-[9px] tracking-wider uppercase">
+          {label}
+        </p>
+      </div>
+      {isPlaceholder && (
+        <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
+          <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
+          <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
+            Generation Pending
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppMockup({
+  url,
+  label,
+  size,
+}: {
+  url: string;
+  label: string;
+  size: number;
+}) {
+  const isPlaceholder = url.includes("placehold.co");
+
+  return (
+    <div className="border-border/50 flex h-full flex-col rounded-none border-2 bg-transparent relative">
+      <div className="bg-muted/10 border-border/50 flex w-full items-center justify-center rounded-none border-b-2 py-8 relative overflow-hidden">
+        <img
+          src={url}
+          alt="App Icon"
+          className={cn("h-28 w-28 rounded-none object-contain", isPlaceholder && "opacity-40 grayscale filter")}
+        />
+      </div>
+      <div className="bg-muted/5 mt-auto p-3 text-center">
+        <p className="font-mono text-[11px] font-bold uppercase">
+          {size}×{size}
+        </p>
+        <p className="text-muted-foreground/60 mt-1 font-mono text-[9px] tracking-wider uppercase">
+          {label}
+        </p>
+      </div>
+      {isPlaceholder && (
+        <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
+          <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
+          <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
+            Generation Pending
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function FaviconSection({
   icons,
@@ -35,40 +122,24 @@ export function FaviconSection({
         isRefining={isRefining}
       />
       <SectionContent isRefining={isRefining}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {icons.map((icon, i) => (
-            <div
-              key={i}
-              className="group hover:border-primary/30 flex flex-col items-center gap-3 border p-4 transition-colors"
-            >
-              <div
-                className="flex items-center justify-center"
-                style={{
-                  ...CHECKER_BG,
-                  width: DISPLAY_SIZE,
-                  height: DISPLAY_SIZE,
-                }}
-              >
-                <img
-                  src={icon.url}
-                  alt={icon.label}
-                  className="object-contain"
-                  style={{
-                    width: DISPLAY_SIZE - 12,
-                    height: DISPLAY_SIZE - 12,
-                  }}
-                />
-              </div>
-              <div className="text-center">
-                <p className="font-mono text-[10px] font-bold uppercase">
-                  {icon.size}×{icon.size}
-                </p>
-                <p className="text-muted-foreground/50 font-mono text-[8px] tracking-wider uppercase">
-                  {icon.label}
-                </p>
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col gap-6">
+          {/* Row 1: Web Mockups (2 columns) */}
+          <div className="grid grid-cols-2 gap-4">
+            {icons
+              .filter((icon) => icon.type === "favicon" || (!icon.type && (icon.size === 16 || icon.size === 32)))
+              .map((icon) => (
+                <BrowserTabMockup key={`web-${icon.size}`} {...icon} />
+              ))}
+          </div>
+
+          {/* Row 2: App Mockups (3 columns) */}
+          <div className="grid grid-cols-3 gap-4">
+            {icons
+              .filter((icon) => icon.type && icon.type !== "favicon" || (!icon.type && icon.size >= 180))
+              .map((icon) => (
+                <AppMockup key={`app-${icon.size}`} {...icon} />
+              ))}
+          </div>
         </div>
       </SectionContent>
     </div>

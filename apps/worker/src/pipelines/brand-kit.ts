@@ -23,6 +23,7 @@ import {
   generateBrandedBackdrops,
 } from "../services/brand-kit/asset-generator";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
+import { FAVICON_SIZES } from "@quicklogo/shared";
 
 export class BrandKitPipeline {
   private repository: BrandKitRepository;
@@ -128,7 +129,7 @@ export class BrandKitPipeline {
         deliverables: deliverables,
       };
 
-      let darkAndIconUrls: { darkModeUrl: string; iconOnlyUrl: string } | null =
+      let darkAndIconUrls: { darkModeUrl?: string; iconOnlyUrl?: string } | null =
         null;
       if (deliverables?.logoVariations || deliverables?.favicon) {
         darkAndIconUrls = actualLogoUrl
@@ -140,6 +141,7 @@ export class BrandKitPipeline {
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
+              types: deliverables?.logoVariations ? ["dark-mode", "icon-only"] : ["icon-only"],
             })
           : null;
       }
@@ -272,23 +274,12 @@ export class BrandKitPipeline {
       }
       if (deliverables?.favicon) {
         const iconUrl = darkAndIconUrls?.iconOnlyUrl ?? fallbackLogoUrl;
-        finalResultsJSON.favicons = [
-          {
-            size: 16,
-            label: "Web",
-            url: iconUrl,
-          },
-          {
-            size: 32,
-            label: "Web HD",
-            url: iconUrl,
-          },
-          {
-            size: 180,
-            label: "Apple",
-            url: iconUrl,
-          },
-        ];
+        finalResultsJSON.favicons = FAVICON_SIZES.map((f) => ({
+          size: f.size,
+          label: f.label,
+          type: f.type,
+          url: iconUrl,
+        }));
       }
 
       await this.repository.saveInitialGeneration(brandKitId, finalResultsJSON);

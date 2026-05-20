@@ -7,5 +7,6 @@ export * from "./constants/generate";
 export * from "./constants/billing";
 export * from "./constants/error-codes";
 export * from "./constants/typography";
+export * from "./constants/favicon";
 
 export * from "./types/index";

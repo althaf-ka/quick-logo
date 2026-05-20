@@ -24,6 +24,7 @@ export async function generateLogoVariations({
   brandKitId,
   brandName,
   sourceLogoUrl,
+  types,
 }: {
   ai: Ai;
   db: Database;
@@ -32,7 +33,8 @@ export async function generateLogoVariations({
   brandKitId: string;
   brandName: string;
   sourceLogoUrl: string;
-}): Promise<{ darkModeUrl: string; iconOnlyUrl: string }> {
+  types?: ("dark-mode" | "icon-only")[];
+}): Promise<{ darkModeUrl?: string; iconOnlyUrl?: string }> {
   const reusableUrls = await findReusableLogoVariationUrls({
     db,
     brandKitId,
@@ -48,62 +50,44 @@ export async function generateLogoVariations({
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
 
-  const [darkModeUrl, iconOnlyUrl] = await Promise.all([
-    generateWithFallback(
-      async () => {
-        const result = await provider.generate(
-          buildLogoVariationGenerationParams({
-            variation: "dark-mode",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
-          }),
-        );
-        if (!result.success || !result.imageData) {
-          throw new Error(
-            result.error ?? `Variation generation failed for logo-dark`,
-          );
-        }
-        const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/logo-dark.${result.format ?? "png"}`,
-          result.imageData,
-        );
-        return uploaded.url;
-      },
-      sourceLogoUrl,
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    ),
-    generateWithFallback(
-      async () => {
-        const result = await provider.generate(
-          buildLogoVariationGenerationParams({
-            variation: "icon-only",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
-          }),
-        );
-        if (!result.success || !result.imageData) {
-          throw new Error(
-            result.error ?? `Variation generation failed for logo-icon`,
-          );
-        }
-        const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/logo-icon.${result.format ?? "png"}`,
-          result.imageData,
-        );
-        return uploaded.url;
-      },
-      sourceLogoUrl,
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    ),
-  ]);
+  const typesToGenerate = types || ["dark-mode", "icon-only"];
 
-  return { darkModeUrl, iconOnlyUrl };
+  const results = await Promise.all(
+    typesToGenerate.map(async (type) => {
+      const url = await generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildLogoVariationGenerationParams({
+              variation: type,
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: mapping.defaultParams,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ?? `Variation generation failed for logo-${type === "dark-mode" ? "dark" : "icon"}`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/logo-${type === "dark-mode" ? "dark" : "icon"}.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      );
+      return { type, url };
+    })
+  );
+
+  return {
+    darkModeUrl: results.find((r) => r.type === "dark-mode")?.url,
+    iconOnlyUrl: results.find((r) => r.type === "icon-only")?.url,
+  };
 }
 
 export async function generateSocialMediaAssets({
