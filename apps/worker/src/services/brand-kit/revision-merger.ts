@@ -9,6 +9,7 @@ import {
   generateBrandedBackdrops,
   generateBusinessCardAssets,
 } from "./asset-generator";
+import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 
@@ -206,6 +207,47 @@ export async function mergeRevisionResults({
               validated.error,
             );
             throw new Error("AI returned invalid color palette schema");
+          }
+        } else if (refinementRequest.sectionKey === "brandPresentation") {
+          if (parsedJson.tagline && parsedJson.description) {
+            const actualLogoUrl =
+              newMergedJSON.logoVariations?.[0]?.url ||
+              currentBrandKit?.customLogoUrl;
+
+            const newPresentationUrl = actualLogoUrl
+              ? await generateBrandPresentationImage({
+                  ai,
+                  env,
+                  storage,
+                  brandKitId,
+                  brandName:
+                    currentBrandKit?.brandName ||
+                    newMergedJSON.brandName ||
+                    "Brand",
+                  sourceLogoUrl: actualLogoUrl,
+                  refinementPrompt,
+                  headingFont: newMergedJSON.typography?.heading?.family,
+                  bodyFont: newMergedJSON.typography?.body?.family,
+                  productImageUrl:
+                    currentBrandKit?.productImageUrls &&
+                    currentBrandKit.productImageUrls.length > 0
+                      ? currentBrandKit.productImageUrls[0]
+                      : undefined,
+                  brandDescription:
+                    currentBrandKit?.prompt || "Professional brand kit",
+                })
+              : newMergedJSON.brandPresentation?.presentationUrl;
+
+            newMergedJSON.brandPresentation = {
+              tagline: parsedJson.tagline,
+              description: parsedJson.description,
+              presentationUrl: newPresentationUrl,
+            };
+          } else {
+            console.warn(
+              "[revision-merger] Brand presentation refinement validation failed: missing tagline or description",
+            );
+            throw new Error("AI returned invalid brand presentation schema");
           }
         }
       } catch (e) {

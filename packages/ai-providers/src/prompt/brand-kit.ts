@@ -7,7 +7,7 @@ type SocialMediaVariationKind =
   | "facebook-banner";
 type BusinessCardVariationKind = "front" | "back";
 type BackdropVariationKind = "feed-backdrop" | "story-backdrop";
-type BrandKitSectionKey = "colorPalette";
+type BrandKitSectionKey = "colorPalette" | "brandPresentation";
 
 interface BrandKitMessage {
   role: "system" | "user";
@@ -102,10 +102,13 @@ interface BuildBrandKitRefinementRequestInput {
 const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
   colorPalette:
     '{ "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }] }',
+  brandPresentation:
+    '{ "tagline": "A tagline matching the brand vibe", "description": "A short, professional brand story or description showing the brand values" }',
 };
 
 const REFINEMENT_SECTION_KEYS: Partial<Record<string, BrandKitSectionKey>> = {
   "color-palette": "colorPalette",
+  "brand-presentation": "brandPresentation",
 };
 
 const JSON_RESPONSE_MAX_TOKENS = 600;
@@ -181,6 +184,29 @@ CRITICAL: Respond with ONLY the "colorPalette" key. Never add brandName, typogra
   return buildJsonBrandKitRequest(
     systemPrompt,
     `Brand Name: ${brandName}\nDescription: ${description}\nBase Colors: ${extractedColors.join(", ")}`,
+  );
+}
+
+interface BuildBrandPresentationTextRequestInput {
+  brandName: string;
+  description: string;
+}
+
+export function buildBrandPresentationTextRequest({
+  brandName,
+  description,
+}: BuildBrandPresentationTextRequestInput): BrandKitJsonRequest {
+  const systemPrompt = `You are an expert brand identity designer and copywriter.
+Output ONLY valid JSON matching the schema below. Do not include any extra text.
+Schema:
+{
+  "tagline": "A catchy, short, professional brand tagline (under 6 words)",
+  "description": "A professional, compelling brand story or mission statement (1-2 sentences, max 30 words)"
+}`;
+
+  return buildJsonBrandKitRequest(
+    systemPrompt,
+    `Brand Name: ${brandName}\nBrand Description: ${description}`,
   );
 }
 
@@ -289,7 +315,9 @@ export function buildBrandKitRefinementRequest({
 
   const sectionSchema = BRAND_KIT_SECTION_SCHEMAS[sectionKey];
   const sectionInstruction =
-    "You are refining the color palette of a brand. Keep it cohesive and professional.";
+    sectionId === "brand-presentation"
+      ? "You are refining the brand presentation tagline and description story. Make sure it incorporates the user's instructions while remaining professional and catchy."
+      : "You are refining the color palette of a brand. Keep it cohesive and professional.";
 
   return {
     sectionKey,
@@ -390,6 +418,51 @@ export function buildBusinessCardGenerationParams({
     prompt: finalPrompt,
     referenceImage: sourceLogoUrl,
     referenceStrength: variation === "front" ? 90 : 40,
+    width: 1376,
+    height: 768,
+  };
+}
+
+export function buildBrandPresentationGenerationParams({
+  brandName,
+  backendModel,
+  defaultParams,
+  refinementPrompt,
+  headingFont,
+  bodyFont,
+  productImageUrl,
+  logoStyleDescription,
+}: {
+  brandName: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+  refinementPrompt?: string;
+  headingFont?: string;
+  bodyFont?: string;
+  productImageUrl?: string;
+  logoStyleDescription?: string;
+}): GenerationParams {
+  let basePrompt = `Stunning modern Dribbble-style UI bento layout for brand "${brandName}". High-end Behance portfolio presentation.`;
+  basePrompt += ` Beautiful soft gradients, rounded floating cards, subtle drop shadows, glassmorphism, and clean typography.`;
+  basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup`;
+  if (logoStyleDescription) basePrompt += ` (${logoStyleDescription})`;
+  if (productImageUrl) basePrompt += `, a sleek product showcase`;
+  basePrompt += `, subtle typography integration (${headingFont || "Inter"} & ${bodyFont || "Montserrat"}), and beautiful modern color palette swatches.`;
+  basePrompt += ` Background should feature abstract organic shapes and sleek brand textures.`;
+  basePrompt += ` CRITICAL: NO literal instruction text (do NOT write "Logo Mockup" or "Art:"). Create a cohesive, highly polished, aesthetic graphic design composition.`;
+
+  const finalPrompt = refinementPrompt
+    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
+    : basePrompt;
+
+  return {
+    ...defaultParams,
+    backendModel,
+    prompt: finalPrompt,
+    ...(productImageUrl && {
+      referenceImage: productImageUrl,
+      referenceStrength: 45,
+    }),
     width: 1376,
     height: 768,
   };

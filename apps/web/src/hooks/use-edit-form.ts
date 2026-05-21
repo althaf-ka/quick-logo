@@ -211,55 +211,63 @@ export function useEditForm({
         ? "polling"
         : "idle";
 
-  const handleEdit = useCallback(async () => {
-    const targetImageUrl = selectedEntry?.url ?? sourceImageUrl;
-    const targetImageId = selectedEntry?.id ?? imageId;
+  const handleEdit = useCallback(
+    async (customPrompt?: string) => {
+      const activePrompt = customPrompt !== undefined ? customPrompt : prompt;
+      const targetImageUrl = selectedEntry?.url ?? sourceImageUrl;
+      const targetImageId = selectedEntry?.id ?? imageId;
 
-    if (!prompt.trim() || isEditing || !targetImageUrl) return;
+      if (!activePrompt.trim() || isEditing || !targetImageUrl) return;
 
-    setErrorState(null);
+      if (customPrompt !== undefined) {
+        setPrompt(customPrompt);
+      }
 
-    try {
-      const fetchedBrandName = (fetchResult?.image as Record<string, unknown>)
-        ?.brandName;
-      const brandName =
-        typeof fetchedBrandName === "string" ? fetchedBrandName : "";
+      setErrorState(null);
 
-      const payload: EditApiRequest = {
-        prompt,
-        sourceImageId: targetImageId,
-        config: {
-          model,
-          brandName,
-          imageCount: 1,
-          style: "",
-          colorPalette: "auto",
-          background: "transparent",
-          customBgColor: "#ffffff",
-          referenceImageUrl: targetImageUrl,
-          referenceStrength: REFERENCE_STRENGTH,
-          magicPrompt: false,
-        },
-      };
+      try {
+        const fetchedBrandName = (fetchResult?.image as Record<string, unknown>)
+          ?.brandName;
+        const brandName =
+          typeof fetchedBrandName === "string" ? fetchedBrandName : "";
 
-      const response = await mutateAsync(payload);
-      if (response?.imageId) setManualActiveId(response.imageId);
-    } catch (err) {
-      setErrorState(
-        err instanceof Error ? err.message : "Failed to start edit",
-      );
-    }
-  }, [
-    prompt,
-    model,
-    sourceImageUrl,
-    imageId,
-    isEditing,
-    mutateAsync,
-    selectedEntry?.id,
-    selectedEntry?.url,
-    fetchResult?.image,
-  ]);
+        const payload: EditApiRequest = {
+          prompt: activePrompt,
+          sourceImageId: targetImageId,
+          config: {
+            model,
+            brandName,
+            imageCount: 1,
+            style: "",
+            colorPalette: "auto",
+            background: "transparent",
+            customBgColor: "#ffffff",
+            referenceImageUrl: targetImageUrl,
+            referenceStrength: REFERENCE_STRENGTH,
+            magicPrompt: false,
+          },
+        };
+
+        const response = await mutateAsync(payload);
+        if (response?.imageId) setManualActiveId(response.imageId);
+      } catch (err) {
+        setErrorState(
+          err instanceof Error ? err.message : "Failed to start edit",
+        );
+      }
+    },
+    [
+      prompt,
+      model,
+      sourceImageUrl,
+      imageId,
+      isEditing,
+      mutateAsync,
+      selectedEntry?.id,
+      selectedEntry?.url,
+      fetchResult?.image,
+    ],
+  );
 
   return {
     prompt,

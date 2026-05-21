@@ -1,6 +1,9 @@
 import type { Database } from "@quicklogo/db";
 
-import { buildBrandKitIdentityRequest } from "@quicklogo/ai-providers/prompt";
+import {
+  buildBrandKitIdentityRequest,
+  buildBrandPresentationTextRequest,
+} from "@quicklogo/ai-providers/prompt";
 import type { StorageProvider } from "@quicklogo/storage";
 import type {
   GenerateBrandKitMessage,
@@ -22,6 +25,7 @@ import {
   generateBusinessCardAssets,
   generateBrandedBackdrops,
 } from "../services/brand-kit/asset-generator";
+import { generateBrandPresentationImage } from "../services/brand-kit/brand-presentation-generator";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
 import { FAVICON_SIZES } from "@quicklogo/shared";
 
@@ -45,6 +49,7 @@ export class BrandKitPipeline {
       extractedColors,
       typographyStyle,
       deliverables,
+      productImageUrls,
     } = message;
 
     await this.repository.updateStatus(brandKitId, "processing");
@@ -122,15 +127,69 @@ export class BrandKitPipeline {
       const fallbackLogoUrl =
         actualLogoUrl || "https://placehold.co/400x400/000/FFF?text=Logo";
 
+      let brandPresentationOutput = null;
+      if (deliverables?.brandPresentation) {
+        const presentationRequest = buildBrandPresentationTextRequest({
+          brandName,
+          description: prompt,
+        });
+        const presentationResponse = await this.ai.run(
+          "@cf/meta/llama-3.1-8b-instruct-fp8",
+          presentationRequest,
+        );
+        const presentationText =
+          extractWorkersAiResponseText(presentationResponse);
+        let tagline = `${brandName}: Redefining Quality`;
+        let description = `Discover the unique design philosophy behind ${brandName}.`;
+        try {
+          const parsed = JSON.parse(presentationText);
+          tagline = parsed.tagline || tagline;
+          description = parsed.description || description;
+        } catch {
+          console.warn(
+            "[brand-kit-pipeline] Brand presentation copy generation failed; using fallback",
+          );
+        }
+
+        const presentationImageUrl = actualLogoUrl
+          ? await generateBrandPresentationImage({
+              ai: this.ai,
+              env: this.env,
+              storage: this.storage,
+              brandKitId,
+              brandName,
+              sourceLogoUrl: actualLogoUrl,
+              headingFont: typographyOutput.heading.family,
+              bodyFont: typographyOutput.body.family,
+              productImageUrl:
+                productImageUrls && productImageUrls.length > 0
+                  ? productImageUrls[0]
+                  : undefined,
+              brandDescription: prompt,
+            })
+          : "https://placehold.co/1376x768/000/FFF?text=Brand+Presentation";
+
+        brandPresentationOutput = {
+          tagline,
+          description,
+          presentationUrl: presentationImageUrl,
+        };
+      }
+
       const finalResultsJSON: Record<string, any> = {
         brandName,
         colorPalette: colorOutput.colorPalette || [],
         typography: typographyOutput,
         deliverables: deliverables,
+        ...(brandPresentationOutput && {
+          brandPresentation: brandPresentationOutput,
+        }),
       };
 
-      let darkAndIconUrls: { darkModeUrl?: string; iconOnlyUrl?: string } | null =
-        null;
+      let darkAndIconUrls: {
+        darkModeUrl?: string;
+        iconOnlyUrl?: string;
+      } | null = null;
       if (deliverables?.logoVariations || deliverables?.favicon) {
         darkAndIconUrls = actualLogoUrl
           ? await generateLogoVariations({
@@ -141,7 +200,9 @@ export class BrandKitPipeline {
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
-              types: deliverables?.logoVariations ? ["dark-mode", "icon-only"] : ["icon-only"],
+              types: deliverables?.logoVariations
+                ? ["dark-mode", "icon-only"]
+                : ["icon-only"],
             })
           : null;
       }

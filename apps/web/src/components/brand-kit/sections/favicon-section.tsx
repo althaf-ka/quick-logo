@@ -27,7 +27,7 @@ function BrowserTabMockup({
   const isPlaceholder = url.includes("placehold.co");
 
   return (
-    <div className="flex h-full flex-col rounded-none border-2 border-border/50 bg-transparent relative">
+    <div className="border-border/50 relative flex h-full flex-col rounded-none border-2 bg-transparent">
       <div className="bg-background border-border/50 flex w-full flex-col overflow-hidden rounded-none border-b-2">
         <div className="bg-muted/20 border-border/50 flex h-6 items-center gap-1.5 border-b-2 px-2">
           <div className="bg-destructive/80 size-2 rounded-none" />
@@ -35,12 +35,15 @@ function BrowserTabMockup({
           <div className="bg-success/80 size-2 rounded-none" />
         </div>
         <div className="bg-background flex items-end px-2 pt-4">
-          <div className="bg-muted/10 border-border/50 flex w-[65%] translate-y-[2px] items-center gap-2.5 overflow-hidden rounded-none border-x-2 border-t-2 px-3 py-2 mt-auto">
+          <div className="bg-muted/10 border-border/50 mt-auto flex w-[65%] translate-y-[2px] items-center gap-2.5 overflow-hidden rounded-none border-x-2 border-t-2 px-3 py-2">
             <img
               src={url}
               alt="Favicon"
               style={{ width: 48, height: 48, imageRendering: "pixelated" }}
-              className={cn("shrink-0 rounded-none", isPlaceholder && "opacity-40 grayscale filter")}
+              className={cn(
+                "shrink-0 rounded-none",
+                isPlaceholder && "opacity-40 grayscale filter",
+              )}
             />
             <div className="text-foreground/80 truncate text-[10px] font-medium">
               Brand Page
@@ -80,12 +83,15 @@ function AppMockup({
   const isPlaceholder = url.includes("placehold.co");
 
   return (
-    <div className="border-border/50 flex h-full flex-col rounded-none border-2 bg-transparent relative">
-      <div className="bg-muted/10 border-border/50 flex w-full items-center justify-center rounded-none border-b-2 py-8 relative overflow-hidden">
+    <div className="border-border/50 relative flex h-full flex-col rounded-none border-2 bg-transparent">
+      <div className="bg-muted/10 border-border/50 relative flex w-full items-center justify-center overflow-hidden rounded-none border-b-2 py-8">
         <img
           src={url}
           alt="App Icon"
-          className={cn("h-28 w-28 rounded-none object-contain", isPlaceholder && "opacity-40 grayscale filter")}
+          className={cn(
+            "h-28 w-28 rounded-none object-contain",
+            isPlaceholder && "opacity-40 grayscale filter",
+          )}
         />
       </div>
       <div className="bg-muted/5 mt-auto p-3 text-center">
@@ -126,7 +132,11 @@ export function FaviconSection({
           {/* Row 1: Web Mockups (2 columns) */}
           <div className="grid grid-cols-2 gap-4">
             {icons
-              .filter((icon) => icon.type === "favicon" || (!icon.type && (icon.size === 16 || icon.size === 32)))
+              .filter(
+                (icon) =>
+                  icon.type === "favicon" ||
+                  (!icon.type && (icon.size === 16 || icon.size === 32)),
+              )
               .map((icon) => (
                 <BrowserTabMockup key={`web-${icon.size}`} {...icon} />
               ))}
@@ -135,7 +145,11 @@ export function FaviconSection({
           {/* Row 2: App Mockups (3 columns) */}
           <div className="grid grid-cols-3 gap-4">
             {icons
-              .filter((icon) => icon.type && icon.type !== "favicon" || (!icon.type && icon.size >= 180))
+              .filter(
+                (icon) =>
+                  (icon.type && icon.type !== "favicon") ||
+                  (!icon.type && icon.size >= 180),
+              )
               .map((icon) => (
                 <AppMockup key={`app-${icon.size}`} {...icon} />
               ))}

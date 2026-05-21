@@ -24,6 +24,7 @@ import {
 import { FaviconSection, type FaviconSize } from "./sections/favicon-section";
 import { BrandGuidelinesSection } from "./sections/brand-guidelines-section";
 import { BrandedBackdropsSection } from "./sections/branded-backdrops-section";
+import { BrandPresentationSection } from "./sections/brand-presentation-section";
 
 export interface BrandKitResultsData {
   logoVariations?: LogoVariation[];
@@ -36,10 +37,16 @@ export interface BrandKitResultsData {
   logoUrl?: string;
   productImages?: string[];
   brandedBackdrops?: { feedUrl: string; storyUrl: string };
+  brandPresentation?: {
+    tagline: string;
+    description: string;
+    presentationUrl?: string;
+  };
 }
 
 interface BrandKitResultsProps {
   data: BrandKitResultsData;
+  typographyStyle?: string;
   onRefine: (sectionId: string) => void;
   onFontChange?: (role: "heading" | "body", family: string) => void;
   onDownloadAll?: () => void;
@@ -48,6 +55,7 @@ interface BrandKitResultsProps {
 
 export function BrandKitResults({
   data,
+  typographyStyle,
   onRefine,
   onFontChange,
   onDownloadAll,
@@ -99,6 +107,15 @@ export function BrandKitResults({
         onFontChange={onFontChange}
         isRefining={refiningSectionId === "typography"}
       />
+
+      {data.brandPresentation && (
+        <BrandPresentationSection
+          data={data}
+          typographyStyle={typographyStyle}
+          onRefine={onRefine}
+          isRefining={refiningSectionId === "brand-presentation"}
+        />
+      )}
 
       {data.socialMedia && data.socialMedia.length > 0 && (
         <SocialMediaSection

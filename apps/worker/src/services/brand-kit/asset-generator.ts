@@ -67,7 +67,8 @@ export async function generateLogoVariations({
           );
           if (!result.success || !result.imageData) {
             throw new Error(
-              result.error ?? `Variation generation failed for logo-${type === "dark-mode" ? "dark" : "icon"}`,
+              result.error ??
+                `Variation generation failed for logo-${type === "dark-mode" ? "dark" : "icon"}`,
             );
           }
           const uploaded = await storage.upload(
@@ -81,7 +82,7 @@ export async function generateLogoVariations({
         "asset-generator",
       );
       return { type, url };
-    })
+    }),
   );
 
   return {

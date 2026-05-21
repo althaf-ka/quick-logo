@@ -95,6 +95,7 @@ export function BrandKitSidebar({
   setTypography,
   deliverables,
   setDeliverables,
+  mockupImages,
   setMockupImages,
   mockupPreviews,
   extractedColors,
@@ -284,6 +285,24 @@ export function BrandKitSidebar({
               setDeliverables((d) => ({ ...d, logoVariations: v }))
             }
             credits={2}
+          />
+          <DeliverableToggle
+            label="Brand Presentation"
+            checked={deliverables.brandPresentation}
+            onChange={(v) => {
+              if (v && mockupImages.length === 0) {
+                toast.error(
+                  "Please upload at least one product image for Brand Presentation",
+                  {
+                    description:
+                      "Brand Presentation requires a product image to showcase your brand.",
+                  },
+                );
+                return;
+              }
+              setDeliverables((d) => ({ ...d, brandPresentation: v }));
+            }}
+            credits={3}
           />
           <DeliverableToggle
             label="Social Media Assets"

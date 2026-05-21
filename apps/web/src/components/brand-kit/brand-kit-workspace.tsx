@@ -39,6 +39,7 @@ export function BrandKitWorkspace({
           ) : bk.results ? (
             <BrandKitResults
               data={bk.results}
+              typographyStyle={bk.typography}
               onRefine={(sectionId) => bk.setTargetSection(sectionId)}
               onFontChange={bk.handleFontChange}
               onDownloadAll={() => {

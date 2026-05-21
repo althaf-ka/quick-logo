@@ -19,6 +19,7 @@ export interface Deliverables {
   businessCard: boolean;
   favicon: boolean;
   brandedBackdrops: boolean;
+  brandPresentation: boolean;
 }
 
 interface UseBrandKitOptions {
@@ -52,6 +53,7 @@ export function useBrandKit({
     businessCard: false,
     favicon: false,
     brandedBackdrops: false,
+    brandPresentation: false,
   });
 
   const [mockupImages, setMockupImages] = useState<File[]>([]);
@@ -88,13 +90,20 @@ export function useBrandKit({
   const brandKit = data?.brandKit ?? null;
   const revisions = useMemo(() => data?.revisions ?? [], [data?.revisions]);
 
-  const results = useMemo(() => {
+  const results = useMemo((): BrandKitResultsData | null => {
     const active = revisions.find((r) => r.isActive);
-    return active ? (active.results as unknown as BrandKitResultsData) : null;
-  }, [revisions]);
-
-  const isGenerating =
-    brandKit?.status === "pending" || brandKit?.status === "processing";
+    if (!active) return null;
+    const res = active.results as unknown as BrandKitResultsData;
+    return {
+      ...res,
+      logoUrl: (brandKit?.customLogoUrl ||
+        res.logoUrl ||
+        logoUrl ||
+        undefined) as string | undefined,
+      productImages:
+        (brandKit?.productImageUrls as string[]) || res.productImages,
+    };
+  }, [revisions, brandKit, logoUrl]);
 
   // Pre-fill logo and brand name if imageId is provided
   useEffect(() => {
@@ -123,9 +132,18 @@ export function useBrandKit({
     fetchImage();
   }, [imageId]);
 
+  // Sync typography state when brandKit loads/changes
+  useEffect(() => {
+    if (brandKit?.typographyStyle) {
+      setTypography(brandKit.typographyStyle);
+    }
+  }, [brandKit?.typographyStyle]);
+
   // Mutations
-  const { mutate: mutateGenerate } = useMutation({
-    mutationFn: async () => {
+  const { mutate: mutateGenerate, isPending: isGeneratingKit } = useMutation({
+    mutationFn: async (variables?: { customPrompt?: string }) => {
+      const activePrompt =
+        variables?.customPrompt !== undefined ? variables.customPrompt : prompt;
       let finalLogoUrl = !isFromPlatform && logoUrl ? logoUrl : undefined;
       if (!isFromPlatform && logoFile) {
         finalLogoUrl = await uploadFileToImageKit(logoFile, user?.id);
@@ -143,7 +161,7 @@ export function useBrandKit({
           sourceImageId: isFromPlatform ? imageId : undefined,
           customLogoUrl: finalLogoUrl,
           brandName,
-          prompt,
+          prompt: activePrompt,
           typographyStyle: typography,
           deliverables,
           extractedColors,
@@ -174,7 +192,7 @@ export function useBrandKit({
     },
   });
 
-  const { mutate: mutateRefine } = useMutation({
+  const { mutate: mutateRefine, isPending: isRefiningKit } = useMutation({
     mutationFn: async ({
       sectionId,
       refinementPrompt,
@@ -193,7 +211,8 @@ export function useBrandKit({
             | "social-media"
             | "business-card"
             | "favicon"
-            | "branded-backdrops",
+            | "branded-backdrops"
+            | "brand-presentation",
           refinementPrompt,
           typographyStyle: typography,
         },
@@ -237,6 +256,12 @@ export function useBrandKit({
     },
   });
 
+  const isGenerating =
+    brandKit?.status === "pending" ||
+    brandKit?.status === "processing" ||
+    isGeneratingKit ||
+    isRefiningKit;
+
   const restoreMutation = useMutation({
     mutationFn: async ({
       sectionId,
@@ -256,7 +281,8 @@ export function useBrandKit({
             | "social-media"
             | "business-card"
             | "favicon"
-            | "branded-backdrops",
+            | "branded-backdrops"
+            | "brand-presentation",
           sourceRevisionId,
         },
       });
@@ -369,7 +395,8 @@ export function useBrandKit({
       (deliverables.socialMedia ? 3 : 0) +
       (deliverables.businessCard ? 2 : 0) +
       (deliverables.favicon ? 1 : 0) +
-      (deliverables.brandedBackdrops ? 2 : 0),
+      (deliverables.brandedBackdrops ? 2 : 0) +
+      (deliverables.brandPresentation ? 3 : 0),
     [deliverables],
   );
 
@@ -379,35 +406,52 @@ export function useBrandKit({
   );
 
   // Unified submit handler
-  const handleGenerate = useCallback(() => {
-    if (!logoUrl && !brandKitId) {
-      toast.error("Please upload or select a logo first");
-      return;
-    }
-    if (!prompt.trim() && !targetSection) {
-      toast.error("Please describe your brand identity");
-      return;
-    }
-    if (!isFromPlatform && !brandName.trim() && !targetSection) {
-      toast.error("Brand name is required");
-      return;
-    }
+  const handleGenerate = useCallback(
+    (customPrompt?: string) => {
+      const activePrompt = customPrompt !== undefined ? customPrompt : prompt;
+      if (!logoUrl && !brandKitId) {
+        toast.error("Please upload or select a logo first");
+        return;
+      }
+      if (!activePrompt.trim() && !targetSection) {
+        toast.error("Please describe your brand identity");
+        return;
+      }
+      if (!isFromPlatform && !brandName.trim() && !targetSection) {
+        toast.error("Brand name is required");
+        return;
+      }
+      if (deliverables.brandPresentation && mockupImages.length === 0) {
+        toast.error("Brand Presentation requires at least one product image");
+        return;
+      }
 
-    if (targetSection) {
-      mutateRefine({ sectionId: targetSection, refinementPrompt: prompt });
-    } else {
-      mutateGenerate();
-    }
-  }, [
-    logoUrl,
-    brandKitId,
-    prompt,
-    targetSection,
-    mutateRefine,
-    mutateGenerate,
-    isFromPlatform,
-    brandName,
-  ]);
+      if (customPrompt !== undefined) {
+        setPrompt(customPrompt);
+      }
+
+      if (targetSection) {
+        mutateRefine({
+          sectionId: targetSection,
+          refinementPrompt: activePrompt,
+        });
+      } else {
+        mutateGenerate({ customPrompt });
+      }
+    },
+    [
+      logoUrl,
+      brandKitId,
+      prompt,
+      targetSection,
+      mutateRefine,
+      mutateGenerate,
+      isFromPlatform,
+      brandName,
+      deliverables.brandPresentation,
+      mockupImages.length,
+    ],
+  );
 
   return {
     // State
@@ -463,6 +507,8 @@ export function getSectionLabel(sectionId: string): string {
     "social-media": "Social Media Kit",
     "business-card": "Business Card",
     favicon: "Favicon & Icons",
+    "branded-backdrops": "Branded Backdrops",
+    "brand-presentation": "Brand Presentation",
     "brand-guidelines": "Brand Guidelines",
   };
   return labels[sectionId] ?? sectionId;

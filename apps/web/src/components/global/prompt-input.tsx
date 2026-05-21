@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import type { ModelOption, ModelContext } from "@quicklogo/ai-providers/models";
 import { Button } from "@quicklogo/ui/components/button";
 import {
@@ -20,7 +20,7 @@ import { cn } from "@quicklogo/ui/lib/utils";
 interface PromptInputProps {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (value: string) => void;
   isLoading?: boolean;
   placeholder?: string;
   credits?: number;
@@ -82,17 +82,57 @@ export function PromptInput({
   const minHeight = isCompact ? 36 : 52;
   const rows = isCompact ? 1 : 2;
 
+  const [localValue, setLocalValue] = useState(value);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleChange = useCallback(
+    (newVal: string) => {
+      setLocalValue(newVal);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        onChange(newVal);
+      }, 400);
+    },
+    [onChange],
+  );
+
+  const handleSubmit = useCallback(() => {
+    const trimmed = localValue.trim();
+    if (!isLoading && (allowEmptySubmit || trimmed.length > 0)) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      onChange(localValue);
+      onSubmit(localValue);
+    }
+  }, [localValue, isLoading, allowEmptySubmit, onChange, onSubmit]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        onSubmit();
+        handleSubmit();
       }
     },
-    [onSubmit],
+    [handleSubmit],
   );
 
-  const canSubmit = !isLoading && (allowEmptySubmit || value.trim().length > 0);
+  const canSubmit =
+    !isLoading && (allowEmptySubmit || localValue.trim().length > 0);
 
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
@@ -138,8 +178,8 @@ export function PromptInput({
           )}
           <textarea
             ref={textareaRef}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = "auto";
@@ -242,7 +282,7 @@ export function PromptInput({
                 </div>
               )}
               <Button
-                onClick={onSubmit}
+                onClick={handleSubmit}
                 disabled={!canSubmit}
                 size="icon-sm"
                 className={cn(

@@ -172,48 +172,63 @@ export function useGenerateForm() {
     status !== "polling" &&
     !isPending;
 
-  const handleGenerate = useCallback(async () => {
-    if (!canGenerate) return;
+  const handleGenerate = useCallback(
+    async (customPrompt?: string) => {
+      const activePrompt = customPrompt !== undefined ? customPrompt : prompt;
+      if (
+        activePrompt.trim().length === 0 ||
+        status === "generating" ||
+        status === "polling" ||
+        isPending
+      )
+        return;
 
-    setStatus("generating");
-    setLocalError(null);
-    setResults([]);
-    setActiveBatchId(null);
+      if (customPrompt !== undefined) {
+        setPrompt(customPrompt);
+      }
 
-    try {
-      let finalReferenceUrl: string | undefined;
+      setStatus("generating");
+      setLocalError(null);
+      setResults([]);
+      setActiveBatchId(null);
 
-      if (config.referenceImage instanceof File) {
-        finalReferenceUrl = await uploadFileToImageKit(
-          config.referenceImage,
-          user?.id,
+      try {
+        let finalReferenceUrl: string | undefined;
+
+        if (config.referenceImage instanceof File) {
+          finalReferenceUrl = await uploadFileToImageKit(
+            config.referenceImage,
+            user?.id,
+          );
+        }
+
+        // Strip frontend-only fields, only send what the API expects
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { referenceImage, referenceImagePreview, ...cleanConfig } =
+          config;
+
+        const apiPayload: GenerateApiRequest = {
+          prompt: activePrompt,
+          config: {
+            ...cleanConfig,
+            ...(finalReferenceUrl && { referenceImageUrl: finalReferenceUrl }),
+          },
+        };
+
+        const response = await mutateAsync(apiPayload);
+
+        if (response?.batchId) {
+          setActiveBatchId(response.batchId);
+        }
+      } catch (err) {
+        setLocalError(
+          err instanceof Error ? err.message : "Failed to start generation",
         );
+        setStatus("error");
       }
-
-      // Strip frontend-only fields, only send what the API expects
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { referenceImage, referenceImagePreview, ...cleanConfig } = config;
-
-      const apiPayload: GenerateApiRequest = {
-        prompt,
-        config: {
-          ...cleanConfig,
-          ...(finalReferenceUrl && { referenceImageUrl: finalReferenceUrl }),
-        },
-      };
-
-      const response = await mutateAsync(apiPayload);
-
-      if (response?.batchId) {
-        setActiveBatchId(response.batchId);
-      }
-    } catch (err) {
-      setLocalError(
-        err instanceof Error ? err.message : "Failed to start generation",
-      );
-      setStatus("error");
-    }
-  }, [canGenerate, prompt, config, mutateAsync, user]);
+    },
+    [prompt, status, isPending, config, mutateAsync, user],
+  );
 
   const handleRetry = useCallback(() => {
     handleGenerate();

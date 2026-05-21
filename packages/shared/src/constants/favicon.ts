@@ -6,4 +6,4 @@ export const FAVICON_SIZES = [
   { size: 512, type: "pwa", label: "App Store / PWA" },
 ] as const;
 
-export type FaviconType = typeof FAVICON_SIZES[number]["type"];
+export type FaviconType = (typeof FAVICON_SIZES)[number]["type"];

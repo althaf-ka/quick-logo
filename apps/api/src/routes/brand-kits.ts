@@ -34,6 +34,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       if (data.deliverables.socialMedia) cost += 3;
       if (data.deliverables.businessCard) cost += 2;
       if (data.deliverables.favicon) cost += 1;
+      if (data.deliverables.brandPresentation) cost += 3;
 
       const [updated] = await db
         .update(users)

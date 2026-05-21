@@ -19,6 +19,7 @@ export const generateBrandKitSchema = z
       businessCard: z.boolean(),
       favicon: z.boolean(),
       brandedBackdrops: z.boolean().optional(),
+      brandPresentation: z.boolean().optional(),
     }),
     extractedColors: z.array(z.string()),
   })
@@ -51,6 +52,7 @@ export const refineBrandKitSectionSchema = z.object({
     "business-card",
     "favicon",
     "branded-backdrops",
+    "brand-presentation",
   ]),
   refinementPrompt: z.string().min(1, "Refinement instruction is required"),
   typographyStyle: z.string().optional(), // In case they are refining typography and changed the dropdown
@@ -66,6 +68,7 @@ export const restoreSectionSchema = z.object({
     "business-card",
     "favicon",
     "branded-backdrops",
+    "brand-presentation",
   ]),
 });
 
