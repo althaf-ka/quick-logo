@@ -12,6 +12,7 @@ import type {
 import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
 import type { Env } from "../types";
 import { extractWorkersAiResponseText } from "../core/ai-response-parser";
+import { createLogger } from "@quicklogo/server-telemetry";
 import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
 import {
   normalizeTypographyOutput,
@@ -31,6 +32,7 @@ import { FAVICON_SIZES } from "@quicklogo/shared";
 
 export class BrandKitPipeline {
   private repository: BrandKitRepository;
+  private logger: ReturnType<typeof createLogger>;
 
   constructor(
     private ai: Ai,
@@ -39,6 +41,7 @@ export class BrandKitPipeline {
     private env: Env,
   ) {
     this.repository = new BrandKitRepository(this.db);
+    this.logger = createLogger("worker", { db: this.db });
   }
 
   async processGeneration(message: GenerateBrandKitMessage) {
@@ -51,6 +54,8 @@ export class BrandKitPipeline {
       deliverables,
       productImageUrls,
     } = message;
+
+    this.logger.info(`Starting brand kit pipeline`, { brandKitId });
 
     await this.repository.updateStatus(brandKitId, "processing");
 
@@ -99,13 +104,16 @@ export class BrandKitPipeline {
         if (validated.success) {
           colorOutput = validated.data;
         } else {
-          console.warn(
-            "[brand-kit-pipeline] Color palette schema validation failed, using empty array",
-            validated.error,
+          this.logger.warn(
+            "[brand-kit-pipeline] Color palette schema validation failed",
+            { brandKitId, error: validated.error },
           );
         }
       } catch (e) {
-        console.error("[brand-kit-pipeline] Failed to parse JSON:", colorText);
+        this.logger.error("[brand-kit-pipeline] Failed to parse JSON", e, {
+          brandKitId,
+          colorText,
+        });
         throw new Error("AI returned invalid JSON");
       }
 
@@ -118,8 +126,9 @@ export class BrandKitPipeline {
             JSON.parse(typographyText),
           );
         } catch {
-          console.warn(
+          this.logger.warn(
             "[brand-kit-pipeline] Vision typography parse failed; using fallback",
+            { brandKitId },
           );
         }
       }
@@ -146,8 +155,9 @@ export class BrandKitPipeline {
           tagline = parsed.tagline || tagline;
           description = parsed.description || description;
         } catch {
-          console.warn(
+          this.logger.warn(
             "[brand-kit-pipeline] Brand presentation copy generation failed; using fallback",
+            { brandKitId },
           );
         }
 
@@ -345,17 +355,15 @@ export class BrandKitPipeline {
 
       await this.repository.saveInitialGeneration(brandKitId, finalResultsJSON);
 
-      console.log(`[brand-kit-pipeline] Completed brandKitId=${brandKitId}`);
+      this.logger.info(`Completed brandKitId=${brandKitId}`);
     } catch (error) {
+      this.logger.error("Brand kit generation failed completely", error, {
+        brandKitId,
+      });
+
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      const stack = error instanceof Error ? error.stack : undefined;
-      console.error(
-        `[brand-kit-pipeline] Failed brandKitId=${brandKitId}:`,
-        error,
-      );
       await this.repository.updateStatus(brandKitId, "failed", errorMessage);
-      await this.repository.logSystemError(brandKitId, errorMessage, stack);
     }
   }
 
@@ -386,22 +394,15 @@ export class BrandKitPipeline {
         sectionId,
         newMergedJSON,
       );
-      console.log(
-        `[brand-kit-pipeline] Completed refinement for brandKitId=${brandKitId}`,
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const stack = error instanceof Error ? error.stack : undefined;
-      console.error(
-        `[brand-kit-pipeline] Refinement failed brandKitId=${brandKitId}:`,
-        error,
-      );
-      await this.repository.logSystemError(
+      this.logger.info(`Completed refinement for brandKitId=${brandKitId}`, {
         brandKitId,
-        `Refinement failed (${sectionId}): ${errorMessage}`,
-        stack,
-      );
+        sectionId,
+      });
+    } catch (error) {
+      this.logger.error(`Refinement failed (${sectionId})`, error, {
+        brandKitId,
+        sectionId,
+      });
     }
   }
 }

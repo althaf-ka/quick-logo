@@ -73,3 +73,9 @@ export class UnauthorizedError extends AppError {
     );
   }
 }
+
+export class BadRequestError extends AppError {
+  constructor(message = "Bad Request") {
+    super(400, "BAD_REQUEST", message);
+  }
+}

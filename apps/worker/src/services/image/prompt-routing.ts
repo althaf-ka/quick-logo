@@ -22,10 +22,8 @@ export async function routePromptAndBuildParams(
   // If the model does not support native enhancement (Alchemy/etc.), we process it locally.
   if (!mapping.capabilities.nativePromptEnhancement) {
     const enhanced = await promptEnhancer.enhance(message);
-    if (message.config.magicPrompt) {
-      finalPrompt = enhanced.finalPrompt;
-      enhancedPromptText = enhanced.enhancedPrompt;
-    }
+    finalPrompt = enhanced.finalPrompt;
+    enhancedPromptText = enhanced.enhancedPrompt;
     negativePrompt = enhanced.negativePrompt;
   }
 

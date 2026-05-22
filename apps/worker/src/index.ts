@@ -3,6 +3,7 @@ import type { QueueMessage } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
 import { ImageGenerationPipeline } from "./pipelines/image-generation";
 import { BrandKitPipeline } from "./pipelines/brand-kit";
+import { createLogger } from "@quicklogo/server-telemetry";
 import type { Env } from "./types";
 
 export default {
@@ -29,10 +30,10 @@ export default {
         }
         message.ack();
       } catch (error) {
-        console.error(
-          `[worker] Message failed attempt=${message.attempts}:`,
-          error instanceof Error ? error.message : error,
-        );
+        const logger = createLogger("worker", { db });
+        logger.error(`Message failed attempt=${message.attempts}`, error, {
+          type: message.body?.type,
+        });
         message.retry();
       }
     }

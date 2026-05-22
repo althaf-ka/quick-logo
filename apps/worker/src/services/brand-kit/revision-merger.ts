@@ -12,6 +12,9 @@ import {
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("worker");
 
 export async function mergeRevisionResults({
   ai,
@@ -168,7 +171,7 @@ export async function mergeRevisionResults({
           );
           newMergedJSON.typography = newTypography;
         } catch {
-          console.warn(
+          logger.warn(
             "[revision-merger] AI suggest typography parse failed; keeping current",
           );
         }
@@ -183,7 +186,7 @@ export async function mergeRevisionResults({
     });
 
     if (!refinementRequest) {
-      console.log(
+      logger.info(
         `[revision-merger] Refinement for ${sectionId} is not text-LLM driven yet.`,
       );
     } else {
@@ -202,9 +205,9 @@ export async function mergeRevisionResults({
           if (validated.success) {
             newMergedJSON.colorPalette = validated.data.colorPalette;
           } else {
-            console.warn(
+            logger.warn(
               "[revision-merger] Color palette refinement validation failed",
-              validated.error,
+              { error: validated.error },
             );
             throw new Error("AI returned invalid color palette schema");
           }
@@ -244,17 +247,17 @@ export async function mergeRevisionResults({
               presentationUrl: newPresentationUrl,
             };
           } else {
-            console.warn(
+            logger.warn(
               "[revision-merger] Brand presentation refinement validation failed: missing tagline or description",
             );
             throw new Error("AI returned invalid brand presentation schema");
           }
         }
       } catch (e) {
-        console.error(
+        logger.error(
           "[revision-merger] Failed to parse/validate Refinement JSON:",
-          responseText,
           e,
+          { responseText },
         );
         throw new Error("AI returned invalid JSON on refinement");
       }

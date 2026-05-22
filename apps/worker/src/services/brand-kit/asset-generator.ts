@@ -13,6 +13,9 @@ import type { Env } from "../../types";
 import { generateWithFallback } from "../../core/pipeline-helpers";
 import { findReusableLogoVariationUrls } from "./reusable-url-finder";
 import type { Database } from "@quicklogo/db";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("worker");
 
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
 
@@ -41,9 +44,7 @@ export async function generateLogoVariations({
     sourceLogoUrl,
   });
   if (reusableUrls) {
-    console.log(
-      `[asset-generator] Reused logo variations for brandKitId=${brandKitId}`,
-    );
+    logger.info(`Reused logo variations`, { brandKitId });
     return reusableUrls;
   }
 

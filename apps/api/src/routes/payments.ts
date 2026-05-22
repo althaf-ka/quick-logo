@@ -11,6 +11,7 @@ import {
 } from "@quicklogo/shared";
 import { users, transactions } from "@quicklogo/db";
 import { z } from "zod";
+import { createLogger } from "@quicklogo/server-telemetry";
 import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
@@ -22,10 +23,16 @@ type WebhookMetadata = {
   user_id?: string;
 };
 
-function extractMetadata(payload: any): WebhookMetadata | null {
-  const metadata = payload.data?.metadata as WebhookMetadata | undefined;
-  if (!metadata?.transaction_id) return null;
-  return metadata;
+export interface DodoPayload {
+  data?: {
+    metadata?: WebhookMetadata;
+    payment_id?: string;
+    abandonment_reason?: string;
+    recovered_payment_id?: string;
+    [key: string]: unknown;
+  };
+  payment_id?: string;
+  [key: string]: unknown;
 }
 
 /** Terminal statuses that should never be overwritten by this helper. */
@@ -36,11 +43,12 @@ async function updateTransactionStatus(
   payload: any,
   newStatus: string,
   label: string,
+  logger: ReturnType<typeof createLogger>,
 ): Promise<void> {
-  const metadata = extractMetadata(payload);
+  const metadata = payload.data?.metadata as WebhookMetadata | undefined | null;
 
   if (!metadata?.transaction_id) {
-    console.error(`[Webhook] Missing transaction_id in ${label} payload`);
+    logger.error(`Missing transaction_id in ${label} payload`, payload.data);
     return;
   }
 
@@ -54,13 +62,13 @@ async function updateTransactionStatus(
       .limit(1);
 
     if (!existing) {
-      console.error(`[Webhook] ${label}: Transaction ${txId} not found`);
+      logger.error(`${label}: Transaction ${txId} not found`, { txId });
       return;
     }
 
     if (TERMINAL_STATUSES.has(existing.status)) {
-      console.log(
-        `[Webhook] ${label}: Skipped — transaction ${txId} already ${existing.status}`,
+      logger.info(
+        `${label}: Skipped — transaction ${txId} already ${existing.status}`,
       );
       return;
     }
@@ -73,9 +81,9 @@ async function updateTransactionStatus(
       })
       .where(eq(transactions.id, txId));
 
-    console.log(`[Webhook] ${label}: Transaction ${txId}`);
+    logger.info(`${label}: Transaction ${txId}`);
   } catch (e) {
-    console.error(`[Webhook ${label} Processing Failed]`, e);
+    logger.error(`${label} Processing Failed`, e, { txId });
   }
 }
 
@@ -88,6 +96,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     async (c) => {
       const db = c.get("db");
       const user = c.get("user");
+      const logger = createLogger("api", { db });
       const { tierName, returnUrl } = c.req.valid("json");
 
       const allowedOrigins = (c.env.ALLOWED_ORIGINS || "")
@@ -138,17 +147,24 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             email: user.email,
             name: user.name,
           },
-          billing_currency: tier.currency as any,
+          billing_currency: tier.currency as "USD" | "EUR",
           return_url: returnUrl,
+          // @ts-expect-error Dodo SDK types missing cancel_url
           cancel_url: `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}payment_cancelled=true`,
           metadata: {
             transaction_id: txId,
             user_id: user.id,
           },
-        } as any);
+        });
 
-        const dodoId =
-          (session as any).id || (session as any).checkout_id || null;
+        const dodoSession = session as {
+          id?: string;
+          checkout_id?: string;
+          url?: string;
+          checkout_url?: string;
+        };
+
+        const dodoId = dodoSession.id || dodoSession.checkout_id || null;
 
         if (dodoId) {
           await db
@@ -157,8 +173,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             .where(eq(transactions.id, txId));
         }
 
-        const redirectUrl =
-          (session as any).url || (session as any).checkout_url;
+        const redirectUrl = dodoSession.url || dodoSession.checkout_url;
 
         return c.json({ url: redirectUrl, transactionId: txId }, 200);
       } catch (error: any) {
@@ -168,7 +183,10 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           .where(eq(transactions.id, txId))
           .catch(() => {});
 
-        console.error("Dodo error:", error.response?.data || error);
+        logger.error("Dodo checkout creation error", error, {
+          txId,
+          responseData: error.response?.data,
+        });
         throw new AppError(
           500,
           ERROR_CODES.PAYMENT_FAILED,
@@ -229,6 +247,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     async (c) => {
       const db = c.get("db");
       const user = c.get("user");
+      const logger = createLogger("api", { db });
       const { transaction_id } = c.req.valid("query");
 
       const [tx] = await db
@@ -301,7 +320,9 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             return c.json({ status: "cancelled", creditsAdded: 0 }, 200);
           }
         } catch (e) {
-          console.error("[Verify] Dodo API call failed:", e);
+          logger.error("Dodo API verification call failed", e, {
+            transaction_id,
+          });
         }
       }
 
@@ -340,7 +361,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const hasNextPage = list.length > limit;
       const items = hasNextPage ? list.slice(0, -1) : list;
       const nextCursor = hasNextPage
-        ? items[items.length - 1].createdAt.toISOString()
+        ? (items[items.length - 1]?.createdAt.toISOString() ?? null)
         : null;
 
       return c.json({ items, nextCursor }, 200);
@@ -350,18 +371,19 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .post("/webhook", async (c) => {
     const { createDb } = await import("@quicklogo/db");
     const safeDb = createDb(c.env.DB);
+    const logger = createLogger("api", { db: safeDb });
 
     const webhookRunner = Webhooks({
       webhookKey: c.env.DODO_PAYMENTS_WEBHOOK_KEY,
 
-      onPaymentSucceeded: async (payload: any) => {
-        const metadata = extractMetadata(payload);
+      onPaymentSucceeded: async (payload) => {
+        const metadata = payload.data?.metadata as
+          | WebhookMetadata
+          | undefined
+          | null;
 
         if (!metadata?.transaction_id || !metadata?.user_id) {
-          console.error(
-            "[Webhook] Missing metadata in payment payload. Data:",
-            payload.data,
-          );
+          logger.error("Missing metadata in payment payload", payload.data);
           return;
         }
 
@@ -380,9 +402,11 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           }
 
           if (localTx.userId !== user_id) {
-            console.error(
-              `[Webhook Security] User ID mismatch! Transaction ${transaction_id} belongs to ${localTx.userId}, but payload claimed ${user_id}`,
-            );
+            logger.error(`User ID mismatch!`, {
+              transaction_id,
+              expectedUserId: localTx.userId,
+              payloadUserId: user_id,
+            });
             return;
           }
 
@@ -391,7 +415,9 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               .update(transactions)
               .set({
                 status: "completed",
-                dodoPaymentId: payload.payment_id || null,
+                dodoPaymentId: (
+                  payload.data as unknown as Record<string, unknown>
+                ).payment_id as string | null,
               })
               .where(eq(transactions.id, transaction_id)),
 
@@ -401,58 +427,66 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               .where(eq(users.id, localTx.userId)),
           ]);
 
-          console.log(
-            `[Webhook] Success: Added ${localTx.creditsAdded} credits to user ${localTx.userId}`,
+          logger.info(
+            `Success: Added ${localTx.creditsAdded} credits to user ${localTx.userId}`,
+            { transaction_id },
           );
         } catch (e) {
-          console.error("[Webhook Processing Failed]", e);
+          logger.error("Webhook Processing Failed", e, {
+            transaction_id: metadata?.transaction_id,
+          });
         }
       },
 
-      onPaymentFailed: async (payload: any) => {
+      onPaymentFailed: async (payload) => {
         await updateTransactionStatus(
           safeDb,
           payload,
           "failed",
           "Payment Failed",
+          logger,
         );
       },
 
-      onPaymentCancelled: async (payload: any) => {
+      onPaymentCancelled: async (payload) => {
         await updateTransactionStatus(
           safeDb,
           payload,
           "cancelled",
           "Payment Cancelled",
+          logger,
         );
       },
 
-      onPaymentProcessing: async (payload: any) => {
+      onPaymentProcessing: async (payload) => {
         await updateTransactionStatus(
           safeDb,
           payload,
           "processing",
           "Payment Processing",
+          logger,
         );
       },
 
       // ACR handlers — Dodo sends emails automatically, we log for observability
-      onAbandonedCheckoutDetected: async (payload: any) => {
+      onAbandonedCheckoutDetected: async (payload: DodoPayload) => {
         const data = payload.data;
-        console.log(
-          `[Webhook] Abandoned checkout detected: payment=${data?.payment_id}, reason=${data?.abandonment_reason}`,
-        );
+        logger.info("Abandoned checkout detected", {
+          paymentId: data?.payment_id,
+          reason: data?.abandonment_reason,
+        });
       },
 
-      onAbandonedCheckoutRecovered: async (payload: any) => {
+      onAbandonedCheckoutRecovered: async (payload: DodoPayload) => {
         const data = payload.data;
-        console.log(
-          `[Webhook] Abandoned checkout recovered: original=${data?.payment_id}, recovered=${data?.recovered_payment_id}`,
-        );
+        logger.info("Abandoned checkout recovered", {
+          originalPaymentId: data?.payment_id,
+          recoveredPaymentId: data?.recovered_payment_id,
+        });
       },
-    } as any);
+    } as Parameters<typeof Webhooks>[0] & Record<string, unknown>);
 
-    return webhookRunner(c as any);
+    return webhookRunner(c);
   });
 
 export default payments;

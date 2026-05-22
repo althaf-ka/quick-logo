@@ -7,6 +7,9 @@ import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { generateWithFallback } from "../../core/pipeline-helpers";
 import { analyzeLogoStyle } from "./vision-analysis";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("worker");
 
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
 
@@ -52,10 +55,10 @@ export async function generateBrandPresentationImage({
         logoStyleDescription = analysis;
       }
     } catch (err) {
-      console.warn(
-        "[brand-presentation-generator] Failed to analyze logo style, proceeding without it",
-        err,
-      );
+      logger.warn("Failed to analyze logo style, proceeding without it", {
+        error: err,
+        prefix: "brand-presentation-generator",
+      });
     }
   }
 

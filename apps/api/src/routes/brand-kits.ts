@@ -16,7 +16,11 @@ import {
 } from "@quicklogo/db";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
-import { InsufficientCreditsError } from "../lib/errors";
+import {
+  InsufficientCreditsError,
+  NotFoundError,
+  BadRequestError,
+} from "../lib/errors";
 import type { Bindings, Variables } from "../types";
 
 const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -81,7 +85,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .select()
         .from(brandKits)
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
-      if (!brandKit) return c.json({ error: "Not found" }, 404);
+      if (!brandKit) throw new NotFoundError("Brand kit");
 
       const cost = 2; // Refinement cost
       const [updated] = await db
@@ -110,7 +114,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .select()
       .from(brandKits)
       .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
-    if (!brandKit) return c.json({ error: "Not found" }, 404);
+    if (!brandKit) throw new NotFoundError("Brand kit");
 
     const revisions = await db
       .select()
@@ -134,7 +138,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .select()
         .from(brandKits)
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
-      if (!brandKit) return c.json({ error: "Not found" }, 404);
+      if (!brandKit) throw new NotFoundError("Brand kit");
 
       const activeRevision = await db.query.brandKitRevisions.findFirst({
         where: and(
@@ -151,11 +155,11 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       });
 
       if (!activeRevision || !sourceRevision) {
-        return c.json({ error: "Revisions not found" }, 400);
+        throw new BadRequestError("Revisions not found");
       }
 
-      const currentResults = activeRevision.results as any;
-      const sourceResults = sourceRevision.results as any;
+      const currentResults = activeRevision.results as Record<string, unknown>;
+      const sourceResults = sourceRevision.results as Record<string, unknown>;
 
       let newMergedJSON = { ...currentResults };
 
@@ -193,7 +197,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         db.insert(brandKitRevisions).values({
           brandKitId: id,
           isActive: true,
-          revisionNumber: (maxRev.max || 0) + 1,
+          revisionNumber: (maxRev?.max || 0) + 1,
           triggerType: `restore_${sectionId}`,
           results: newMergedJSON,
         }),

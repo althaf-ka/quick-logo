@@ -10,7 +10,9 @@ export const systemLogs = sqliteTable("system_log", {
   level: text("level", { enum: ["info", "warn", "error", "fatal"] })
     .notNull()
     .default("info"),
-  source: text("source", { enum: ["web", "admin", "api", "worker"] }).notNull(),
+  source: text("source", {
+    enum: ["web", "admin", "api", "worker", "ai-providers"],
+  }).notNull(),
   message: text("message").notNull(),
   stack: text("stack"),
   pathname: text("pathname"),

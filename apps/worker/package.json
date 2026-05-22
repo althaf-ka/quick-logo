@@ -2,16 +2,19 @@
   "name": "@quicklogo/worker",
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy --minify"
+    "deploy": "wrangler deploy --minify",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@quicklogo/ai-providers": "workspace:*",
     "@quicklogo/db": "workspace:*",
+    "@quicklogo/server-telemetry": "workspace:*",
     "@quicklogo/shared": "workspace:*",
     "@quicklogo/storage": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",
+    "typescript": "^6.0.3",
     "wrangler": "^4.66.0"
   }
 }

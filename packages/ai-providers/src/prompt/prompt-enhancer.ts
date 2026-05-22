@@ -1,5 +1,8 @@
 import type { GenerateImageMessage } from "@quicklogo/shared";
+import { createLogger } from "@quicklogo/server-telemetry";
 import { buildBasePrompt } from "./prompt-builder";
+
+const logger = createLogger("ai-providers");
 
 /**
  * Single entry point for prompt construction.
@@ -117,16 +120,17 @@ ${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorpo
           : null;
 
       if (!text || text.length < 10) {
-        console.warn("[prompt-enhancer] LLM returned empty — using original");
+        logger.warn("LLM returned empty — using original", {
+          originalPrompt: message.prompt,
+        });
         return message.prompt;
       }
 
       return text;
     } catch (error) {
-      console.error(
-        "[prompt-enhancer] LLM call failed:",
-        error instanceof Error ? error.message : error,
-      );
+      logger.error("LLM call failed", error, {
+        originalPrompt: message.prompt,
+      });
       return message.prompt;
     }
   }

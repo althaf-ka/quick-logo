@@ -1,6 +1,9 @@
 import { clearTimeout, setTimeout as safeTimeout } from "node:timers";
 import { setTimeout } from "node:timers/promises";
 import { PipelineError } from "./errors";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("worker");
 
 export async function withRetry<T>(
   operation: () => Promise<T>,
@@ -59,7 +62,7 @@ export async function generateWithFallback<T>(
   const timeoutPromise = new Promise<T>((resolve) => {
     timeoutId = safeTimeout(() => {
       controller.abort();
-      console.warn(
+      logger.warn(
         `[${loggerPrefix}] Operation timed out (${timeoutMs}ms); using fallback`,
       );
       resolve(fallbackValue);
@@ -76,7 +79,7 @@ export async function generateWithFallback<T>(
       if (controller.signal.aborted) {
         return fallbackValue;
       }
-      console.error(`[${loggerPrefix}] Operation failed:`, error);
+      logger.error(`[${loggerPrefix}] Operation failed:`, error);
       return fallbackValue;
     });
 

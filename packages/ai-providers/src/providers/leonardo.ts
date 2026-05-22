@@ -1,4 +1,7 @@
 import type { AIProvider, GenerationParams, GenerationResult } from "../types";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("ai-providers");
 
 export interface LeonardoOptions {
   apiSchema?: "v1" | "v2";
@@ -189,7 +192,7 @@ export class LeonardoProvider implements AIProvider {
         },
       };
     } catch (error) {
-      console.error("[leonardo-provider] Generation failed:", error);
+      logger.error("Generation failed", error, { model: "leonardo" });
       return {
         success: false,
         error:

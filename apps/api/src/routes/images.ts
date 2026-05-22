@@ -95,7 +95,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         })
         .returning();
 
-      return c.json({ imageId: newImage.id }, 200);
+      return c.json({ imageId: newImage?.id }, 200);
     },
   );
 

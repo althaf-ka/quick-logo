@@ -117,12 +117,13 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         totalTransactions: Number(transactionCount?.value) || 0,
         totalImages: Number(imageCount?.value) || 0,
         monthlyRevenue: (Number(currentMonthRevenue?.value) || 0) / 100,
-        revenueGrowth: Number(prevMonthRevenue?.value)
-          ? (((Number(currentMonthRevenue?.value) || 0) -
-              Number(prevMonthRevenue.value)) /
-              Number(prevMonthRevenue.value)) *
-            100
-          : 0,
+        revenueGrowth:
+          prevMonthRevenue && Number(prevMonthRevenue.value)
+            ? (((Number(currentMonthRevenue?.value) || 0) -
+                Number(prevMonthRevenue.value)) /
+                Number(prevMonthRevenue.value)) *
+              100
+            : 0,
       },
       trends: {
         revenue: revenueTrend.map((t) => ({

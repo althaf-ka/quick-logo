@@ -3,6 +3,9 @@ import {
   buildLogoStyleAnalysisRequest,
 } from "@quicklogo/ai-providers/prompt";
 import { extractWorkersAiResponseText } from "../../core/ai-response-parser";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("worker");
 
 export async function analyzeLogoStyle({
   ai,
@@ -55,10 +58,13 @@ export async function analyzeLogoStyle({
       }),
     );
     const text = extractWorkersAiResponseText(response);
-    console.log("[vision-analysis] Logo style analysis:", text);
+    logger.info("Logo style analysis", { text, prefix: "vision-analysis" });
     return text;
   } catch (error) {
-    console.warn("[vision-analysis] Logo style analysis failed:", error);
+    logger.warn("Logo style analysis failed", {
+      error,
+      prefix: "vision-analysis",
+    });
     return null;
   }
 }
@@ -102,10 +108,10 @@ export async function runVisionTypographyRequest({
 
     return fontResponse;
   } catch (error) {
-    console.warn(
-      "[vision-analysis] Typography generation failed; using fallback",
+    logger.warn("Typography generation failed; using fallback", {
       error,
-    );
+      prefix: "vision-analysis",
+    });
     return null;
   }
 }

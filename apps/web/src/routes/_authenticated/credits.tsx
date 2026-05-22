@@ -188,7 +188,9 @@ function CreditsPage() {
         sessionStorage.setItem("pending_transaction_id", data.transactionId);
       }
 
-      window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      }
     },
     onError: (error) => {
       toast.error(error.message || "Failed to initiate checkout");

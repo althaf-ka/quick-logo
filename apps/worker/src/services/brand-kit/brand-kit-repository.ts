@@ -12,28 +12,6 @@ import {
 export class BrandKitRepository {
   constructor(private db: Database) {}
 
-  async logSystemError(
-    brandKitId: string,
-    message: string,
-    stack?: string,
-  ): Promise<void> {
-    try {
-      const brandKit = await this.getBrandKit(brandKitId);
-      await this.db.insert(systemLogs).values({
-        level: "error",
-        source: "worker",
-        message: `[brand-kit-pipeline] ${message}`,
-        stack: stack ?? null,
-        pathname: `/brand-kits/${brandKitId}`,
-        userId: brandKit?.userId ?? null,
-        context: JSON.stringify({ brandKitId }),
-        status: "unresolved",
-      });
-    } catch (e) {
-      console.error("[brand-kit-repository] Failed to persist system log:", e);
-    }
-  }
-
   async updateStatus(
     id: string,
     status: "processing" | "failed" | "completed",

@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { ERROR_CODES } from "@quicklogo/shared";
 import type { Context } from "hono";
 import type { Bindings, Variables } from "../types";
-import { systemLogs } from "@quicklogo/db";
+import { createLogger } from "@quicklogo/server-telemetry";
 
 type ApiContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
@@ -22,15 +22,14 @@ export function globalErrorHandler(err: Error, c: ApiContext) {
   const method = c.req.method;
   const path = c.req.path;
   const userId = safeGetUserId(c);
+  const db = c.get("db");
 
-  console.error(`[api] Unhandled: ${method} ${path}`, err);
-
-  persistErrorLog(c, {
+  const logger = createLogger("api", { db });
+  logger.error(`Unhandled: ${method} ${path}`, err, {
     method,
     path,
     userId,
-    message: err instanceof Error ? err.message : String(err),
-    stack: err instanceof Error ? err.stack : undefined,
+    userAgent: c.req.header("User-Agent"),
   });
 
   return c.json(
@@ -48,44 +47,6 @@ function safeGetUserId(c: ApiContext): string | null {
     return user?.id ?? null;
   } catch {
     return null;
-  }
-}
-
-function persistErrorLog(
-  c: ApiContext,
-  data: {
-    method: string;
-    path: string;
-    userId: string | null;
-    message: string;
-    stack?: string;
-  },
-) {
-  try {
-    const db = c.get("db");
-    if (!db) return; // DB middleware might not have run
-
-    db.insert(systemLogs)
-      .values({
-        level: "error",
-        source: "api",
-        message: `[${data.method} ${data.path}] ${data.message}`,
-        stack: data.stack ?? null,
-        pathname: data.path,
-        userId: data.userId,
-        context: JSON.stringify({
-          method: data.method,
-          path: data.path,
-          userAgent: c.req.header("User-Agent"),
-        }),
-        status: "unresolved",
-      })
-      .execute()
-      .catch((e: unknown) => {
-        console.error("[api] Failed to persist error log to DB:", e);
-      });
-  } catch (e) {
-    console.error("[api] Persist log setup failed:", e);
   }
 }
 

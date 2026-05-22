@@ -14,8 +14,8 @@ import { uploadAndSyncThumbnail } from "../services/image/thumbnail-sync";
 import {
   updateImageStatus,
   finalizeImageGeneration,
-  logSystemImageError,
 } from "../services/image/image-repository";
+import { createLogger } from "@quicklogo/server-telemetry";
 import { withRetry, withTimeout } from "../core/pipeline-helpers";
 import { parseAndValidateAiResponse } from "../core/ai-response-parser";
 
@@ -29,6 +29,7 @@ import { parseAndValidateAiResponse } from "../core/ai-response-parser";
  */
 export class ImageGenerationPipeline {
   private promptEnhancer: PromptEnhancer;
+  private logger: ReturnType<typeof createLogger>;
 
   constructor(
     private ai: Ai,
@@ -37,6 +38,7 @@ export class ImageGenerationPipeline {
     private env: Env,
   ) {
     this.promptEnhancer = new PromptEnhancer(ai);
+    this.logger = createLogger("worker", { db: this.db });
   }
 
   /**
@@ -99,20 +101,16 @@ export class ImageGenerationPipeline {
         uploadResult,
       });
 
-      console.log(
-        `[image-generation-pipeline] Completed imageId=${imageId} in ${parsedAiResponse.duration}ms`,
-      );
+      this.logger.info(`Completed image generation`, {
+        imageId,
+        duration: parsedAiResponse.duration,
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      const stack = error instanceof Error ? error.stack : undefined;
-      console.error(
-        `[image-generation-pipeline] Failed imageId=${imageId}:`,
-        error,
-      );
+      this.logger.error("Image Pipeline execution failed", error, { imageId });
 
       await updateImageStatus(this.db, imageId, "failed", errorMessage);
-      await logSystemImageError(this.db, imageId, errorMessage, stack);
       throw error;
     }
   }

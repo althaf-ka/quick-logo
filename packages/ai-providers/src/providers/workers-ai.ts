@@ -1,5 +1,8 @@
 import { Buffer } from "node:buffer";
+import { createLogger } from "@quicklogo/server-telemetry";
 import type { AIProvider, GenerationParams, GenerationResult } from "../types";
+
+const logger = createLogger("ai-providers");
 
 export class WorkersAIProvider implements AIProvider {
   readonly name = "workers-ai";
@@ -28,7 +31,7 @@ export class WorkersAIProvider implements AIProvider {
         metadata: { model: params.backendModel, duration: Date.now() - start },
       };
     } catch (error) {
-      console.error(`[workers-ai] Generation failed:`, error);
+      logger.error("Generation failed", error, { model: params.backendModel });
       return {
         success: false,
         error:

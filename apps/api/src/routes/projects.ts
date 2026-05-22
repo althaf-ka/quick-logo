@@ -7,6 +7,9 @@ import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
 import { InsufficientCreditsError, NotFoundError } from "../lib/errors";
+import { createLogger } from "@quicklogo/server-telemetry";
+
+const logger = createLogger("api");
 
 const EXTEND_COST = 10;
 const EXTEND_DAYS = 30;
@@ -80,7 +83,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       return c.json({
         items,
         nextCursor: hasMore
-          ? items[items.length - 1].createdAt.toISOString()
+          ? (items[items.length - 1]?.createdAt.toISOString() ?? null)
           : null,
       });
     },
@@ -108,7 +111,10 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const storage = new ImageKitProvider(c.env.IMAGEKIT_PRIVATE_KEY);
 
     await storage.deleteFolder(`quick-logo/${user.id}/${id}`).catch((err) => {
-      console.warn(`[projects] ImageKit folder delete failed for ${id}:`, err);
+      logger.warn(`ImageKit folder delete failed for project`, {
+        projectId: id,
+        error: err,
+      });
     });
 
     if (project.referenceImgId) {

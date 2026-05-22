@@ -56,38 +56,3 @@ export async function finalizeImageGeneration(
       .where(eq(projects.id, params.projectId)),
   ]);
 }
-
-/**
- * Logs system errors to the systemLogs table for observability.
- */
-export async function logSystemImageError(
-  db: Database,
-  imageId: string,
-  message: string,
-  stack?: string,
-): Promise<void> {
-  try {
-    const img = await db.query.images.findFirst({
-      where: eq(images.id, imageId),
-    });
-    let userId: string | null = null;
-    if (img?.projectId) {
-      const proj = await db.query.projects.findFirst({
-        where: eq(projects.id, img.projectId),
-      });
-      userId = proj?.userId ?? null;
-    }
-    await db.insert(systemLogs).values({
-      level: "error",
-      source: "worker",
-      message: `[image-generation-pipeline] ${message}`,
-      stack: stack ?? null,
-      pathname: `/images/${imageId}`,
-      userId,
-      context: JSON.stringify({ imageId, projectId: img?.projectId }),
-      status: "unresolved",
-    });
-  } catch (e) {
-    console.error("[image-repository] Failed to persist system log:", e);
-  }
-}

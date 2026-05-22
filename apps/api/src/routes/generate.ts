@@ -91,7 +91,7 @@ const generate = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           batchId,
           projects: createdProjects.map((p, i) => ({
             id: p.id,
-            imageId: createdImages[i].id,
+            imageId: createdImages[i]?.id,
             status: "pending" as const,
           })),
         },
@@ -182,7 +182,7 @@ const generate = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       return c.json(
         {
-          imageId: createdImages[0].id,
+          imageId: createdImages[0]?.id,
           status: "pending" as const,
         },
         202,

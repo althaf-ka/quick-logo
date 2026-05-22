@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@quicklogo/server-telemetry": "workspace:*",
     "@quicklogo/shared": "workspace:*"
   },
   "devDependencies": {
