@@ -5,6 +5,7 @@ import { logReportSchema } from "@quicklogo/shared";
 import { createAuth } from "@quicklogo/auth/server";
 import type { Bindings, Variables } from "../types";
 import { validationHook } from "../lib/validator";
+import { sanitizeText, deepSanitize } from "../lib/sanitize";
 
 const logsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -39,9 +40,15 @@ logsRoute.post(
     if (context) {
       try {
         const parsed = JSON.parse(context);
-        finalContext = JSON.stringify({ ...parsed, ...serverContext });
+        finalContext = JSON.stringify({
+          ...((deepSanitize(parsed) as Record<string, unknown>) || {}),
+          ...serverContext,
+        });
       } catch {
-        finalContext = JSON.stringify({ raw: context, ...serverContext });
+        finalContext = JSON.stringify({
+          raw: sanitizeText(context, 5000),
+          ...serverContext,
+        });
       }
     } else {
       finalContext = JSON.stringify(serverContext);
@@ -50,9 +57,9 @@ logsRoute.post(
     await db.insert(systemLogs).values({
       level,
       source,
-      message,
-      stack: stack ?? null,
-      pathname: pathname ?? null,
+      message: sanitizeText(message, 2000) || "[Stripped]",
+      stack: sanitizeText(stack, 10000) ?? null,
+      pathname: sanitizeText(pathname, 1000) ?? null,
       context: finalContext,
       userId,
       status: "unresolved",

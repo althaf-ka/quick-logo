@@ -79,11 +79,17 @@ async function updateTransactionStatus(
         status: newStatus,
         dodoPaymentId: payload.payment_id || null,
       })
-      .where(eq(transactions.id, txId));
+      .where(
+        and(
+          eq(transactions.id, txId),
+          eq(transactions.status, existing.status),
+        ),
+      );
 
     logger.info(`${label}: Transaction ${txId}`);
   } catch (e) {
     logger.error(`${label} Processing Failed`, e, { txId });
+    throw e;
   }
 }
 
@@ -135,7 +141,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           tierName: tier.name,
         });
 
-        const session = await client.checkoutSessions.create({
+        const checkoutPayload = {
           product_cart: [
             {
               product_id: tier.productId as string,
@@ -149,13 +155,18 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           },
           billing_currency: tier.currency as "USD" | "EUR",
           return_url: returnUrl,
-          // @ts-expect-error Dodo SDK types missing cancel_url
           cancel_url: `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}payment_cancelled=true`,
           metadata: {
             transaction_id: txId,
             user_id: user.id,
           },
-        });
+        };
+
+        const session = await client.checkoutSessions.create(
+          checkoutPayload as Parameters<
+            typeof client.checkoutSessions.create
+          >[0],
+        );
 
         const dodoSession = session as {
           id?: string;
@@ -288,15 +299,20 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           if (dodoStatus === "succeeded") {
             await db.batch([
               db
-                .update(transactions)
-                .set({ status: "completed" })
-                .where(eq(transactions.id, transaction_id)),
-              db
                 .update(users)
                 .set({
-                  credits: sql`${users.credits} + ${tx.creditsAdded}`,
+                  credits: sql`${users.credits} + COALESCE((SELECT ${transactions.creditsAdded} FROM ${transactions} WHERE ${transactions.id} = ${transaction_id} AND ${transactions.status} = ${tx.status}), 0)`,
                 })
                 .where(eq(users.id, tx.userId)),
+              db
+                .update(transactions)
+                .set({ status: "completed" })
+                .where(
+                  and(
+                    eq(transactions.id, transaction_id),
+                    eq(transactions.status, tx.status),
+                  ),
+                ),
             ]);
             return c.json(
               { status: "completed", creditsAdded: tx.creditsAdded },
@@ -412,6 +428,12 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
           await safeDb.batch([
             safeDb
+              .update(users)
+              .set({
+                credits: sql`${users.credits} + COALESCE((SELECT ${transactions.creditsAdded} FROM ${transactions} WHERE ${transactions.id} = ${transaction_id} AND ${transactions.status} = ${localTx.status}), 0)`,
+              })
+              .where(eq(users.id, localTx.userId)),
+            safeDb
               .update(transactions)
               .set({
                 status: "completed",
@@ -419,22 +441,23 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
                   payload.data as unknown as Record<string, unknown>
                 ).payment_id as string | null,
               })
-              .where(eq(transactions.id, transaction_id)),
-
-            safeDb
-              .update(users)
-              .set({ credits: sql`${users.credits} + ${localTx.creditsAdded}` })
-              .where(eq(users.id, localTx.userId)),
+              .where(
+                and(
+                  eq(transactions.id, transaction_id),
+                  eq(transactions.status, localTx.status),
+                ),
+              ),
           ]);
 
           logger.info(
-            `Success: Added ${localTx.creditsAdded} credits to user ${localTx.userId}`,
+            `Processed Webhook for ${transaction_id}. Added credits if transaction was pending.`,
             { transaction_id },
           );
         } catch (e) {
           logger.error("Webhook Processing Failed", e, {
             transaction_id: metadata?.transaction_id,
           });
+          throw e;
         }
       },
 

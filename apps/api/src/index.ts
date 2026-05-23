@@ -18,6 +18,7 @@ import brandKitsRoute from "./routes/brand-kits";
 import { Bindings, Variables } from "./types";
 import { globalErrorHandler } from "./lib/error-handler";
 import { ERROR_CODES } from "@quicklogo/shared";
+import { getAllowedOrigins } from "./lib/url";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -29,23 +30,13 @@ app.notFound((c) =>
   c.json({ error: "Not found", code: ERROR_CODES.NOT_FOUND }, 404),
 );
 
-const parseOrigins = (raw: string | undefined): string[] => {
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
-};
-
 app.use("/api/*", async (c, next) => {
-  const allowedOrigins = parseOrigins(c.env.ALLOWED_ORIGINS);
-  if (c.env.CLIENT_URL && !allowedOrigins.includes(c.env.CLIENT_URL)) {
-    allowedOrigins.push(c.env.CLIENT_URL);
-  }
-  const origin = c.req.header("Origin") || "";
-
+  const allowedOrigins = getAllowedOrigins(c.env);
   const corsMiddleware = cors({
-    origin: allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "",
+    origin: (origin) => {
+      if (allowedOrigins.includes(origin)) return origin;
+      return null;
+    },
     credentials: true,
   });
   return corsMiddleware(c, next);
@@ -57,10 +48,7 @@ app.use("/api/*", async (c, next) => {
     return next();
   }
 
-  const allowedOrigins = parseOrigins(c.env.ALLOWED_ORIGINS);
-  if (c.env.CLIENT_URL && !allowedOrigins.includes(c.env.CLIENT_URL)) {
-    allowedOrigins.push(c.env.CLIENT_URL);
-  }
+  const allowedOrigins = getAllowedOrigins(c.env);
 
   const csrfMiddleware = csrf({
     origin: allowedOrigins,

@@ -155,8 +155,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/storage
       dodopayments:
-        specifier: ^2.23.2
-        version: 2.23.2
+        specifier: ^2.32.0
+        version: 2.32.0
       hono:
         specifier: 'catalog:'
         version: 4.12.14
@@ -2922,8 +2922,8 @@ packages:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
 
-  dodopayments@2.23.2:
-    resolution: {integrity: sha512-KekzwNChglkSWqyiQKg2nAl8Y6KJe9z94CmHVuqkzcl+PsjSqxDql5QuHxd+ni6FAUz+1qDpstPk0Jb4MBT/Mg==}
+  dodopayments@2.32.0:
+    resolution: {integrity: sha512-2eQ1FoFIAFQxaTEqnyx7SZr+5mpayrj2FGMEVkAgrXUof76ytvGiEqVxY5gTlwH9QehmOFgFm92T1ycKhqPc0w==}
     hasBin: true
 
   dotenv@16.0.3:
@@ -4848,7 +4848,7 @@ snapshots:
 
   '@dodopayments/core@0.3.9(zod@4.3.6)':
     dependencies:
-      dodopayments: 2.23.2
+      dodopayments: 2.32.0
       standardwebhooks: 1.0.0
       zod: 4.3.6
 
@@ -6651,7 +6651,7 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
-  dodopayments@2.23.2:
+  dodopayments@2.32.0:
     dependencies:
       standardwebhooks: 1.0.0
 
