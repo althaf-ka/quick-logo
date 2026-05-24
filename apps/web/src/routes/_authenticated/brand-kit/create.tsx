@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { BrandKitWorkspace } from "@/components/brand-kit/brand-kit-workspace";
+import { BrandKitWorkspace } from "@/components/brand-kit/workspace/brand-kit-workspace";
 
 const searchSchema = z.object({
   imageId: z.string().optional(),

@@ -1,5 +1,5 @@
 import * as fflate from "fflate";
-import type { BrandKitResultsData } from "@/components/brand-kit/brand-kit-results";
+import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
 import { toast } from "@quicklogo/ui/components/sonner";
 
 async function fetchAsUint8Array(url: string): Promise<Uint8Array> {

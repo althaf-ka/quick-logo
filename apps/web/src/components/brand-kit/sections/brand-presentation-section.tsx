@@ -1,5 +1,5 @@
 import { SectionHeader, SectionContent } from "./section-header";
-import type { BrandKitResultsData } from "../brand-kit-results";
+import type { BrandKitResultsData } from "../results/brand-kit-results";
 
 interface BrandPresentationSectionProps {
   data: BrandKitResultsData;
@@ -56,8 +56,8 @@ export function BrandPresentationSection({
                 AI Generation Queued
               </span>
               <p className="text-muted-foreground max-w-[340px] font-mono text-xs leading-relaxed">
-                AI is designing a premium presentation layout representing your
-                brand colors, patterns, and style identity...
+                AI is designing a brand presentation that reflects your colors,
+                patterns, and style identity...
               </p>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BrandKitWorkspace } from "@/components/brand-kit/brand-kit-workspace";
+import { BrandKitWorkspace } from "@/components/brand-kit/workspace/brand-kit-workspace";
 
 export const Route = createFileRoute("/_authenticated/brand-kit/$id")({
   component: BrandKitViewRoute,
