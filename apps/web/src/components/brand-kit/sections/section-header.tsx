@@ -2,6 +2,13 @@ import { Button } from "@quicklogo/ui/components/button";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { cn } from "@quicklogo/ui/lib/utils";
+import { createContext, useContext } from "react";
+
+export const BrandKitSectionContext = createContext<{
+  targetSectionId?: string | null;
+  refiningSectionId?: string | null;
+  cancelRefine?: () => void;
+}>({});
 
 interface SectionHeaderProps {
   title: string;
@@ -18,6 +25,9 @@ export function SectionHeader({
   isRefining,
   className,
 }: SectionHeaderProps) {
+  const { targetSectionId, cancelRefine } = useContext(BrandKitSectionContext);
+  const isTargeted = targetSectionId === sectionId;
+
   return (
     <div className={cn("flex items-center justify-between pb-3", className)}>
       <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
@@ -28,14 +38,29 @@ export function SectionHeader({
           variant="ghost"
           size="sm"
           disabled={isRefining}
-          className="text-foreground/70 hover:text-primary hover:bg-primary/10 h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all"
-          onClick={() => onRefine(sectionId)}
+          className={cn(
+            "h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all",
+            isTargeted
+              ? "border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
+              : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
+          )}
+          onClick={() => {
+            if (isTargeted && cancelRefine) {
+              cancelRefine();
+            } else {
+              onRefine(sectionId);
+            }
+          }}
         >
           <ArrowsClockwiseIcon
             weight="bold"
             className={cn("size-3", isRefining && "animate-spin")}
           />
-          {isRefining ? "Refining..." : "Refine"}
+          {isRefining
+            ? "Processing..."
+            : isTargeted
+              ? "Cancel Refine"
+              : "Refine"}
         </Button>
       )}
     </div>

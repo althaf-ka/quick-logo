@@ -79,8 +79,8 @@ export function PromptInput({
   const isCompact = size === "compact";
 
   const maxHeight = isCompact ? 100 : 160;
-  const minHeight = isCompact ? 36 : 52;
-  const rows = isCompact ? 1 : 2;
+  const minHeight = isCompact ? 36 : 72;
+  const rows = isCompact ? 1 : 3;
 
   const [localValue, setLocalValue] = useState(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);

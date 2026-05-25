@@ -58,7 +58,7 @@ export function SetupSidebar({
             )}
           />
           <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
-            Identity Source
+            Logo
           </h3>
         </div>
 

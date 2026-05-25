@@ -1,12 +1,8 @@
 import { motion } from "motion/react";
 import {
   DownloadSimpleIcon,
-  ShareNetworkIcon,
   ClockCounterClockwiseIcon,
   CircleIcon,
-  StackIcon,
-  PaletteIcon,
-  TextTIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@quicklogo/ui/components/button";
 import { cn } from "@quicklogo/ui/lib/utils";
@@ -32,18 +28,6 @@ export function ResultsSidebar({
   onDownloadAll,
   revisions,
 }: ResultsSidebarProps) {
-  // Quick stats
-  const assetCount = [
-    results?.logoVariations?.length && "logos",
-    results?.colorPalette?.length && "colors",
-    results?.typography && "fonts",
-    results?.socialMedia?.length && "social",
-    results?.businessCard && "card",
-    results?.favicons?.length && "icons",
-    results?.brandedBackdrops && "backdrops",
-    results?.brandPresentation && "deck",
-  ].filter(Boolean);
-
   return (
     <motion.div
       variants={staggerContainer}
@@ -51,80 +35,94 @@ export function ResultsSidebar({
       animate="visible"
       className="flex flex-col gap-8"
     >
-      {/* Quick Stats */}
-      <motion.div variants={staggerItem} className="space-y-3">
-        <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
-          Kit Summary
-        </h3>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="border border-white/[0.06] bg-white/[0.02] p-3 text-center">
-            <StackIcon
-              weight="bold"
-              className="text-primary mx-auto mb-1.5 size-4"
-            />
-            <span className="text-foreground block font-mono text-lg font-black tabular-nums">
-              {assetCount.length}
-            </span>
-            <span className="text-muted-foreground/40 block font-mono text-[8px] tracking-widest uppercase">
-              Assets
-            </span>
-          </div>
-          <div className="border border-white/[0.06] bg-white/[0.02] p-3 text-center">
-            <PaletteIcon
-              weight="bold"
-              className="text-primary mx-auto mb-1.5 size-4"
-            />
-            <span className="text-foreground block font-mono text-lg font-black tabular-nums">
-              {results?.colorPalette?.length || 0}
-            </span>
-            <span className="text-muted-foreground/40 block font-mono text-[8px] tracking-widest uppercase">
-              Colors
-            </span>
-          </div>
-          <div className="border border-white/[0.06] bg-white/[0.02] p-3 text-center">
-            <TextTIcon
-              weight="bold"
-              className="text-primary mx-auto mb-1.5 size-4"
-            />
-            <span className="text-foreground block font-mono text-lg font-black tabular-nums">
-              2
-            </span>
-            <span className="text-muted-foreground/40 block font-mono text-[8px] tracking-widest uppercase">
-              Fonts
-            </span>
-          </div>
-        </div>
-      </motion.div>
-
       {/* Actions */}
       <motion.div variants={staggerItem} className="space-y-3">
         <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
           Actions
         </h3>
-        <div className="flex flex-col gap-2">
-          <Button
-            className="group relative w-full justify-start overflow-hidden rounded-none font-mono text-[11px] tracking-wider uppercase"
-            size="lg"
-            onClick={onDownloadAll}
-          >
-            {/* Shimmer sweep */}
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-            <DownloadSimpleIcon
-              weight="bold"
-              className="relative z-10 mr-2 size-4"
-            />
-            <span className="relative z-10">Export Assets</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full justify-start rounded-none border-white/[0.08] font-mono text-[11px] tracking-wider uppercase hover:border-white/[0.15] hover:bg-white/[0.04]"
-            size="lg"
-          >
-            <ShareNetworkIcon weight="bold" className="mr-2 size-4" />
-            Share Link
-          </Button>
-        </div>
+        <Button
+          className="group relative w-full justify-start overflow-hidden rounded-none font-mono text-[11px] tracking-wider uppercase transition-colors hover:bg-white/10"
+          size="lg"
+          onClick={onDownloadAll}
+        >
+          {/* Shimmer sweep */}
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+          <DownloadSimpleIcon
+            weight="bold"
+            className="relative z-10 mr-2 size-4"
+          />
+          <span className="relative z-10">Download All</span>
+        </Button>
       </motion.div>
+
+      {/* Brand DNA */}
+      {(results?.brandPresentation?.tagline ||
+        results?.brandPresentation?.description ||
+        (results?.colorPalette && results.colorPalette.length > 0) ||
+        results?.typography) && (
+        <motion.div variants={staggerItem} className="space-y-3">
+          <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
+            Brand DNA
+          </h3>
+          <div className="space-y-4 border border-white/[0.06] bg-white/[0.02] p-4">
+            {results?.brandPresentation?.tagline && (
+              <div>
+                <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
+                  Tagline
+                </span>
+                <span className="text-foreground/80 font-mono text-xs italic">
+                  "{results.brandPresentation.tagline}"
+                </span>
+              </div>
+            )}
+
+            {results?.brandPresentation?.description && (
+              <div>
+                <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
+                  Core Identity
+                </span>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {results.brandPresentation.description}
+                </p>
+              </div>
+            )}
+
+            {results?.colorPalette && results.colorPalette.length > 0 && (
+              <div>
+                <span className="text-muted-foreground/50 mb-2 block font-mono text-[9px] tracking-widest uppercase">
+                  Color System
+                </span>
+                <div className="flex gap-2">
+                  {results.colorPalette.map((c: any) => (
+                    <div
+                      key={c.hex}
+                      className="size-5 rounded-full border border-white/10 shadow-sm"
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name || c.hex}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {results?.typography && (
+              <div>
+                <span className="text-muted-foreground/50 mb-2 block font-mono text-[9px] tracking-widest uppercase">
+                  Typography
+                </span>
+                <div className="text-foreground/80 flex flex-col gap-1 font-mono text-[10px]">
+                  {results.typography.heading && (
+                    <span>Heading • {results.typography.heading.family}</span>
+                  )}
+                  {results.typography.body && (
+                    <span>Body • {results.typography.body.family}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Version History */}
       <motion.div

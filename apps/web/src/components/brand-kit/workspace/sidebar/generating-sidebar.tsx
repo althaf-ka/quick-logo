@@ -3,10 +3,15 @@ import { motion } from "motion/react";
 import {
   CheckCircleIcon,
   CircleDashedIcon,
-  TerminalIcon,
+  LightningIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
-import { stepReveal } from "@/lib/motion/variants";
+import {
+  stepReveal,
+  staggerContainer,
+  staggerItem,
+} from "@/lib/motion/variants";
+import type { DeliverablesConfig } from "@/types/brand-kit";
 
 const STEPS = [
   { label: "Parsing instructions", duration: 2000 },
@@ -15,7 +20,13 @@ const STEPS = [
   { label: "Rendering final assets", duration: 0 },
 ];
 
-export function GeneratingSidebar() {
+export function GeneratingSidebar({
+  deliverables,
+  totalCredits,
+}: {
+  deliverables?: DeliverablesConfig;
+  totalCredits?: number;
+}) {
   const [activeStep, setActiveStep] = useState(0);
   const [elapsed, setElapsed] = useState(0);
 
@@ -36,9 +47,6 @@ export function GeneratingSidebar() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const estimatedTotal = 35;
-  const remaining = Math.max(0, estimatedTotal - elapsed);
 
   return (
     <div className="flex flex-col gap-8">
@@ -103,7 +111,7 @@ export function GeneratingSidebar() {
                     className={cn(
                       "font-mono text-[11px] font-medium tracking-wider uppercase",
                       isComplete
-                        ? "text-muted-foreground decoration-primary/40 line-through"
+                        ? "text-muted-foreground/70"
                         : isActive
                           ? "text-primary"
                           : "text-muted-foreground/40",
@@ -136,60 +144,76 @@ export function GeneratingSidebar() {
       <div className="space-y-3 border border-white/[0.06] bg-white/[0.02] p-4">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground/50 font-mono text-[10px] tracking-wider uppercase">
-            Estimated
+            Elapsed Time
           </span>
           <span className="text-foreground font-mono text-[10px] tabular-nums">
-            ~{remaining}s remaining
+            {elapsed}s
           </span>
         </div>
         {/* Progress bar */}
-        <div className="h-px w-full overflow-hidden bg-white/[0.06]">
+        <div className="relative h-px w-full overflow-hidden bg-white/[0.06]">
           <motion.div
-            className="bg-primary/60 h-full"
-            initial={{ width: "0%" }}
+            className="bg-primary/60 absolute h-full w-1/3"
             animate={{
-              width: `${Math.min(100, (elapsed / estimatedTotal) * 100)}%`,
+              left: ["-33%", "100%"],
             }}
-            transition={{ duration: 0.5, ease: "linear" }}
+            transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
           />
         </div>
       </div>
 
-      {/* Telemetry */}
-      <div className="space-y-3 border-t border-white/[0.06] pt-4">
-        <div className="flex items-center gap-2">
-          <TerminalIcon
-            weight="bold"
-            className="text-muted-foreground/40 size-3"
-          />
+      {/* Generation Summary */}
+      {(deliverables || totalCredits !== undefined) && (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="space-y-3"
+        >
           <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
-            Telemetry
+            Order Summary
           </h3>
-        </div>
-        <div className="space-y-3 border border-white/[0.06] bg-white/[0.01] p-4 font-mono text-[10px]">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground/50">Model</span>
-            <span className="text-foreground">Gemini Pro 1.5</span>
+          <div className="space-y-4 border border-white/[0.06] bg-white/[0.02] p-4">
+            {deliverables && (
+              <motion.div variants={staggerItem}>
+                <span className="text-muted-foreground/50 mb-2 block font-mono text-[9px] tracking-widest uppercase">
+                  Selected Add-ons
+                </span>
+                <ul className="text-muted-foreground space-y-1.5 font-mono text-[11px]">
+                  {Object.entries(deliverables)
+                    .filter(([, value]) => value.enabled)
+                    .map(([key]) => {
+                      const label = key
+                        .replace(/([A-Z])/g, " $1")
+                        .replace(/^./, (str) => str.toUpperCase());
+                      return (
+                        <li key={key} className="flex items-center gap-2">
+                          <CheckCircleIcon className="size-3 text-emerald-400/70" />
+                          {label}
+                        </li>
+                      );
+                    })}
+                </ul>
+              </motion.div>
+            )}
+
+            {totalCredits !== undefined && (
+              <motion.div variants={staggerItem} className="pt-2">
+                <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
+                  Total Cost
+                </span>
+                <div className="text-foreground flex items-center gap-1.5 font-mono text-sm font-black uppercase">
+                  <LightningIcon
+                    weight="fill"
+                    className="size-3.5 text-amber-400"
+                  />
+                  {totalCredits} Credits
+                </div>
+              </motion.div>
+            )}
           </div>
-          <div className="h-px bg-white/[0.04]" />
-          <div className="flex justify-between">
-            <span className="text-muted-foreground/50">Context Window</span>
-            <span className="text-foreground">128k</span>
-          </div>
-          <div className="h-px bg-white/[0.04]" />
-          <div className="flex justify-between">
-            <span className="text-muted-foreground/50">Active Pipelines</span>
-            <span className="text-primary">
-              <span className="inline-block animate-pulse">●</span> 4
-            </span>
-          </div>
-          <div className="h-px bg-white/[0.04]" />
-          <div className="flex justify-between">
-            <span className="text-muted-foreground/50">Elapsed</span>
-            <span className="text-foreground tabular-nums">{elapsed}s</span>
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      )}
     </div>
   );
 }

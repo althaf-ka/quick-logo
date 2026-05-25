@@ -1,6 +1,10 @@
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@quicklogo/ui/lib/utils";
-import type { WorkspaceState, NormalizedBrandKit } from "@/types/brand-kit";
+import type {
+  WorkspaceState,
+  NormalizedBrandKit,
+  DeliverablesConfig,
+} from "@/types/brand-kit";
 import { SetupSidebar } from "./setup-sidebar";
 import { GeneratingSidebar } from "./generating-sidebar";
 import { ResultsSidebar } from "./results-sidebar";
@@ -33,6 +37,10 @@ export interface SidebarShellProps {
   // Refinement Props
   refiningSectionId: string | null;
   onCloseRefinement: () => void;
+
+  // Selection state
+  deliverables?: DeliverablesConfig;
+  totalCredits?: number;
 
   className?: string;
 }
@@ -104,7 +112,12 @@ export function SidebarShell({
       case "review":
         return <SetupSidebar {...props} />;
       case "generating":
-        return <GeneratingSidebar />;
+        return (
+          <GeneratingSidebar
+            deliverables={props.deliverables}
+            totalCredits={props.totalCredits}
+          />
+        );
       case "refining":
         return <RefinementSidebar {...props} />;
       case "results":
@@ -142,12 +155,18 @@ export function SidebarShell({
       {/* Step Progress — only during setup */}
       {isSetupState(workspaceState) && (
         <div className="border-b border-white/[0.06] px-6 py-4">
-          <div className="flex items-center gap-0">
+          <div className="flex items-start">
             {SETUP_STEPS.map((step, idx) => {
               const status = getStepStatus(step.id, workspaceState);
               return (
-                <div key={step.id} className="flex flex-1 items-center">
-                  <div className="flex flex-1 flex-col items-center gap-1.5">
+                <div
+                  key={step.id}
+                  className={cn(
+                    "flex items-center",
+                    idx < SETUP_STEPS.length - 1 ? "flex-1" : "",
+                  )}
+                >
+                  <div className="flex w-14 shrink-0 flex-col items-center gap-1.5">
                     <div
                       className={cn(
                         "flex size-6 items-center justify-center font-mono text-[10px] font-black transition-all duration-300",
@@ -181,7 +200,7 @@ export function SidebarShell({
                   {idx < SETUP_STEPS.length - 1 && (
                     <div
                       className={cn(
-                        "-mt-4 h-px w-full transition-colors duration-500",
+                        "-mt-4 h-px flex-1 transition-colors duration-500",
                         status === "completed"
                           ? "bg-primary/40"
                           : "bg-white/[0.06]",

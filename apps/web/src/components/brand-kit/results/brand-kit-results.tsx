@@ -1,6 +1,5 @@
-import { Button } from "@quicklogo/ui/components/button";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
+import { cn } from "@quicklogo/ui/lib/utils";
 import { motion } from "motion/react";
 import { activeFocusVariant } from "@/lib/motion/variants";
 import {
@@ -20,6 +19,7 @@ import {
   SocialMediaSection,
   type SocialMediaAsset,
 } from "../sections/social-media-section";
+import { BrandKitSectionContext } from "../sections/section-header";
 import {
   BusinessCardSection,
   type BusinessCardData,
@@ -50,10 +50,20 @@ export interface BrandKitResultsData {
 interface BrandKitResultsProps {
   data: BrandKitResultsData;
   typographyStyle?: string;
-  onRefine: (sectionId: string) => void;
-  onFontChange?: (role: "heading" | "body", family: string) => void;
-  onDownloadAll?: () => void;
+  onRefine: (sectionId: string | null, itemIndex?: number) => void;
+  onFontChange: (role: "heading" | "body", family: string) => void;
   refiningSectionId?: string | null;
+  targetSectionId?: string | null;
+}
+
+interface FocusWrapperProps {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+  refiningSectionId?: string | null;
+  isMobile?: boolean;
+  anyRefining: boolean;
+  targetSectionId?: string | null;
 }
 
 const FocusWrapper = ({
@@ -63,14 +73,8 @@ const FocusWrapper = ({
   refiningSectionId,
   isMobile,
   anyRefining,
-}: {
-  id: string;
-  children: React.ReactNode;
-  className?: string;
-  refiningSectionId?: string | null;
-  isMobile?: boolean;
-  anyRefining: boolean;
-}) => {
+  targetSectionId,
+}: FocusWrapperProps) => {
   const isRefining = refiningSectionId === id;
   const variant = isMobile
     ? "inactive"
@@ -86,7 +90,8 @@ const FocusWrapper = ({
       variants={activeFocusVariant}
       initial="inactive"
       animate={variant}
-      className={className}
+      className={cn("group/section", className)}
+      data-targeted={targetSectionId === id}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       style={{ originY: 0.5, originX: 0.5 }}
     >
@@ -110,8 +115,8 @@ export function BrandKitResults({
   typographyStyle,
   onRefine,
   onFontChange,
-  onDownloadAll,
   refiningSectionId,
+  targetSectionId,
 }: BrandKitResultsProps) {
   useGoogleFontLoader(data.typography?.heading?.family);
   useGoogleFontLoader(data.typography?.body?.family);
@@ -119,186 +124,188 @@ export function BrandKitResults({
   const anyRefining = !!refiningSectionId;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-12 pb-4">
-      {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-mono text-xl font-black tracking-widest uppercase md:text-3xl">
-            {data.brandName || "Brand Kit"}
-          </h2>
-          <p className="text-muted-foreground mt-2 font-mono text-[10px] tracking-widest uppercase">
-            Editorial Guidelines
-          </p>
+    <BrandKitSectionContext.Provider
+      value={{
+        targetSectionId,
+        refiningSectionId,
+        cancelRefine: () => onRefine(null),
+      }}
+    >
+      <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-4 sm:px-6">
+        {/* Header */}
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="font-mono text-xl font-black tracking-widest uppercase md:text-3xl">
+              {data.brandName || "Brand Kit"}
+            </h2>
+            <p className="text-muted-foreground mt-2 font-mono text-[10px] tracking-widest uppercase">
+              Editorial Guidelines
+            </p>
+          </div>
         </div>
-        <Button
-          variant="default"
-          className="cursor-pointer gap-2 rounded-none bg-white font-mono text-[11px] tracking-wider text-black uppercase hover:bg-white/90"
-          onClick={onDownloadAll}
-        >
-          <DownloadSimpleIcon weight="bold" className="size-4" />
-          Download All
-        </Button>
+
+        <div className="mb-12 h-px w-full bg-white/10" />
+
+        {/* Editorial Grid Layout */}
+        <div className="flex flex-col gap-12">
+          {/* HERO SECTION: Logo Variations */}
+          {data.logoVariations && data.logoVariations.length > 0 && (
+            <FocusWrapper
+              id="logo-variations"
+              className="w-full"
+              refiningSectionId={refiningSectionId}
+              isMobile={isMobile}
+              anyRefining={anyRefining}
+              targetSectionId={targetSectionId}
+            >
+              <LogoVariationsSection
+                variations={data.logoVariations}
+                onRefine={onRefine}
+                isRefining={refiningSectionId === "logo-variations"}
+              />
+            </FocusWrapper>
+          )}
+
+          {/* SUPPORT ROW: Typography & Palette */}
+          <div className="flex flex-col gap-12">
+            <FocusWrapper
+              id="typography"
+              className="w-full"
+              refiningSectionId={refiningSectionId}
+              isMobile={isMobile}
+              anyRefining={anyRefining}
+              targetSectionId={targetSectionId}
+            >
+              <TypographySection
+                pairing={data.typography}
+                brandName={data.brandName}
+                onFontChange={onFontChange}
+                isRefining={refiningSectionId === "typography"}
+              />
+            </FocusWrapper>
+
+            <FocusWrapper
+              id="color-palette"
+              className="w-full"
+              refiningSectionId={refiningSectionId}
+              isMobile={isMobile}
+              anyRefining={anyRefining}
+            >
+              <ColorPaletteSection
+                colors={data.colorPalette}
+                onRefine={onRefine}
+                isRefining={refiningSectionId === "color-palette"}
+              />
+            </FocusWrapper>
+          </div>
+
+          {/* SECONDARY GRID: Deliverables */}
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {data.brandPresentation && (
+              <FocusWrapper
+                id="brand-presentation"
+                className="md:col-span-2 lg:col-span-3"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <BrandPresentationSection
+                  data={data}
+                  typographyStyle={typographyStyle}
+                  onRefine={onRefine}
+                  isRefining={refiningSectionId === "brand-presentation"}
+                />
+              </FocusWrapper>
+            )}
+
+            {data.socialMedia && data.socialMedia.length > 0 && (
+              <FocusWrapper
+                id="social-media"
+                className="md:col-span-2 lg:col-span-3"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <SocialMediaSection
+                  assets={data.socialMedia}
+                  onRefine={onRefine}
+                  isRefining={refiningSectionId === "social-media"}
+                />
+              </FocusWrapper>
+            )}
+
+            {data.businessCard && (
+              <FocusWrapper
+                id="business-card"
+                className="w-full"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <BusinessCardSection
+                  card={data.businessCard}
+                  onRefine={onRefine}
+                  isRefining={refiningSectionId === "business-card"}
+                />
+              </FocusWrapper>
+            )}
+
+            {data.favicons && data.favicons.length > 0 && (
+              <FocusWrapper
+                id="favicon"
+                className="w-full"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <FaviconSection
+                  icons={data.favicons}
+                  onRefine={onRefine}
+                  isRefining={refiningSectionId === "favicon"}
+                />
+              </FocusWrapper>
+            )}
+
+            {data.brandedBackdrops && (
+              <FocusWrapper
+                id="branded-backdrops"
+                className="w-full"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <BrandedBackdropsSection
+                  data={data.brandedBackdrops}
+                  onRefine={onRefine}
+                  isRefining={refiningSectionId === "branded-backdrops"}
+                />
+              </FocusWrapper>
+            )}
+
+            {data.logoUrl && (
+              <FocusWrapper
+                id="brand-guidelines"
+                className="w-full md:col-span-2 lg:col-span-3"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <BrandGuidelinesSection
+                  data={{
+                    logoUrl: data.logoUrl,
+                    brandName: data.brandName || "Brand",
+                    colors: data.colorPalette,
+                    typography: data.typography,
+                    productImages: data.productImages,
+                  }}
+                  onRefine={onRefine}
+                  isRefining={refiningSectionId === "brand-guidelines"}
+                />
+              </FocusWrapper>
+            )}
+          </div>
+        </div>
       </div>
-
-      <div className="h-px w-full bg-white/10" />
-
-      {/* Editorial Grid Layout */}
-      <div className="flex flex-col gap-12">
-        {/* HERO SECTION: Logo Variations */}
-        {data.logoVariations && data.logoVariations.length > 0 && (
-          <FocusWrapper
-            id="logo-variations"
-            className="w-full"
-            refiningSectionId={refiningSectionId}
-            isMobile={isMobile}
-            anyRefining={anyRefining}
-          >
-            <LogoVariationsSection
-              variations={data.logoVariations}
-              onRefine={onRefine}
-              isRefining={refiningSectionId === "logo-variations"}
-            />
-          </FocusWrapper>
-        )}
-
-        {/* SUPPORT ROW: Typography & Palette */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-          <FocusWrapper
-            id="typography"
-            className="w-full"
-            refiningSectionId={refiningSectionId}
-            isMobile={isMobile}
-            anyRefining={anyRefining}
-          >
-            <TypographySection
-              pairing={data.typography}
-              brandName={data.brandName}
-              onFontChange={onFontChange}
-              isRefining={refiningSectionId === "typography"}
-            />
-          </FocusWrapper>
-
-          <FocusWrapper
-            id="color-palette"
-            className="w-full"
-            refiningSectionId={refiningSectionId}
-            isMobile={isMobile}
-            anyRefining={anyRefining}
-          >
-            <ColorPaletteSection
-              colors={data.colorPalette}
-              onRefine={onRefine}
-              isRefining={refiningSectionId === "color-palette"}
-            />
-          </FocusWrapper>
-        </div>
-
-        {/* SECONDARY GRID: Deliverables */}
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {data.brandPresentation && (
-            <FocusWrapper
-              id="brand-presentation"
-              className="md:col-span-2 lg:col-span-3"
-              refiningSectionId={refiningSectionId}
-              isMobile={isMobile}
-              anyRefining={anyRefining}
-            >
-              <BrandPresentationSection
-                data={data}
-                typographyStyle={typographyStyle}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "brand-presentation"}
-              />
-            </FocusWrapper>
-          )}
-
-          {data.socialMedia && data.socialMedia.length > 0 && (
-            <FocusWrapper
-              id="social-media"
-              className="md:col-span-2 lg:col-span-3"
-              refiningSectionId={refiningSectionId}
-              isMobile={isMobile}
-              anyRefining={anyRefining}
-            >
-              <SocialMediaSection
-                assets={data.socialMedia}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "social-media"}
-              />
-            </FocusWrapper>
-          )}
-
-          {data.businessCard && (
-            <FocusWrapper
-              id="business-card"
-              className="w-full"
-              refiningSectionId={refiningSectionId}
-              isMobile={isMobile}
-              anyRefining={anyRefining}
-            >
-              <BusinessCardSection
-                card={data.businessCard}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "business-card"}
-              />
-            </FocusWrapper>
-          )}
-
-          {data.favicons && data.favicons.length > 0 && (
-            <FocusWrapper
-              id="favicon"
-              className="w-full"
-              refiningSectionId={refiningSectionId}
-              isMobile={isMobile}
-              anyRefining={anyRefining}
-            >
-              <FaviconSection
-                icons={data.favicons}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "favicon"}
-              />
-            </FocusWrapper>
-          )}
-
-          {data.brandedBackdrops && (
-            <FocusWrapper
-              id="branded-backdrops"
-              className="w-full"
-              refiningSectionId={refiningSectionId}
-              isMobile={isMobile}
-              anyRefining={anyRefining}
-            >
-              <BrandedBackdropsSection
-                data={data.brandedBackdrops}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "branded-backdrops"}
-              />
-            </FocusWrapper>
-          )}
-
-          {data.logoUrl && (
-            <FocusWrapper
-              id="brand-guidelines"
-              className="w-full md:col-span-2 lg:col-span-3"
-              refiningSectionId={refiningSectionId}
-              isMobile={isMobile}
-              anyRefining={anyRefining}
-            >
-              <BrandGuidelinesSection
-                data={{
-                  logoUrl: data.logoUrl,
-                  brandName: data.brandName || "Brand",
-                  colors: data.colorPalette,
-                  typography: data.typography,
-                  productImages: data.productImages,
-                }}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "brand-guidelines"}
-              />
-            </FocusWrapper>
-          )}
-        </div>
-      </div>
-    </div>
+    </BrandKitSectionContext.Provider>
   );
 }

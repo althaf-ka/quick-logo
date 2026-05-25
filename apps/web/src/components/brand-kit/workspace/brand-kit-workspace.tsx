@@ -36,14 +36,10 @@ export function BrandKitWorkspace({
   const isMobile = useIsMobile();
   const bk = useBrandKit({ imageId, brandKitId });
 
-  const promptPlaceholder = bk.targetSection
-    ? `What would you like to change about the ${getSectionLabel(bk.targetSection).toLowerCase()}?`
-    : "Describe your brand identity, target audience, or specific aesthetic preferences...";
-
   return (
     <div className="flex h-full overflow-hidden bg-zinc-950">
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <div className="scrollbar-subtle flex flex-1 flex-col items-center overflow-y-auto p-4 pb-24 md:p-6">
+        <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 pb-24 md:p-6">
           <AnimatePresence mode="wait">
             {bk.isGenerating ? (
               <motion.div
@@ -63,15 +59,15 @@ export function BrandKitWorkspace({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="flex w-full flex-1"
+                className="w-full"
               >
                 <BrandKitResults
                   data={bk.results}
                   typographyStyle={bk.typography}
                   onRefine={(sectionId) => bk.setTargetSection(sectionId)}
                   onFontChange={bk.handleFontChange}
-                  onDownloadAll={() => downloadBrandKit(bk.results!)}
                   refiningSectionId={bk.refiningSectionId}
+                  targetSectionId={bk.targetSection}
                 />
               </motion.div>
             ) : bk.logoUrl ? (
@@ -103,12 +99,6 @@ export function BrandKitWorkspace({
                   typography={bk.typography}
                   setTypography={bk.setTypography}
                   onMockupUpload={bk.handleMockupUpload}
-                  onMockupRemove={(idx) =>
-                    bk.setProductImageUrls(
-                      bk.productImageUrls.filter((_, i) => i !== idx),
-                    )
-                  }
-                  mockupPreviews={bk.productImageUrls}
                   onGenerate={bk.handleGenerate}
                   isGenerating={bk.isGenerating}
                   totalCredits={bk.totalCredits}
@@ -133,21 +123,21 @@ export function BrandKitWorkspace({
         </div>
 
         <AnimatePresence>
-          {(bk.results || (bk.logoUrl && bk.workspaceState === "refining")) && (
+          {bk.targetSection && (
             <motion.div
               variants={promptBarSlide}
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="pointer-events-none absolute bottom-0 flex w-full justify-center p-6"
+              className="pointer-events-none absolute bottom-0 flex w-full justify-center p-6 pb-12"
             >
-              <div className="pointer-events-auto w-full max-w-4xl">
+              <div className="pointer-events-auto w-full max-w-4xl shadow-2xl">
                 <PromptInput
                   value={bk.prompt}
                   onChange={bk.setPrompt}
                   onSubmit={bk.handleGenerate}
                   isLoading={bk.isGenerating || !!bk.refiningSectionId}
-                  placeholder={promptPlaceholder}
+                  placeholder="What changes would you like to make?"
                   credits={bk.totalCredits}
                   targetContext={
                     bk.targetSection
@@ -186,6 +176,8 @@ export function BrandKitWorkspace({
           revisions={bk.normalizedData?.revisions}
           refiningSectionId={bk.refiningSectionId ?? null}
           onCloseRefinement={() => bk.setTargetSection(null)}
+          deliverables={bk.deliverables}
+          totalCredits={bk.totalCredits}
         />
       )}
 
@@ -212,6 +204,8 @@ export function BrandKitWorkspace({
                 revisions={bk.normalizedData?.revisions}
                 refiningSectionId={bk.refiningSectionId ?? null}
                 onCloseRefinement={() => bk.setTargetSection(null)}
+                deliverables={bk.deliverables}
+                totalCredits={bk.totalCredits}
                 className="h-auto max-h-none w-full overflow-visible border-none"
               />
             </div>

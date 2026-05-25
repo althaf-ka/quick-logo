@@ -51,6 +51,7 @@ export function useBrandKit({
     if (normalizedData) {
       session.hydrateFromBrandKit(normalizedData);
       refinement.hydrateFromBrandKit(normalizedData);
+      session.setWorkspaceState("results");
     }
   }, [normalizedData, session, refinement]);
 
@@ -150,9 +151,10 @@ export function useBrandKit({
           files.map((file) => uploadFileToImageKit(file, user?.id)),
         );
         session.setProductImageUrls(urls);
-        toast.success("Product images uploaded successfully!");
+        return urls;
       } catch {
         toast.error("Failed to upload mockup images.");
+        return [];
       } finally {
         setIsUploadingMockups(false);
       }
