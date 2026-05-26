@@ -266,7 +266,7 @@ export function ProjectPreviewDialog({
                   </p>
                 </div>
 
-                {!isExpired && (
+                {!isExpired ? (
                   <div className="grid grid-cols-2 gap-2">
                     <div className="border-border/40 border p-3">
                       <p className="text-muted-foreground/40 font-mono text-[9px] font-black tracking-widest uppercase">
@@ -298,9 +298,9 @@ export function ProjectPreviewDialog({
                       </p>
                     </div>
                   </div>
-                )}
+                ) : null}
 
-                {!isExpired && (
+                {!isExpired ? (
                   <Button
                     className="h-9 w-full rounded-none font-mono text-[9px] font-black tracking-widest uppercase"
                     onClick={() => extendMutation.mutate()}
@@ -324,7 +324,7 @@ export function ProjectPreviewDialog({
                       </>
                     )}
                   </Button>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

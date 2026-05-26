@@ -66,15 +66,15 @@ function GeneratePage() {
         />
       </div>
 
-      {!isMobile && (
+      {!isMobile ? (
         <GenerationSidebar
           config={config}
           onConfigChange={updateConfig}
           onReferenceImageChange={handleReferenceImage}
         />
-      )}
+      ) : null}
 
-      {isMobile && (
+      {isMobile ? (
         <MobileControlsSheet
           open={mobileConfigOpen}
           onOpenChange={setMobileConfigOpen}
@@ -82,7 +82,7 @@ function GeneratePage() {
           onConfigChange={updateConfig}
           onReferenceImageChange={handleReferenceImage}
         />
-      )}
+      ) : null}
     </div>
   );
 }

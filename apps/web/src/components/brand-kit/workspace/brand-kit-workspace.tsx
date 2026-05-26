@@ -38,7 +38,7 @@ export function BrandKitWorkspace({
 
   return (
     <div className="flex h-full overflow-hidden bg-zinc-950">
-      <div className="relative flex flex-1 flex-col overflow-hidden">
+      <div className="relative flex flex-1 flex-col overflow-hidden px-4">
         <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 pb-24 md:p-6">
           <AnimatePresence mode="wait">
             {bk.isGenerating ? (
@@ -79,7 +79,7 @@ export function BrandKitWorkspace({
                 exit="exit"
                 className="relative flex w-full flex-1 flex-col"
               >
-                {isMobile && (
+                {isMobile ? (
                   <div className="absolute top-0 right-0 z-10 flex w-full justify-end p-4">
                     <button
                       onClick={() => bk.setSidebarOpen(true)}
@@ -88,7 +88,7 @@ export function BrandKitWorkspace({
                       <SlidersHorizontalIcon className="size-4" /> Settings
                     </button>
                   </div>
-                )}
+                ) : null}
                 <BrandQuestionnaire
                   workspaceState={bk.workspaceState}
                   setWorkspaceState={bk.setWorkspaceState}
@@ -123,7 +123,7 @@ export function BrandKitWorkspace({
         </div>
 
         <AnimatePresence>
-          {bk.targetSection && (
+          {bk.targetSection ? (
             <motion.div
               variants={promptBarSlide}
               initial="hidden"
@@ -157,11 +157,11 @@ export function BrandKitWorkspace({
                 />
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
 
-      {!isMobile && (
+      {!isMobile ? (
         <SidebarShell
           workspaceState={bk.workspaceState}
           logoUrl={bk.logoUrl}
@@ -179,9 +179,9 @@ export function BrandKitWorkspace({
           deliverables={bk.deliverables}
           totalCredits={bk.totalCredits}
         />
-      )}
+      ) : null}
 
-      {isMobile && (
+      {isMobile ? (
         <Drawer open={bk.sidebarOpen} onOpenChange={bk.setSidebarOpen}>
           <DrawerContent className="max-h-[85vh] rounded-none px-0 pb-0">
             <DrawerHeader className="border-b border-white/[0.06] px-4 pb-2 text-left">
@@ -211,10 +211,17 @@ export function BrandKitWorkspace({
             </div>
           </DrawerContent>
         </Drawer>
-      )}
+      ) : null}
     </div>
   );
 }
+
+const GENERATING_STEPS = [
+  "Analyzing brand identity",
+  "Curating typography system",
+  "Generating color palettes",
+  "Rendering mockups",
+];
 
 function GeneratingState() {
   const [step, setStep] = useState(0);
@@ -230,12 +237,7 @@ function GeneratingState() {
     };
   }, []);
 
-  const steps = [
-    "Analyzing brand identity",
-    "Curating typography system",
-    "Generating color palettes",
-    "Rendering mockups",
-  ];
+  const steps = GENERATING_STEPS;
 
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col items-center justify-center gap-16 py-12">
@@ -300,7 +302,7 @@ function GeneratingState() {
               >
                 {text}
               </span>
-              {step === i && (
+              {step === i ? (
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -308,7 +310,7 @@ function GeneratingState() {
                 >
                   Processing...
                 </motion.span>
-              )}
+              ) : null}
             </div>
           </motion.div>
         ))}
@@ -334,7 +336,7 @@ function EmptyState({
 }) {
   return (
     <div className="relative flex h-full w-full flex-1 flex-col items-center justify-center gap-8">
-      {isMobile && (
+      {isMobile ? (
         <div className="absolute top-0 right-0 z-10 flex w-full justify-end p-4">
           <button
             onClick={onOpenSidebar}
@@ -343,7 +345,7 @@ function EmptyState({
             <SlidersHorizontalIcon className="size-4" /> Settings
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* Background gradient orb */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -382,7 +384,7 @@ function EmptyState({
           ))}
         </div>
 
-        {isMobile && (
+        {isMobile ? (
           <button
             onClick={onOpenSidebar}
             className="bg-primary text-primary-foreground mt-2 flex items-center gap-2 px-6 py-3 font-mono text-[11px] font-bold tracking-widest uppercase transition-all hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
@@ -390,7 +392,7 @@ function EmptyState({
             <UploadSimpleIcon weight="bold" className="size-4" />
             Get Started
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

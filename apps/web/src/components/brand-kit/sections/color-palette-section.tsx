@@ -70,11 +70,11 @@ export function ColorPaletteSection({
                 <p className="font-mono text-[10px] font-bold uppercase">
                   {color.hex}
                 </p>
-                {color.rgb && (
+                {color.rgb ? (
                   <p className="text-muted-foreground/60 font-mono text-[9px]">
                     {color.rgb}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           ))}

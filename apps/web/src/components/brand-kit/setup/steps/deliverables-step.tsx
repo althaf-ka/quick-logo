@@ -347,14 +347,14 @@ export function DeliverablesStep({
                     : "bg-white/[0.01] ring-white/[0.06] hover:ring-white/[0.1]",
                 )}
               >
-                {isSelected && (
+                {isSelected ? (
                   <div
                     className={cn(
                       "absolute top-0 bottom-0 left-0 w-0.5",
                       isError ? "bg-red-500" : "bg-primary",
                     )}
                   />
-                )}
+                ) : null}
                 {/* Card header — always visible */}
                 <div
                   className="flex cursor-pointer items-center gap-3 px-4 py-3"
@@ -381,13 +381,13 @@ export function DeliverablesStep({
                       )}
                     >
                       {item.label}
-                      {isError && (
+                      {isError ? (
                         <span className="font-mono text-[9px] tracking-wider text-red-500 uppercase">
                           {key === "brandPresentation"
                             ? "Needs Images"
                             : "Needs Info"}
                         </span>
-                      )}
+                      ) : null}
                     </h3>
                     <p className="text-muted-foreground/45 text-[10px] leading-snug">
                       {item.desc}
@@ -435,7 +435,7 @@ export function DeliverablesStep({
 
                 {/* Configure Button (Visible when selected) */}
                 <AnimatePresence initial={false}>
-                  {hasSettings && isSelected && (
+                  {(hasSettings && isSelected) ? (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -473,12 +473,12 @@ export function DeliverablesStep({
                         </motion.div>
                       </button>
                     </motion.div>
-                  )}
+                  ) : null}
                 </AnimatePresence>
 
                 {/* Settings Content (Visible when expanded) */}
                 <AnimatePresence initial={false}>
-                  {hasSettings && isSelected && isExpanded && (
+                  {(hasSettings && isSelected && isExpanded) ? (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -487,7 +487,7 @@ export function DeliverablesStep({
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4">
-                        {key === "socialMedia" && (
+                        {key === "socialMedia" ? (
                           <div className="space-y-3 pt-2">
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                               {[
@@ -528,8 +528,8 @@ export function DeliverablesStep({
                               ))}
                             </div>
                           </div>
-                        )}
-                        {key === "brandGuidelines" && (
+                        ) : null}
+                        {key === "brandGuidelines" ? (
                           <div className="space-y-4 pt-2">
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                               {[
@@ -574,8 +574,8 @@ export function DeliverablesStep({
                               ))}
                             </div>
                           </div>
-                        )}
-                        {key === "businessCard" && (
+                        ) : null}
+                        {key === "businessCard" ? (
                           <div className="space-y-3 pt-2">
                             <div className="grid grid-cols-2 gap-2.5">
                               <div className="col-span-2">
@@ -663,8 +663,8 @@ export function DeliverablesStep({
                               </div>
                             </div>
                           </div>
-                        )}
-                        {key === "brandPresentation" && (
+                        ) : null}
+                        {key === "brandPresentation" ? (
                           <div className="space-y-3 pt-2">
                             <input
                               ref={fileInputRef}
@@ -683,7 +683,7 @@ export function DeliverablesStep({
                                 }
                               }}
                             />
-                            {localMockupPreviews.length > 0 && (
+                            {localMockupPreviews.length > 0 ? (
                               <div className="grid grid-cols-4 gap-2">
                                 {localMockupPreviews.map((preview, pidx) => (
                                   <div
@@ -706,7 +706,7 @@ export function DeliverablesStep({
                                   </div>
                                 ))}
                               </div>
-                            )}
+                            ) : null}
                             <button
                               onClick={() => fileInputRef.current?.click()}
                               className="group text-muted-foreground/40 hover:border-primary/30 hover:text-primary flex w-full items-center justify-center gap-2 border border-dashed border-white/[0.08] py-2 font-mono text-[10px] tracking-wider uppercase transition-all"
@@ -718,10 +718,10 @@ export function DeliverablesStep({
                               Upload Images
                             </button>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </motion.div>
-                  )}
+                  ) : null}
                 </AnimatePresence>
               </div>
             );
@@ -825,11 +825,11 @@ export function DeliverablesStep({
             )}
           >
             {/* Shimmer effect */}
-            {!(errorKeys.size > 0 && hasErrors) &&
+            {(!(errorKeys.size > 0 && hasErrors) &&
               !isGenerating &&
-              !isUploadingMockups && (
+              !isUploadingMockups) ? (
                 <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-              )}
+              ) : null}
 
             {isGenerating || isUploadingMockups ? (
               <span className="relative z-10 flex items-center gap-2">

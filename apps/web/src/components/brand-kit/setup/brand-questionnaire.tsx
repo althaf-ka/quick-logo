@@ -261,7 +261,7 @@ export function BrandQuestionnaire({
             ))}
 
           {/* ========== DELIVERABLES SECTION ========== */}
-          {workspaceState === "deliverables" && (
+          {workspaceState === "deliverables" ? (
             <DeliverablesStep
               deliverables={deliverables}
               setDeliverables={setDeliverables}
@@ -281,7 +281,7 @@ export function BrandQuestionnaire({
               onBack={() => setWorkspaceState("creative-direction")}
               onGenerate={handleGenerate}
             />
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </div>

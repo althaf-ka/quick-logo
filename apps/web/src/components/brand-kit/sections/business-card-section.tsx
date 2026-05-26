@@ -61,7 +61,7 @@ export function BusinessCardSection({
             </div>
           </div>
 
-          {card.backUrl && (
+          {card.backUrl ? (
             <div className="group border-border/50 hover:border-primary/40 bg-card flex flex-col overflow-hidden border transition-colors">
               <div className="bg-muted/10 relative flex aspect-[16/9] w-full flex-1 items-center justify-center overflow-hidden">
                 <img
@@ -93,7 +93,7 @@ export function BusinessCardSection({
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </SectionContent>
     </div>

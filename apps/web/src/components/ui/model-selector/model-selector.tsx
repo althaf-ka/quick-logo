@@ -97,7 +97,7 @@ export function ModelSelector({
             >
               {selectedModel?.label || selectedModel?.name || "Select Model"}
             </span>
-            {selectedModel && variant === "default" && (
+            {selectedModel && variant === "default" ? (
               <span className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px] font-medium">
                 <span className="capitalize">{selectedModel.name}</span>
                 <span className="text-border">·</span>
@@ -109,7 +109,7 @@ export function ModelSelector({
                   {selectedModel.credits}
                 </span>
               </span>
-            )}
+            ) : null}
           </div>
         </div>
         <CaretDownIcon
@@ -160,9 +160,9 @@ export function ModelSelector({
                     )}
                   >
                     {/* Selected accent bar */}
-                    {isSelected && (
+                    {isSelected ? (
                       <div className="bg-primary absolute inset-y-0 left-0 w-[3px]" />
-                    )}
+                    ) : null}
 
                     {/* Icon */}
                     <div
@@ -188,12 +188,12 @@ export function ModelSelector({
                         >
                           {model.label}
                         </span>
-                        {showRecommendedBadge && (
+                        {showRecommendedBadge ? (
                           <span className="bg-primary/15 text-primary inline-flex items-center gap-0.5 px-1.5 py-px text-[8px] font-bold tracking-wider uppercase">
                             <StarIcon weight="fill" className="size-2" />
                             Recommended
                           </span>
-                        )}
+                        ) : null}
                       </div>
 
                       {/* Technical model name (secondary) */}

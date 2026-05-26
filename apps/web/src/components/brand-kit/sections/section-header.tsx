@@ -2,13 +2,7 @@ import { Button } from "@quicklogo/ui/components/button";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { cn } from "@quicklogo/ui/lib/utils";
-import { createContext, useContext } from "react";
-
-export const BrandKitSectionContext = createContext<{
-  targetSectionId?: string | null;
-  refiningSectionId?: string | null;
-  cancelRefine?: () => void;
-}>({});
+import { useBrandKitSection } from "./section-context";
 
 interface SectionHeaderProps {
   title: string;
@@ -25,7 +19,7 @@ export function SectionHeader({
   isRefining,
   className,
 }: SectionHeaderProps) {
-  const { targetSectionId, cancelRefine } = useContext(BrandKitSectionContext);
+  const { targetSectionId, cancelRefine } = useBrandKitSection();
   const isTargeted = targetSectionId === sectionId;
 
   return (
@@ -33,7 +27,7 @@ export function SectionHeader({
       <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
         {title}
       </h3>
-      {onRefine && (
+      {onRefine ? (
         <Button
           variant="ghost"
           size="sm"
@@ -62,7 +56,7 @@ export function SectionHeader({
               ? "Cancel Refine"
               : "Refine"}
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -81,7 +75,7 @@ export function SectionContent({
   return (
     <div className="relative">
       {children}
-      {isRefining && (
+      {isRefining ? (
         <div className="animate-in fade-in absolute inset-0 z-10 flex items-center justify-center duration-200">
           <Skeleton className="absolute inset-0 opacity-60" />
           <div className="relative z-20 flex items-center gap-2">
@@ -91,7 +85,7 @@ export function SectionContent({
             </p>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

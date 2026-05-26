@@ -1,5 +1,5 @@
 import { FeatureCarousel } from "@/components/auth/feature-carousel";
-import { GoogleIcon } from "@/components/icons";
+import { GoogleIcon } from "@/components/icons/google-icon";
 import { Button } from "@quicklogo/ui/components/button";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useGoogleLogin } from "@/hooks/use-auth";

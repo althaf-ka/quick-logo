@@ -126,7 +126,7 @@ export function SocialMediaSection({
                         isPlaceholder && "opacity-40 grayscale filter",
                       )}
                     />
-                    {isPlaceholder && (
+                    {isPlaceholder ? (
                       <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
                         <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
                         <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
@@ -136,7 +136,7 @@ export function SocialMediaSection({
                           AI asset generation is queued or encountered an issue.
                         </p>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <div className="bg-muted/5 flex w-full shrink-0 items-center justify-between border-t px-4 py-2.5">

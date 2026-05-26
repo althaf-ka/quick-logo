@@ -50,7 +50,7 @@ export function BrandPresentationSection({
               isPlaceholder ? "opacity-35 blur-sm" : ""
             }`}
           />
-          {isPlaceholder && (
+          {isPlaceholder ? (
             <div className="bg-background/40 absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 p-4 text-center backdrop-blur-md">
               <span className="animate-pulse font-mono text-xs font-bold tracking-widest text-amber-500 uppercase">
                 AI Generation Queued
@@ -60,7 +60,7 @@ export function BrandPresentationSection({
                 patterns, and style identity...
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </SectionContent>
     </div>

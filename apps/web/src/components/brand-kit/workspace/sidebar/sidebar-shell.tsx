@@ -5,6 +5,7 @@ import type {
   NormalizedBrandKit,
   DeliverablesConfig,
 } from "@/types/brand-kit";
+import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
 import { SetupSidebar } from "./setup-sidebar";
 import { GeneratingSidebar } from "./generating-sidebar";
 import { ResultsSidebar } from "./results-sidebar";
@@ -30,7 +31,7 @@ export interface SidebarShellProps {
 
   // Results Props
   brandKitId?: string;
-  results?: NormalizedBrandKit;
+  results?: BrandKitResultsData | null;
   onDownloadAll?: () => void;
   revisions?: NormalizedBrandKit["revisions"];
 
@@ -153,7 +154,7 @@ export function SidebarShell({
       </div>
 
       {/* Step Progress — only during setup */}
-      {isSetupState(workspaceState) && (
+      {isSetupState(workspaceState) ? (
         <div className="border-b border-white/[0.06] px-6 py-4">
           <div className="flex items-start">
             {SETUP_STEPS.map((step, idx) => {
@@ -197,7 +198,7 @@ export function SidebarShell({
                       {step.label}
                     </span>
                   </div>
-                  {idx < SETUP_STEPS.length - 1 && (
+                  {idx < SETUP_STEPS.length - 1 ? (
                     <div
                       className={cn(
                         "-mt-4 h-px flex-1 transition-colors duration-500",
@@ -206,13 +207,13 @@ export function SidebarShell({
                           : "bg-white/[0.06]",
                       )}
                     />
-                  )}
+                  ) : null}
                 </div>
               );
             })}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Content */}
       <div className="scrollbar-subtle flex-1 overflow-y-auto p-6">

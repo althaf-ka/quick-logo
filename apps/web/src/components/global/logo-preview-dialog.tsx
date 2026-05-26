@@ -63,7 +63,7 @@ export function LogoPreviewDialog({
 
         <DialogFooter className="flex-row justify-between gap-2">
           <div className="flex gap-2">
-            {onEditWithAI && (
+            {onEditWithAI ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -73,8 +73,8 @@ export function LogoPreviewDialog({
                 <PencilIcon weight="bold" className="size-3.5" />
                 Edit with AI
               </Button>
-            )}
-            {onOpenInCanvas && (
+            ) : null}
+            {onOpenInCanvas ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -84,10 +84,10 @@ export function LogoPreviewDialog({
                 <FrameCornersIcon weight="bold" className="size-3.5" />
                 Canvas
               </Button>
-            )}
+            ) : null}
           </div>
           <div className="flex gap-2">
-            {onDownload && (
+            {onDownload ? (
               <Button
                 size="sm"
                 className="cursor-pointer gap-2"
@@ -96,7 +96,7 @@ export function LogoPreviewDialog({
                 <DownloadIcon weight="bold" className="size-3.5" />
                 Download
               </Button>
-            )}
+            ) : null}
           </div>
         </DialogFooter>
       </DialogContent>

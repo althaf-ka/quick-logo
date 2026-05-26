@@ -8,6 +8,7 @@ import { useBrandKitRefinement } from "./use-brand-kit-refinement";
 import { uploadFileToImageKit } from "@/lib/imagekit";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
+import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
 
 interface UseBrandKitOptions {
   imageId?: string;
@@ -23,13 +24,39 @@ export function useBrandKit({
 
   // 1. Instantiate lower-level hooks
   const session = useBrandKitSession();
+  const {
+    workspaceState,
+    setWorkspaceState,
+    logoUrl,
+    setLogoUrl,
+    brandName,
+    setBrandName,
+    typographyPreference,
+    setTypographyPreference,
+    deliverables,
+    setDeliverables,
+    productImageUrls,
+    setProductImageUrls,
+    extractedColors,
+    setExtractedColors,
+    hydrateFromBrandKit: hydrateSession,
+  } = session;
+
   const generation = useBrandKitGeneration({
     brandKitId: initialBrandKitId,
     onGenerationSuccess: () => {
       // Move to generating state while waiting for polling to complete
-      session.setWorkspaceState("generating");
+      setWorkspaceState("generating");
     },
   });
+  const {
+    brandKitId,
+    isGeneratingKit,
+    normalizedData,
+    isQueryLoading,
+    error: generationError,
+    mutateGenerate,
+  } = generation;
 
   // Use state to track logo upload process
   const [isLoadingLogo, setIsLoadingLogo] = useState(false);
@@ -41,19 +68,38 @@ export function useBrandKit({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const refinement = useBrandKitRefinement({
-    brandKitId: generation.brandKitId,
-    typographyStyle: session.typographyPreference.mood,
+    brandKitId: brandKitId,
+    typographyStyle: typographyPreference.mood,
   });
+  const {
+    isRefiningKit,
+    prompt,
+    setPrompt,
+    targetSection,
+    setTargetSection,
+    refiningSectionId,
+    conversationHistory,
+    refinementHistory,
+    hydrateFromBrandKit: hydrateRefinement,
+    mutateRefine,
+    mutateRestore,
+  } = refinement;
 
   // 2. Hydration Flow (Sync query changes exactly once)
-  const normalizedData = generation.normalizedData;
   useEffect(() => {
     if (normalizedData) {
-      session.hydrateFromBrandKit(normalizedData);
-      refinement.hydrateFromBrandKit(normalizedData);
-      session.setWorkspaceState("results");
+      hydrateSession(normalizedData);
+      hydrateRefinement(normalizedData);
+      if (normalizedData.status === "completed") {
+        setWorkspaceState("results");
+      }
     }
-  }, [normalizedData, session, refinement]);
+  }, [
+    normalizedData,
+    hydrateSession,
+    setWorkspaceState,
+    hydrateRefinement,
+  ]);
 
   const { data: imageDetails } = useQuery({
     queryKey: ["image-details", imageId],
@@ -72,41 +118,41 @@ export function useBrandKit({
         imageUrl?: string;
         brandName?: string;
       };
-      if (img.imageUrl && !session.logoUrl) {
-        session.setLogoUrl(img.imageUrl);
-        session.setExtractedColors([
+      if (img.imageUrl && !logoUrl) {
+        setLogoUrl(img.imageUrl);
+        setExtractedColors([
           "#3b82f6",
           "#1d4ed8",
           "#1e3a8a",
           "#eff6ff",
         ]);
       }
-      if (img.brandName && !session.brandName) {
-        session.setBrandName(img.brandName);
+      if (img.brandName && !brandName) {
+        setBrandName(img.brandName);
       }
     }
-  }, [imageDetails, session]);
+  }, [
+    imageDetails,
+    logoUrl,
+    setLogoUrl,
+    setExtractedColors,
+    brandName,
+    setBrandName,
+  ]);
 
   // Derived state
-  const isGenerating = useMemo(() => {
-    const status = normalizedData?.status;
-    return (
-      status === "pending" ||
-      status === "processing" ||
-      generation.isGeneratingKit ||
-      refinement.isRefiningKit
-    );
-  }, [
-    normalizedData?.status,
-    generation.isGeneratingKit,
-    refinement.isRefiningKit,
-  ]);
+  const status = normalizedData?.status;
+  const isGenerating =
+    status === "pending" ||
+    status === "processing" ||
+    isGeneratingKit ||
+    isRefiningKit;
 
   const results = useMemo(() => {
     if (!normalizedData) return null;
     const activeRev = normalizedData.revisions.find((r) => r.isActive);
     if (!activeRev) return null;
-    return activeRev.results as any;
+    return activeRev.results as unknown as BrandKitResultsData;
   }, [normalizedData]);
 
   // 3. Orchestrated File Uploads & Generation
@@ -121,9 +167,9 @@ export function useBrandKit({
       setIsLoadingLogo(true);
       try {
         const url = await uploadFileToImageKit(file, user?.id);
-        session.setLogoUrl(url);
+        setLogoUrl(url);
         // Optimistically seed palette derived from placeholder/image
-        session.setExtractedColors([
+        setExtractedColors([
           "#3b82f6",
           "#1d4ed8",
           "#1e3a8a",
@@ -135,13 +181,13 @@ export function useBrandKit({
         setIsLoadingLogo(false);
       }
     },
-    [user?.id, session],
+    [user?.id, setLogoUrl, setExtractedColors],
   );
 
   const handleLogoRemove = useCallback(() => {
-    session.setLogoUrl(null);
-    session.setExtractedColors([]);
-  }, [session]);
+    setLogoUrl(null);
+    setExtractedColors([]);
+  }, [setLogoUrl, setExtractedColors]);
 
   const handleMockupUpload = useCallback(
     async (files: File[]) => {
@@ -150,7 +196,7 @@ export function useBrandKit({
         const urls = await Promise.all(
           files.map((file) => uploadFileToImageKit(file, user?.id)),
         );
-        session.setProductImageUrls(urls);
+        setProductImageUrls(urls);
         return urls;
       } catch {
         toast.error("Failed to upload mockup images.");
@@ -159,23 +205,22 @@ export function useBrandKit({
         setIsUploadingMockups(false);
       }
     },
-    [user?.id, session],
+    [user?.id, setProductImageUrls],
   );
 
   const handleFontChange = useCallback(
     (role: "heading" | "body", family: string) => {
-      const bkId = generation.brandKitId;
-      if (!bkId || !results) return;
+      if (!brandKitId || !results) return;
 
       queryClient.setQueryData<NormalizedBrandKit | null>(
-        ["brand-kit", bkId],
+        ["brand-kit", brandKitId],
         (current) => {
           if (!current) return current;
           return {
             ...current,
             revisions: current.revisions.map((revision) => {
               if (!revision.isActive) return revision;
-              const revisionResults = revision.results as any;
+              const revisionResults = revision.results as unknown as BrandKitResultsData;
               return {
                 ...revision,
                 results: {
@@ -195,138 +240,143 @@ export function useBrandKit({
         },
       );
 
-      refinement.mutateRefine({
+      mutateRefine({
         sectionId: "typography",
         refinementPrompt: `__FONT_OVERRIDE__:${role}:${family}`,
       });
     },
-    [generation.brandKitId, results, queryClient, refinement],
+    [brandKitId, results, queryClient, mutateRefine],
   );
 
   // Credit calculation
   const baseCredits = 5;
   const regenerationCredits = 2;
-  const extraCredits = useMemo(() => {
-    const d = session.deliverables;
-    return (
-      (d.logoVariations.enabled ? 2 : 0) +
-      (d.socialMedia.enabled ? 3 : 0) +
-      (d.businessCard.enabled ? 2 : 0) +
-      (d.favicon.enabled ? 1 : 0) +
-      (d.brandedBackdrops.enabled ? 2 : 0) +
-      (d.brandPresentation.enabled ? 3 : 0)
-    );
-  }, [session.deliverables]);
+  const extraCredits =
+    (deliverables.logoVariations.enabled ? 2 : 0) +
+    (deliverables.socialMedia.enabled ? 3 : 0) +
+    (deliverables.businessCard.enabled ? 2 : 0) +
+    (deliverables.favicon.enabled ? 1 : 0) +
+    (deliverables.brandedBackdrops.enabled ? 2 : 0) +
+    (deliverables.brandPresentation.enabled ? 3 : 0);
 
-  const totalCredits = useMemo(
-    () =>
-      refinement.targetSection
-        ? regenerationCredits
-        : baseCredits + extraCredits,
-    [refinement.targetSection, extraCredits],
-  );
+  const totalCredits = targetSection
+    ? regenerationCredits
+    : baseCredits + extraCredits;
 
   // Conversational Submit Handler
   const handleGenerate = useCallback(
     async (customPrompt?: string) => {
       const activePrompt =
-        customPrompt !== undefined ? customPrompt : refinement.prompt;
+        customPrompt !== undefined ? customPrompt : prompt;
 
-      if (!session.logoUrl && !generation.brandKitId) {
+      if (!logoUrl && !brandKitId) {
         toast.error("Please upload or select a logo first");
         return;
       }
-      if (!activePrompt.trim() && !refinement.targetSection) {
+      if (!activePrompt.trim() && !targetSection) {
         toast.error("Please describe your brand identity");
         return;
       }
-      if (!imageId && !session.brandName.trim() && !refinement.targetSection) {
+      if (!imageId && !brandName.trim() && !targetSection) {
         toast.error("Brand name is required");
         return;
       }
       if (
-        session.deliverables.brandPresentation.enabled &&
-        session.productImageUrls.length === 0
+        deliverables.brandPresentation.enabled &&
+        productImageUrls.length === 0
       ) {
         toast.error("Brand Presentation requires at least one product image");
         return;
       }
 
       if (customPrompt !== undefined) {
-        refinement.setPrompt(customPrompt);
+        setPrompt(customPrompt);
       }
 
-      if (refinement.targetSection) {
-        refinement.mutateRefine({
-          sectionId: refinement.targetSection,
+      if (targetSection) {
+        mutateRefine({
+          sectionId: targetSection,
           refinementPrompt: activePrompt,
         });
       } else {
-        const d = session.deliverables;
-        generation.mutateGenerate({
+        mutateGenerate({
           sourceImageId: imageId,
-          customLogoUrl: session.logoUrl || undefined,
-          brandName: session.brandName,
+          customLogoUrl: logoUrl || undefined,
+          brandName: brandName,
           prompt: activePrompt,
-          typographyStyle: session.typographyPreference.mood,
-          extractedColors: session.extractedColors,
+          typographyStyle: typographyPreference.mood,
+          extractedColors: extractedColors,
           productImageUrls:
-            session.productImageUrls.length > 0
-              ? session.productImageUrls
+            productImageUrls.length > 0
+              ? productImageUrls
               : undefined,
           deliverables: {
-            logoVariations: d.logoVariations.enabled,
-            socialMedia: d.socialMedia.enabled,
-            businessCard: d.businessCard.enabled,
-            favicon: d.favicon.enabled,
-            brandedBackdrops: d.brandedBackdrops.enabled,
-            brandPresentation: d.brandPresentation.enabled,
-            brandGuidelines: d.brandGuidelines.enabled,
+            logoVariations: deliverables.logoVariations.enabled,
+            socialMedia: deliverables.socialMedia.enabled,
+            businessCard: deliverables.businessCard.enabled,
+            favicon: deliverables.favicon.enabled,
+            brandedBackdrops: deliverables.brandedBackdrops.enabled,
+            brandPresentation: deliverables.brandPresentation.enabled,
+            brandGuidelines: deliverables.brandGuidelines.enabled,
           },
         });
       }
     },
-    [imageId, session, generation, refinement],
+    [
+      imageId,
+      prompt,
+      targetSection,
+      setPrompt,
+      mutateRefine,
+      logoUrl,
+      brandName,
+      deliverables,
+      productImageUrls,
+      typographyPreference.mood,
+      extractedColors,
+      brandKitId,
+      mutateGenerate,
+    ],
   );
 
   return {
     // Session State
-    workspaceState: session.workspaceState,
-    setWorkspaceState: session.setWorkspaceState,
-    logoUrl: session.logoUrl,
-    brandName: session.brandName,
-    setBrandName: session.setBrandName,
-    typography: session.typographyPreference.mood,
+    workspaceState,
+    setWorkspaceState,
+    logoUrl,
+    brandName,
+    setBrandName,
+    typography: typographyPreference.mood,
     setTypography: (mood: string) =>
-      session.setTypographyPreference((prev) => ({ ...prev, mood })),
-    deliverables: session.deliverables,
-    setDeliverables: session.setDeliverables,
-    productImageUrls: session.productImageUrls,
-    setProductImageUrls: session.setProductImageUrls,
-    extractedColors: session.extractedColors,
+      setTypographyPreference((prev) => ({ ...prev, mood })),
+    deliverables,
+    setDeliverables,
+    productImageUrls,
+    setProductImageUrls,
+    extractedColors,
 
     // Upload Progress States
     isLoadingLogo,
     isUploadingMockups,
 
     // Generation & Polling State
-    brandKitId: generation.brandKitId,
+    brandKitId,
     normalizedData,
     results,
     isGenerating,
-    isQueryLoading: generation.isQueryLoading,
-    error: generation.error,
+    isQueryLoading,
+    error: generationError,
     totalCredits,
     isFromPlatform: !!imageId,
 
     // Refinement State
-    prompt: refinement.prompt,
-    setPrompt: refinement.setPrompt,
-    targetSection: refinement.targetSection,
-    setTargetSection: refinement.setTargetSection,
-    refiningSectionId: refinement.refiningSectionId,
-    conversationHistory: refinement.conversationHistory,
-    refinementHistory: refinement.refinementHistory,
+    prompt,
+    setPrompt,
+    targetSection,
+    setTargetSection,
+    refiningSectionId,
+    conversationHistory,
+    refinementHistory,
 
     // UI state
     sidebarOpen,
@@ -339,9 +389,9 @@ export function useBrandKit({
     handleFontChange,
     handleGenerate,
     handleRefine: (sectionId: string, refinementPrompt: string) =>
-      refinement.mutateRefine({ sectionId, refinementPrompt }),
+      mutateRefine({ sectionId, refinementPrompt }),
     handleRestore: (sectionId: string, sourceRevisionId: string) =>
-      refinement.mutateRestore({ sectionId, sourceRevisionId }),
+      mutateRestore({ sectionId, sourceRevisionId }),
     getSectionHistory: (sectionPrefix: string) => {
       if (!normalizedData) return [];
       return normalizedData.revisions.filter((r) => {

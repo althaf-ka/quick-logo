@@ -64,7 +64,7 @@ function ConfigField({
         <Label className="text-muted-foreground/70 text-[11px] font-semibold tracking-wider uppercase">
           {label}
         </Label>
-        {tooltip && (
+        {tooltip ? (
           <Tooltip>
             <TooltipTrigger
               render={
@@ -77,7 +77,7 @@ function ConfigField({
               {tooltip}
             </TooltipContent>
           </Tooltip>
-        )}
+        ) : null}
       </div>
       {children}
     </div>
@@ -176,7 +176,7 @@ export function GenerationSidebar({
           onClick={() => setStyleDialogOpen(true)}
           className="group hover:border-primary/40 hover:bg-muted/30 flex w-full cursor-pointer items-center gap-3 border px-3 py-2 text-left transition-colors"
         >
-          {selectedStyle && (
+          {selectedStyle ? (
             <div
               className={cn(
                 "flex size-7 shrink-0 items-center justify-center bg-linear-to-br text-[10px] font-bold text-white transition-transform duration-150 group-hover:scale-105",
@@ -185,11 +185,11 @@ export function GenerationSidebar({
             >
               {selectedStyle.name.charAt(0)}
             </div>
-          )}
+          ) : null}
           <span className="flex-1 text-xs font-medium">
             {selectedStyle?.name ?? "Select style"}
           </span>
-          {selectedStyle && (
+          {selectedStyle ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -199,7 +199,7 @@ export function GenerationSidebar({
             >
               <XIcon weight="bold" className="size-3" />
             </button>
-          )}
+          ) : null}
         </div>
 
         <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
@@ -324,7 +324,7 @@ export function GenerationSidebar({
         {selectedPalette &&
           selectedPalette.id !== "auto" &&
           selectedPalette.id !== "custom" &&
-          selectedPalette.colors.length > 0 && (
+          selectedPalette.colors.length > 0 ? (
             <div className="animate-in fade-in flex items-center gap-1.5 pt-1 duration-150">
               {selectedPalette.colors.map((color, i) => (
                 <div
@@ -338,9 +338,9 @@ export function GenerationSidebar({
                 {selectedPalette.colors.length} colors
               </span>
             </div>
-          )}
+          ) : null}
 
-        {config.colorPalette === "custom" && (
+        {config.colorPalette === "custom" ? (
           <div className="animate-in fade-in slide-in-from-top-1 bg-muted/20 space-y-2.5 border p-3 duration-150">
             <Label className="text-muted-foreground/60 text-[10px] font-medium tracking-wider uppercase">
               Custom Colors ({config.customColors.length}/{MAX_COLORS})
@@ -366,7 +366,7 @@ export function GenerationSidebar({
                 </button>
               ))}
 
-              {config.customColors.length < MAX_COLORS && (
+              {config.customColors.length < MAX_COLORS ? (
                 <div className="flex items-center gap-1.5">
                   <input
                     type="color"
@@ -387,10 +387,10 @@ export function GenerationSidebar({
                     Add
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
-        )}
+        ) : null}
       </ConfigField>
 
       <Separator />
@@ -415,7 +415,7 @@ export function GenerationSidebar({
             Custom
           </ToggleGroupItem>
         </ToggleGroup>
-        {config.background === "custom" && (
+        {config.background === "custom" ? (
           <div className="animate-in fade-in flex items-center gap-2 pt-1 duration-150">
             <input
               type="color"
@@ -427,10 +427,10 @@ export function GenerationSidebar({
               {config.customBgColor}
             </span>
           </div>
-        )}
+        ) : null}
       </ConfigField>
 
-      {selectedModel?.supportsReferenceImage !== false && (
+      {selectedModel?.supportsReferenceImage !== false ? (
         <ConfigField
           label="Reference"
           tooltip="Upload an image to guide the AI's visual direction."
@@ -501,7 +501,7 @@ export function GenerationSidebar({
             </button>
           )}
         </ConfigField>
-      )}
+      ) : null}
 
       <Separator />
 

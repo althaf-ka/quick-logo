@@ -59,14 +59,14 @@ function BrowserTabMockup({
           {label}
         </p>
       </div>
-      {isPlaceholder && (
+      {isPlaceholder ? (
         <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
           <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
           <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
             Generation Pending
           </p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -102,14 +102,14 @@ function AppMockup({
           {label}
         </p>
       </div>
-      {isPlaceholder && (
+      {isPlaceholder ? (
         <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
           <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
           <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
             Generation Pending
           </p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

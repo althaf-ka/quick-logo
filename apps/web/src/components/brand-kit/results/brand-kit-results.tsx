@@ -19,7 +19,7 @@ import {
   SocialMediaSection,
   type SocialMediaAsset,
 } from "../sections/social-media-section";
-import { BrandKitSectionContext } from "../sections/section-header";
+import { BrandKitSectionContext } from "../sections/section-context";
 import {
   BusinessCardSection,
   type BusinessCardData,
@@ -131,7 +131,7 @@ export function BrandKitResults({
         cancelRefine: () => onRefine(null),
       }}
     >
-      <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-4 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl px-6 pt-12 pb-4 sm:px-8 md:px-12 lg:px-16">
         {/* Header */}
         <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -149,7 +149,7 @@ export function BrandKitResults({
         {/* Editorial Grid Layout */}
         <div className="flex flex-col gap-12">
           {/* HERO SECTION: Logo Variations */}
-          {data.logoVariations && data.logoVariations.length > 0 && (
+          {data.logoVariations && data.logoVariations.length > 0 ? (
             <FocusWrapper
               id="logo-variations"
               className="w-full"
@@ -164,7 +164,7 @@ export function BrandKitResults({
                 isRefining={refiningSectionId === "logo-variations"}
               />
             </FocusWrapper>
-          )}
+          ) : null}
 
           {/* SUPPORT ROW: Typography & Palette */}
           <div className="flex flex-col gap-12">
@@ -201,7 +201,7 @@ export function BrandKitResults({
 
           {/* SECONDARY GRID: Deliverables */}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {data.brandPresentation && (
+            {data.brandPresentation ? (
               <FocusWrapper
                 id="brand-presentation"
                 className="md:col-span-2 lg:col-span-3"
@@ -216,9 +216,9 @@ export function BrandKitResults({
                   isRefining={refiningSectionId === "brand-presentation"}
                 />
               </FocusWrapper>
-            )}
+            ) : null}
 
-            {data.socialMedia && data.socialMedia.length > 0 && (
+            {data.socialMedia && data.socialMedia.length > 0 ? (
               <FocusWrapper
                 id="social-media"
                 className="md:col-span-2 lg:col-span-3"
@@ -232,9 +232,9 @@ export function BrandKitResults({
                   isRefining={refiningSectionId === "social-media"}
                 />
               </FocusWrapper>
-            )}
+            ) : null}
 
-            {data.businessCard && (
+            {data.businessCard ? (
               <FocusWrapper
                 id="business-card"
                 className="w-full"
@@ -248,9 +248,9 @@ export function BrandKitResults({
                   isRefining={refiningSectionId === "business-card"}
                 />
               </FocusWrapper>
-            )}
+            ) : null}
 
-            {data.favicons && data.favicons.length > 0 && (
+            {data.favicons && data.favicons.length > 0 ? (
               <FocusWrapper
                 id="favicon"
                 className="w-full"
@@ -264,9 +264,9 @@ export function BrandKitResults({
                   isRefining={refiningSectionId === "favicon"}
                 />
               </FocusWrapper>
-            )}
+            ) : null}
 
-            {data.brandedBackdrops && (
+            {data.brandedBackdrops ? (
               <FocusWrapper
                 id="branded-backdrops"
                 className="w-full"
@@ -280,9 +280,9 @@ export function BrandKitResults({
                   isRefining={refiningSectionId === "branded-backdrops"}
                 />
               </FocusWrapper>
-            )}
+            ) : null}
 
-            {data.logoUrl && (
+            {data.logoUrl ? (
               <FocusWrapper
                 id="brand-guidelines"
                 className="w-full md:col-span-2 lg:col-span-3"
@@ -302,7 +302,7 @@ export function BrandKitResults({
                   isRefining={refiningSectionId === "brand-guidelines"}
                 />
               </FocusWrapper>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

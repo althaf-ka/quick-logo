@@ -56,10 +56,6 @@ export function FontPicker({
     }
   }, []);
 
-  // Reset pagination when search query changes
-  useEffect(() => {
-    setVisibleCount(VISIBLE_BATCH_SIZE);
-  }, [searchQuery]);
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
@@ -152,7 +148,10 @@ export function FontPicker({
             <CommandInput
               placeholder={placeholder}
               value={searchQuery}
-              onValueChange={setSearchQuery}
+              onValueChange={(val) => {
+                setSearchQuery(val);
+                setVisibleCount(VISIBLE_BATCH_SIZE);
+              }}
             />
             <CommandList
               ref={listRef}

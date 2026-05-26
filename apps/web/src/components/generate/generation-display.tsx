@@ -108,7 +108,7 @@ function ErrorState({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
       <p className="text-destructive text-sm">{error}</p>
-      {onRetry && (
+      {onRetry ? (
         <Button
           variant="outline"
           size="sm"
@@ -118,7 +118,7 @@ function ErrorState({
           <ArrowClockwiseIcon weight="bold" className="size-4" />
           Retry
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -309,7 +309,9 @@ export function GenerationDisplay({
       <LogoPreviewDialog
         logo={previewLogo}
         open={!!previewLogo}
-        onOpenChange={(open) => !open && setPreviewLogo(null)}
+        onOpenChange={(open) => {
+          if (!open) setPreviewLogo(null);
+        }}
         onDownload={async (logo) => {
           await downloadImage(logo.url, `quicklogo-${logo.id}.png`);
         }}

@@ -8,10 +8,11 @@ import { Button } from "@quicklogo/ui/components/button";
 import { cn } from "@quicklogo/ui/lib/utils";
 import type { NormalizedBrandKit } from "@/types/brand-kit";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
+import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
 
 export interface ResultsSidebarProps {
   brandKitId?: string;
-  results?: any;
+  results?: BrandKitResultsData | null;
   onDownloadAll?: () => void;
   revisions?: NormalizedBrandKit["revisions"];
 }
@@ -59,13 +60,13 @@ export function ResultsSidebar({
       {(results?.brandPresentation?.tagline ||
         results?.brandPresentation?.description ||
         (results?.colorPalette && results.colorPalette.length > 0) ||
-        results?.typography) && (
+        results?.typography) ? (
         <motion.div variants={staggerItem} className="space-y-3">
           <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
             Brand DNA
           </h3>
           <div className="space-y-4 border border-white/[0.06] bg-white/[0.02] p-4">
-            {results?.brandPresentation?.tagline && (
+            {results?.brandPresentation?.tagline ? (
               <div>
                 <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
                   Tagline
@@ -74,9 +75,9 @@ export function ResultsSidebar({
                   "{results.brandPresentation.tagline}"
                 </span>
               </div>
-            )}
+            ) : null}
 
-            {results?.brandPresentation?.description && (
+            {results?.brandPresentation?.description ? (
               <div>
                 <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
                   Core Identity
@@ -85,15 +86,15 @@ export function ResultsSidebar({
                   {results.brandPresentation.description}
                 </p>
               </div>
-            )}
+            ) : null}
 
-            {results?.colorPalette && results.colorPalette.length > 0 && (
+            {results?.colorPalette && results.colorPalette.length > 0 ? (
               <div>
                 <span className="text-muted-foreground/50 mb-2 block font-mono text-[9px] tracking-widest uppercase">
                   Color System
                 </span>
                 <div className="flex gap-2">
-                  {results.colorPalette.map((c: any) => (
+                  {results.colorPalette.map((c: { hex: string; name?: string; role?: string }) => (
                     <div
                       key={c.hex}
                       className="size-5 rounded-full border border-white/10 shadow-sm"
@@ -103,26 +104,26 @@ export function ResultsSidebar({
                   ))}
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {results?.typography && (
+            {results?.typography ? (
               <div>
                 <span className="text-muted-foreground/50 mb-2 block font-mono text-[9px] tracking-widest uppercase">
                   Typography
                 </span>
                 <div className="text-foreground/80 flex flex-col gap-1 font-mono text-[10px]">
-                  {results.typography.heading && (
+                  {results.typography.heading ? (
                     <span>Heading • {results.typography.heading.family}</span>
-                  )}
-                  {results.typography.body && (
+                  ) : null}
+                  {results.typography.body ? (
                     <span>Body • {results.typography.body.family}</span>
-                  )}
+                  ) : null}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </motion.div>
-      )}
+      ) : null}
 
       {/* Version History */}
       <motion.div
@@ -151,9 +152,9 @@ export function ResultsSidebar({
               <div className="flex min-w-0 flex-col">
                 <span className="text-foreground font-mono text-[10px] tracking-wider uppercase">
                   v{revisions.length - idx}
-                  {idx === 0 && (
+                  {idx === 0 ? (
                     <span className="text-primary/60 ml-2">Current</span>
-                  )}
+                  ) : null}
                 </span>
                 <span className="text-muted-foreground/40 truncate font-mono text-[9px]">
                   {new Date(rev.createdAt).toLocaleString()}
@@ -161,11 +162,11 @@ export function ResultsSidebar({
               </div>
             </div>
           ))}
-          {(!revisions || revisions.length === 0) && (
+          {(!revisions || revisions.length === 0) ? (
             <div className="text-muted-foreground/30 border border-dashed border-white/[0.06] p-4 text-center font-mono text-[10px] tracking-wider">
               No revisions yet
             </div>
-          )}
+          ) : null}
         </div>
       </motion.div>
     </motion.div>

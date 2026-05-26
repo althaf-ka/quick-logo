@@ -49,6 +49,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/brand-kit": "Brand Kit",
 };
 
+const BRAND_KIT_DETAIL_RE = /^\/brand-kit\/(?!create$)[^/]+$/;
+
 function AuthenticatedLayout() {
   const { pathname } = useLocation();
   const title =
@@ -60,7 +62,7 @@ function AuthenticatedLayout() {
     pathname.startsWith("/edit") ||
     pathname.startsWith("/canvas") ||
     pathname.startsWith("/brand-kit/create") ||
-    /^\/brand-kit\/(?!create$)[^/]+$/.test(pathname);
+    BRAND_KIT_DETAIL_RE.test(pathname);
 
   return (
     <TooltipProvider>

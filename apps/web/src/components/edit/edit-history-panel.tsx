@@ -30,15 +30,15 @@ export function EditHistoryPanel({
     <aside className={cn("bg-card flex flex-col", className)}>
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-xs font-semibold tracking-tight">Versions</span>
-        {editCount > 0 && (
+        {editCount > 0 ? (
           <span className="text-muted-foreground text-[10px] tabular-nums">
             {editCount} edit{editCount !== 1 ? "s" : ""}
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className="[&::-webkit-scrollbar-thumb]:bg-border/60 flex-1 space-y-1 overflow-y-auto px-2 pb-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent">
-        {history.length === 0 && (
+        {history.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <ImageIcon
               weight="thin"
@@ -48,7 +48,7 @@ export function EditHistoryPanel({
               Edits appear here
             </p>
           </div>
-        )}
+        ) : null}
 
         {history.map((entry, index) => (
           <HistoryCard
@@ -114,11 +114,11 @@ function HistoryCard({
           <p className="text-foreground flex-1 truncate text-[11px] leading-snug font-medium">
             {isSource ? "Original source" : label}
           </p>
-          {isSource && (
+          {isSource ? (
             <span className="bg-primary/10 text-primary shrink-0 rounded px-1 py-0.5 text-[8px] font-bold tracking-wider uppercase">
               Source
             </span>
-          )}
+          ) : null}
         </div>
         <span className="text-muted-foreground/50 text-[9px]">{time}</span>
       </div>

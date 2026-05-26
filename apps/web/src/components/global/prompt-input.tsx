@@ -141,24 +141,24 @@ export function PromptInput({
           className="border-input bg-card focus-within:border-primary/25 flex flex-col overflow-hidden rounded-none border shadow-sm transition-colors"
           title={contextPrompt}
         >
-          {targetContext && (
+          {targetContext ? (
             <div className="bg-primary/5 border-border/20 flex items-center gap-2 border-b px-3 py-1.5">
               <CrosshairIcon weight="bold" className="text-primary size-3" />
               <span className="text-primary font-mono text-[10px] font-bold tracking-wider uppercase">
                 Refining: {targetContext}
               </span>
-              {onClearTarget && (
+              {onClearTarget ? (
                 <button
                   onClick={onClearTarget}
                   className="text-muted-foreground/50 hover:text-foreground ml-auto cursor-pointer transition-colors"
                 >
                   <XIcon weight="bold" className="size-3" />
                 </button>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {onBrandNameChange && !isCompact && !targetContext && (
+          {onBrandNameChange && !isCompact && !targetContext ? (
             <div className="bg-muted/5 border-border/40 focus-within:bg-muted/10 flex h-10 items-center gap-3 border-b px-3 transition-colors">
               <div className="flex items-center gap-2.5">
                 <span className="text-muted-foreground/50 text-[10px] font-bold tracking-wider uppercase select-none">
@@ -175,7 +175,7 @@ export function PromptInput({
                 disabled={isLoading}
               />
             </div>
-          )}
+          ) : null}
           <textarea
             ref={textareaRef}
             value={localValue}
@@ -207,7 +207,7 @@ export function PromptInput({
             )}
           >
             <div className="flex items-center gap-0.5">
-              {showModelSelector && models.length > 0 && (
+              {showModelSelector && models.length > 0 ? (
                 <div className="flex items-center">
                   <ModelSelector
                     variant="minimal"
@@ -219,9 +219,9 @@ export function PromptInput({
                     context={modelContext}
                   />
                 </div>
-              )}
+              ) : null}
 
-              {showMagicPrompt && (
+              {showMagicPrompt ? (
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -246,9 +246,9 @@ export function PromptInput({
                     {magicPrompt ? "Magic Prompt: On" : "Magic Prompt: Off"}
                   </TooltipContent>
                 </Tooltip>
-              )}
+              ) : null}
 
-              {showConfigTrigger && (
+              {showConfigTrigger ? (
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -265,22 +265,22 @@ export function PromptInput({
                   </TooltipTrigger>
                   <TooltipContent side="top">Settings</TooltipContent>
                 </Tooltip>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center gap-2.5">
-              {modelValue && models.find((m) => m.id === modelValue) && (
+              {modelValue && models.find((m) => m.id === modelValue) ? (
                 <div className="text-primary flex items-center gap-1 text-[11px] font-bold tracking-tight tabular-nums">
                   <LightningIcon weight="fill" className="size-3.5" />
                   {models.find((m) => m.id === modelValue)?.credits}
                 </div>
-              )}
-              {credits !== undefined && !showModelSelector && (
+              ) : null}
+              {credits !== undefined && !showModelSelector ? (
                 <div className="text-primary flex items-center gap-1 text-[11px] font-bold tracking-tight tabular-nums">
                   <LightningIcon weight="fill" className="size-3.5" />
                   {credits}
                 </div>
-              )}
+              ) : null}
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit}

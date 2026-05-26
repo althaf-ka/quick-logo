@@ -49,7 +49,7 @@ export function TypographySection({
         <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
           Typography System
         </h3>
-        {onFontChange && (
+        {onFontChange ? (
           <Button
             variant={isEditing ? "default" : "ghost"}
             size="sm"
@@ -72,10 +72,10 @@ export function TypographySection({
               </>
             )}
           </Button>
-        )}
+        ) : null}
       </div>
       <SectionContent isRefining={isRefining}>
-        {isEditing && onFontChange && (
+        {(isEditing && onFontChange) ? (
           <div className="bg-muted/20 mb-4 space-y-3 border border-dashed p-4">
             <p className="text-muted-foreground/50 font-mono text-[9px] leading-relaxed tracking-wide">
               Select a font for each role. Your brand kit uses two fonts — one
@@ -94,7 +94,7 @@ export function TypographySection({
               />
             </div>
           </div>
-        )}
+        ) : null}
 
         <div className="grid gap-3 md:grid-cols-2">
           <div className="border p-5">

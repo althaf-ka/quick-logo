@@ -90,7 +90,7 @@ export function SetupSidebar({
             {/* Reflection effect */}
             <div className="absolute right-0 bottom-0 left-0 h-1/3 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent" />
 
-            {!isFromPlatform && (
+            {!isFromPlatform ? (
               <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                 <Button
                   variant="secondary"
@@ -109,7 +109,7 @@ export function SetupSidebar({
                   Remove
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         ) : (
           <button
@@ -154,7 +154,7 @@ export function SetupSidebar({
               Extracted Palette
             </h3>
           </div>
-          {hasColors && (
+          {hasColors ? (
             <button
               onClick={copyAllColors}
               className="text-muted-foreground/40 hover:text-primary flex items-center gap-1 font-mono text-[9px] tracking-wider uppercase transition-colors"
@@ -162,7 +162,7 @@ export function SetupSidebar({
               <CopyIcon className="size-3" />
               Copy All
             </button>
-          )}
+          ) : null}
         </div>
 
         {hasColors ? (

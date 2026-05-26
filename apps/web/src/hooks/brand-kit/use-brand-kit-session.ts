@@ -12,12 +12,12 @@ export function useBrandKitSession() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [brandName, setBrandName] = useState("");
   const [typographyPreference, setTypographyPreference] =
-    useState<TypographyPreference>({
+    useState<TypographyPreference>(() => ({
       mood: "modern-sans",
       locked: false,
-    });
+    }));
 
-  const [deliverables, setDeliverables] = useState<DeliverablesConfig>({
+  const [deliverables, setDeliverables] = useState<DeliverablesConfig>(() => ({
     logoVariations: { enabled: false, config: {} },
     socialMedia: { enabled: false, config: {} },
     businessCard: { enabled: false, config: {} },
@@ -25,7 +25,7 @@ export function useBrandKitSession() {
     brandedBackdrops: { enabled: false, config: {} },
     brandPresentation: { enabled: false, config: {} },
     brandGuidelines: { enabled: false, config: {} },
-  });
+  }));
 
   const [productImageUrls, setProductImageUrls] = useState<string[]>([]);
   const [extractedColors, setExtractedColors] = useState<string[]>([]);

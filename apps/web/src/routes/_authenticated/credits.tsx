@@ -216,7 +216,7 @@ function CreditsPage() {
         </p>
       </div>
 
-      {isVerifying && (
+      {isVerifying ? (
         <Card className="mb-8 border-blue-500/30 bg-blue-500/5 shadow-none">
           <div className="flex items-center gap-3 p-4">
             <SpinnerGapIcon className="size-5 animate-spin text-blue-500" />
@@ -225,7 +225,7 @@ function CreditsPage() {
             </p>
           </div>
         </Card>
-      )}
+      ) : null}
 
       <Card className="border-border/60 bg-muted/20 mb-8 shadow-none">
         <div className="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center">
@@ -275,12 +275,12 @@ function CreditsPage() {
                   <CardTitle className="text-lg font-bold">
                     {tier.name}
                   </CardTitle>
-                  {tier.popular && (
+                  {tier.popular ? (
                     <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold tracking-wider uppercase">
                       <StarIcon weight="fill" className="size-3" />
                       Popular
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <CardDescription className="text-sm">
                   {tier.description}
@@ -411,11 +411,11 @@ function CreditsPage() {
                 No previous transactions found.
               </div>
             )}
-            {isFetchingNextPage && (
+            {isFetchingNextPage ? (
               <div className="flex items-center justify-center py-6">
                 <SpinnerGapIcon className="text-muted-foreground size-5 animate-spin" />
               </div>
-            )}
+            ) : null}
           </div>
         </div>
         <div className="h-12" />

@@ -64,13 +64,10 @@ export function CreativeDirectionStep({
   };
 
   const handleVibeToggle = (vibe: string) => {
-    setSelectedVibes((prev) => {
-      const next = prev.includes(vibe)
-        ? prev.filter((v) => v !== vibe)
-        : [...prev, vibe];
-      if (showErrors && next.length > 0) setShowErrors(false);
-      return next;
-    });
+    setSelectedVibes((prev) =>
+      prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe]
+    );
+    if (showErrors) setShowErrors(false);
   };
 
   const handleTypographySelect = (id: string) => {
@@ -135,18 +132,18 @@ export function CreativeDirectionStep({
                       : "text-muted-foreground/60 hover:text-muted-foreground bg-white/[0.02] ring-1 ring-white/[0.06] hover:bg-white/[0.04] hover:ring-white/[0.1]",
                 )}
               >
-                {isSelected && (
+                {isSelected ? (
                   <CheckIcon
                     weight="bold"
                     className="-mt-0.5 mr-1.5 inline size-3"
                   />
-                )}
+                ) : null}
                 {vibe}
               </motion.button>
             );
           })}
         </div>
-        {selectedVibes.length > 0 && (
+        {selectedVibes.length > 0 ? (
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -154,7 +151,7 @@ export function CreativeDirectionStep({
           >
             {selectedVibes.length} selected
           </motion.p>
-        )}
+        ) : null}
       </div>
 
       {/* Typography */}
@@ -191,9 +188,9 @@ export function CreativeDirectionStep({
                 )}
               >
                 {/* Selected accent line */}
-                {isSelected && (
+                {isSelected ? (
                   <div className="bg-primary absolute top-0 right-0 left-0 h-0.5" />
-                )}
+                ) : null}
 
                 {/* Specimen preview area */}
                 <div
@@ -250,9 +247,9 @@ export function CreativeDirectionStep({
                         : "border-white/[0.1]",
                     )}
                   >
-                    {isSelected && (
+                    {isSelected ? (
                       <CheckIcon weight="bold" className="size-2.5" />
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </motion.div>

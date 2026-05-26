@@ -129,9 +129,9 @@ export function EditPage({
                 )}
               />
 
-              {isWorking && (
+              {isWorking ? (
                 <ImageLoadingState label="Editing logo..." isOverlay />
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -157,7 +157,7 @@ export function EditPage({
         />
       </div>
 
-      {isMobile && (
+      {isMobile ? (
         <Drawer open={isMobileDrawerOpen} onOpenChange={setIsMobileDrawerOpen}>
           <DrawerContent className="flex h-[80vh] flex-col px-0 pb-0">
             <DrawerHeader className="px-4 pb-2 text-left">
@@ -210,9 +210,9 @@ export function EditPage({
             </div>
           </DrawerContent>
         </Drawer>
-      )}
+      ) : null}
 
-      {!isMobile && (
+      {!isMobile ? (
         <div className="relative flex h-full w-64 shrink-0 flex-col border-l">
           <div className="flex-1 overflow-hidden">
             {isHistoryBootstrapping ? (
@@ -295,7 +295,7 @@ export function EditPage({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

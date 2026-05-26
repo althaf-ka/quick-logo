@@ -65,7 +65,7 @@ export const ProjectCard = memo(function ProjectCard({
 
         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/20" />
 
-        {isGenerating && (
+        {isGenerating ? (
           <div className="bg-background/60 absolute inset-0 flex flex-col items-center justify-center gap-2.5 backdrop-blur-[3px]">
             <div className="relative">
               <SpinnerGapIcon className="text-primary size-7 animate-spin" />
@@ -75,9 +75,9 @@ export const ProjectCard = memo(function ProjectCard({
               Generating
             </span>
           </div>
-        )}
+        ) : null}
 
-        {!isGenerating && (
+        {!isGenerating ? (
           <div className="absolute top-2.5 right-2.5">
             <div
               className={cn(
@@ -92,21 +92,21 @@ export const ProjectCard = memo(function ProjectCard({
                       : "bg-black/50 text-white/80",
               )}
             >
-              {isWarning && !isExpiringSoon && (
+              {isWarning && !isExpiringSoon ? (
                 <WarningIcon weight="bold" className="size-2.5 shrink-0" />
-              )}
+              ) : null}
               {isExpired ? "Expired" : `${daysLeft}d`}
             </div>
           </div>
-        )}
+        ) : null}
 
-        {!isGenerating && (
+        {!isGenerating ? (
           <div className="absolute inset-0 flex items-end justify-end p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <div className="border-foreground/20 bg-background/80 border p-1.5 backdrop-blur-sm">
               <ArrowRightIcon className="text-foreground size-3.5" />
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="border-border/60 border-t px-3 py-2.5">

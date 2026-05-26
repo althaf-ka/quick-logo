@@ -52,19 +52,19 @@ export function NavUser() {
             </AvatarFallback>
           </Avatar>
 
-          {state === "expanded" && (
+          {state === "expanded" ? (
             <div className="grid min-w-0 flex-1 overflow-hidden text-left leading-tight">
               <span className="truncate text-[13px] font-semibold tracking-tight">
                 {name}
               </span>
 
-              {email && (
+              {email ? (
                 <span className="text-muted-foreground mt-0.5 truncate text-[11px]">
                   {email}
                 </span>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </SidebarMenuItem>
     </SidebarMenu>
