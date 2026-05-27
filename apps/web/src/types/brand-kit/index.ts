@@ -1,3 +1,5 @@
+import type { StructuredBrandContext } from "@quicklogo/shared";
+
 export type WorkspaceState =
   | "foundation"
   | "creative-direction"
@@ -57,7 +59,7 @@ export interface TypographyPreference {
   };
 }
 
-export interface NormalizedBrandKit {
+export interface NormalizedBrandKit extends StructuredBrandContext {
   id: string;
   brandName: string;
   logoUrl?: string;

@@ -4,6 +4,10 @@ import { api } from "@/lib/api";
 import { normalizeBrandKit } from "../../lib/brand-kit/transformers/normalize-brand-kit";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
+import type { z } from "zod";
+import type { generateBrandKitSchema } from "@quicklogo/shared";
+
+export type GeneratePayload = z.infer<typeof generateBrandKitSchema>;
 
 interface UseBrandKitGenerationOptions {
   brandKitId?: string;
@@ -43,24 +47,7 @@ export function useBrandKitGeneration({
   });
 
   const { mutate: mutateGenerate, isPending: isGeneratingKit } = useMutation({
-    mutationFn: async (payload: {
-      sourceImageId?: string;
-      customLogoUrl?: string;
-      brandName: string;
-      prompt: string;
-      typographyStyle: string;
-      deliverables: {
-        logoVariations?: boolean;
-        socialMedia: boolean;
-        businessCard: boolean;
-        favicon: boolean;
-        brandedBackdrops?: boolean;
-        brandPresentation?: boolean;
-        brandGuidelines?: boolean;
-      };
-      extractedColors: string[];
-      productImageUrls?: string[];
-    }) => {
+    mutationFn: async (payload: GeneratePayload) => {
       const res = await api.brandKits.index.$post({
         json: payload,
       });

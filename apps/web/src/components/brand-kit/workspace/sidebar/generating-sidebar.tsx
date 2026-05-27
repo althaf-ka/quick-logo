@@ -12,13 +12,7 @@ import {
 } from "@/lib/motion/variants";
 import type { DeliverablesConfig } from "@/types/brand-kit";
 
-const TIPS = [
-  "Color consistency increases brand recognition by up to 80%.",
-  "The world's most successful brands stick to 1-2 core colors.",
-  "Typography communicates your brand's voice before a single word is read.",
-  "A strong brand identity builds trust and emotional connection.",
-  "Your logo is just the beginning; consistency is the real asset.",
-];
+import { GENERATING_TIPS } from "@quicklogo/shared";
 
 export function GeneratingSidebar({
   deliverables,
@@ -39,7 +33,7 @@ export function GeneratingSidebar({
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % TIPS.length);
+      setTipIndex((prev) => (prev + 1) % GENERATING_TIPS.length);
     }, 4500);
     return () => clearInterval(interval);
   }, []);
@@ -56,16 +50,16 @@ export function GeneratingSidebar({
           className="absolute inset-0 animate-pulse bg-[radial-gradient(ellipse_at_center,rgba(var(--primary),0.15),transparent_70%)]"
           style={{ animationDuration: "3s" }}
         />
-        <div className="relative z-10 flex flex-col items-center gap-2">
+        <div className="relative z-10 flex flex-col items-center gap-1.5">
           <ClockIcon
             weight="duotone"
-            className="text-primary size-6 animate-pulse"
+            className="text-primary size-5 animate-pulse"
           />
-          <div className="text-foreground font-mono text-3xl font-black tracking-widest tabular-nums">
-            00:{elapsed.toString().padStart(2, "0")}
+          <div className="text-foreground font-mono text-2xl font-black tracking-widest tabular-nums">
+            {Math.floor(elapsed / 60).toString().padStart(2, "0")}:{(elapsed % 60).toString().padStart(2, "0")}
           </div>
           <span className="text-primary/60 font-mono text-[9px] font-bold tracking-widest uppercase">
-            Processing Brand Kit
+            Crafting Brand Kit
           </span>
         </div>
       </div>
@@ -143,7 +137,7 @@ export function GeneratingSidebar({
               exit={{ opacity: 0, y: -5 }}
               className="text-muted-foreground font-mono text-[10px] leading-relaxed"
             >
-              "{TIPS[tipIndex]}"
+              "{GENERATING_TIPS[tipIndex]}"
             </motion.p>
           </AnimatePresence>
         </div>

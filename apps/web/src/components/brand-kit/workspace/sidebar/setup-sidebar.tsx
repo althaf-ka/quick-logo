@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { motion } from "motion/react";
 import { Button } from "@quicklogo/ui/components/button";
-import { UploadSimpleIcon, CopyIcon, CircleIcon } from "@phosphor-icons/react";
+import { UploadSimpleIcon, CopyIcon, CircleIcon, CheckCircleIcon, LightningIcon } from "@phosphor-icons/react";
 import {
   Tooltip,
   TooltipContent,
@@ -19,6 +19,8 @@ export interface SetupSidebarProps {
   onLogoRemove: () => void;
   isFromPlatform: boolean;
   extractedColors: string[];
+  deliverables?: import("@/types/brand-kit").DeliverablesConfig;
+  totalCredits?: number;
 }
 
 export function SetupSidebar({
@@ -28,6 +30,8 @@ export function SetupSidebar({
   onLogoRemove,
   isFromPlatform,
   extractedColors,
+  deliverables,
+  totalCredits,
 }: SetupSidebarProps) {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,6 +43,10 @@ export function SetupSidebar({
     navigator.clipboard.writeText(text);
     toast.success("All colors copied to clipboard");
   };
+
+  const selectedAddons = deliverables
+    ? Object.entries(deliverables).filter(([, value]) => value.enabled)
+    : [];
 
   return (
     <motion.div
@@ -79,17 +87,15 @@ export function SetupSidebar({
           </div>
         ) : logoUrl ? (
           <div className="group relative overflow-hidden ring-1 ring-white/[0.08] transition-all duration-300 hover:ring-white/[0.15]">
-            <div className="flex aspect-square items-center justify-center bg-black/60 p-6">
+            <div className="flex aspect-square items-center justify-center bg-black/60 p-3">
               <img
                 src={logoUrl}
                 alt="Logo"
-                className="max-h-full max-w-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]"
+                className="max-h-full max-w-full object-contain drop-shadow-md"
               />
             </div>
 
-            {/* Reflection effect */}
-            <div className="absolute right-0 bottom-0 left-0 h-1/3 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent" />
-
+            {/* Hover overlay actions */}
             {!isFromPlatform ? (
               <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                 <Button
@@ -166,13 +172,13 @@ export function SetupSidebar({
         </div>
 
         {hasColors ? (
-          <div className="space-y-2">
+          <div className="flex flex-wrap gap-2 pt-1">
             {extractedColors.map((color, i) => (
               <Tooltip key={i}>
                 <TooltipTrigger
                   render={
                     <button
-                      className="group flex w-full cursor-pointer items-center gap-3 bg-white/[0.01] p-2 ring-1 ring-white/[0.06] transition-all duration-200 hover:bg-white/[0.03] hover:ring-white/[0.12]"
+                      className="group relative cursor-pointer outline-none transition-all duration-200 hover:scale-110 hover:z-10 focus:outline-none"
                       onClick={() => {
                         navigator.clipboard.writeText(color);
                         toast.success(`Copied ${color}`);
@@ -181,16 +187,14 @@ export function SetupSidebar({
                   }
                 >
                   <div
-                    className="size-6 shrink-0 ring-1 ring-white/[0.1]"
+                    className="size-10 shrink-0 ring-1 ring-white/[0.1] shadow-sm rounded-none"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-muted-foreground group-hover:text-foreground font-mono text-[10px] tracking-wider uppercase transition-colors">
-                    {color}
-                  </span>
-                  <CopyIcon className="text-muted-foreground/20 ml-auto size-3 opacity-0 transition-opacity group-hover:opacity-100" />
                 </TooltipTrigger>
-                <TooltipContent className="font-mono text-xs uppercase">
-                  Click to copy
+                <TooltipContent className="font-mono text-[10px] uppercase flex items-center gap-2 border border-white/20 bg-zinc-800 text-white shadow-xl px-2.5 py-1.5">
+                  <div className="size-2 shrink-0 border border-white/20 rounded-none" style={{ backgroundColor: color }} />
+                  <span className="font-bold tracking-wider">{color}</span>
+                  <span className="text-zinc-400 ml-1 text-[8px] lowercase">click to copy</span>
                 </TooltipContent>
               </Tooltip>
             ))}
@@ -203,6 +207,59 @@ export function SetupSidebar({
           </div>
         )}
       </motion.div>
+
+      {/* Order Summary */}
+      {(deliverables || totalCredits !== undefined) ? (
+        <motion.div variants={staggerItem} className="space-y-3">
+          <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
+            Order Summary
+          </h3>
+          <div className="space-y-4 border border-white/[0.06] bg-white/[0.02] p-4">
+            {deliverables ? (
+              <div>
+                <span className="text-muted-foreground/50 mb-2 block font-mono text-[9px] tracking-widest uppercase">
+                  Selected Add-ons
+                </span>
+                {selectedAddons.length > 0 ? (
+                  <ul className="text-muted-foreground space-y-1.5 font-mono text-[11px]">
+                    {selectedAddons.map(([key]) => {
+                      const label = key
+                        .replace(/([A-Z])/g, " $1")
+                        .replace(/^./, (str) => str.toUpperCase());
+                      return (
+                        <li key={key} className="flex items-center gap-2">
+                          <CheckCircleIcon className="size-3 text-emerald-400/70" />
+                          {label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <div className="text-muted-foreground/60 flex items-center gap-2 font-mono text-[10px] italic">
+                    <div className="bg-muted-foreground/20 size-1 rounded-full" />
+                    Base Generation Only
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {totalCredits !== undefined ? (
+              <div className="pt-2">
+                <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
+                  Total Cost
+                </span>
+                <div className="text-foreground flex items-center gap-1.5 font-mono text-sm font-black uppercase">
+                  <LightningIcon
+                    weight="fill"
+                    className="size-3.5 text-amber-400"
+                  />
+                  {totalCredits} Credits
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </motion.div>
+      ) : null}
     </motion.div>
   );
 }

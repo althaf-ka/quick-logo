@@ -1,5 +1,22 @@
 import { z } from "zod";
 
+export const structuredBrandContextSchema = z.object({
+  industry: z.string().optional(),
+  tagline: z.string().optional(),
+  targetAudience: z.string().optional(),
+  selectedVibes: z.array(z.string()).optional(),
+  brandPersonality: z.string().optional(),
+  additionalContext: z.string().optional(),
+  socials: z.record(z.string(), z.string()).optional(),
+  contact: z.record(z.string(), z.string()).optional(),
+  guidelines: z
+    .object({
+      depth: z.enum(["essential", "complete"]).optional(),
+    })
+    .optional(),
+  _hydratedAt: z.number().optional(),
+});
+
 export const generateBrandKitSchema = z
   .object({
     sourceImageId: z.string().optional(),
@@ -8,7 +25,7 @@ export const generateBrandKitSchema = z
       .optional()
       .or(z.literal("")),
     brandName: z.string().optional(),
-    prompt: z.string().min(1, "Brand description is required"),
+    prompt: z.string().optional(),
     typographyStyle: z.string(), // Input preference (e.g., "modern-sans")
     productImageUrls: z
       .array(z.url({ error: "Invalid product image URL" }))
@@ -20,9 +37,11 @@ export const generateBrandKitSchema = z
       favicon: z.boolean(),
       brandedBackdrops: z.boolean().optional(),
       brandPresentation: z.boolean().optional(),
+      brandGuidelines: z.boolean().optional(),
     }),
     extractedColors: z.array(z.string()),
   })
+  .merge(structuredBrandContextSchema)
   .refine((data) => data.sourceImageId || data.customLogoUrl, {
     message: "Either a generated image ID or custom logo URL must be provided",
   })
@@ -53,6 +72,7 @@ export const refineBrandKitSectionSchema = z.object({
     "favicon",
     "branded-backdrops",
     "brand-presentation",
+    "brand-guidelines",
   ]),
   refinementPrompt: z.string().min(1, "Refinement instruction is required"),
   typographyStyle: z.string().optional(), // In case they are refining typography and changed the dropdown
@@ -69,6 +89,7 @@ export const restoreSectionSchema = z.object({
     "favicon",
     "branded-backdrops",
     "brand-presentation",
+    "brand-guidelines",
   ]),
 });
 

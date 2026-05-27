@@ -20,6 +20,12 @@ const VIBES = [
   "Elegant",
   "Classic",
   "Tech-focused",
+  "Organic",
+  "Futuristic",
+  "Luxurious",
+  "Earthy",
+  "Retro",
+  "Handcrafted"
 ];
 
 const TYPOGRAPHY_SPECIMENS: Record<string, { char: string; category: string }> =
@@ -132,12 +138,6 @@ export function CreativeDirectionStep({
                       : "text-muted-foreground/60 hover:text-muted-foreground bg-white/[0.02] ring-1 ring-white/[0.06] hover:bg-white/[0.04] hover:ring-white/[0.1]",
                 )}
               >
-                {isSelected ? (
-                  <CheckIcon
-                    weight="bold"
-                    className="-mt-0.5 mr-1.5 inline size-3"
-                  />
-                ) : null}
                 {vibe}
               </motion.button>
             );

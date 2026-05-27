@@ -72,11 +72,7 @@ interface BuildBackdropParamsInput {
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
 }
 
-interface BuildBrandKitIdentityRequestInput {
-  brandName: string;
-  description: string;
-  extractedColors: string[];
-}
+
 
 interface BuildTypographyRequestInput {
   brandName: string;
@@ -92,12 +88,7 @@ interface BuildLogoStyleAnalysisInput {
   logoUrl: string;
 }
 
-interface BuildBrandKitRefinementRequestInput {
-  brandName: string;
-  sectionId: string;
-  refinementPrompt: string;
-  currentResults: Record<string, unknown>;
-}
+
 
 const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
   colorPalette:
@@ -169,10 +160,24 @@ function buildJsonBrandKitRequest(
   };
 }
 
+interface BuildBrandKitIdentityRequestInput {
+  brandName: string;
+  description: string;
+  extractedColors: string[];
+  industry?: string;
+  targetAudience?: string;
+  selectedVibes?: string[];
+  brandPersonality?: string;
+}
+
 export function buildBrandKitIdentityRequest({
   brandName,
   description,
   extractedColors,
+  industry,
+  targetAudience,
+  selectedVibes,
+  brandPersonality,
 }: BuildBrandKitIdentityRequestInput): BrandKitJsonRequest {
   const systemPrompt = `You are an expert brand identity designer.
 Output ONLY valid JSON matching the schema below.
@@ -181,20 +186,36 @@ CRITICAL: Respond with ONLY the "colorPalette" key. Never add brandName, typogra
   "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }]
 }`;
 
-  return buildJsonBrandKitRequest(
-    systemPrompt,
-    `Brand Name: ${brandName}\nDescription: ${description}\nBase Colors: ${extractedColors.join(", ")}`,
-  );
+  let context = `Brand Name: ${brandName}\nBase Colors: ${extractedColors.join(", ")}\n`;
+  if (industry) context += `Industry: ${industry}\n`;
+  if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
+  if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
+  if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
+  if (!industry && !targetAudience && !selectedVibes?.length && !brandPersonality) {
+    context += `Description: ${description}\n`;
+  } else {
+    context += `Additional Context: ${description}\n`;
+  }
+
+  return buildJsonBrandKitRequest(systemPrompt, context);
 }
 
 interface BuildBrandPresentationTextRequestInput {
   brandName: string;
   description: string;
+  industry?: string;
+  targetAudience?: string;
+  selectedVibes?: string[];
+  brandPersonality?: string;
 }
 
 export function buildBrandPresentationTextRequest({
   brandName,
   description,
+  industry,
+  targetAudience,
+  selectedVibes,
+  brandPersonality,
 }: BuildBrandPresentationTextRequestInput): BrandKitJsonRequest {
   const systemPrompt = `You are an expert brand identity designer and copywriter.
 Output ONLY valid JSON matching the schema below. Do not include any extra text.
@@ -204,10 +225,18 @@ Schema:
   "description": "A professional, compelling brand story or mission statement (1-2 sentences, max 30 words)"
 }`;
 
-  return buildJsonBrandKitRequest(
-    systemPrompt,
-    `Brand Name: ${brandName}\nBrand Description: ${description}`,
-  );
+  let context = `Brand Name: ${brandName}\n`;
+  if (industry) context += `Industry: ${industry}\n`;
+  if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
+  if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
+  if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
+  if (!industry && !targetAudience && !selectedVibes?.length && !brandPersonality) {
+    context += `Description: ${description}\n`;
+  } else {
+    context += `Additional Context: ${description}\n`;
+  }
+
+  return buildJsonBrandKitRequest(systemPrompt, context);
 }
 
 export function buildLogoStyleAnalysisRequest({
@@ -301,11 +330,26 @@ Schema:
   };
 }
 
+interface BuildBrandKitRefinementRequestInput {
+  brandName: string;
+  sectionId: string;
+  refinementPrompt: string;
+  currentResults: Record<string, unknown>;
+  industry?: string;
+  targetAudience?: string;
+  selectedVibes?: string[];
+  brandPersonality?: string;
+}
+
 export function buildBrandKitRefinementRequest({
   brandName,
   sectionId,
   refinementPrompt,
   currentResults,
+  industry,
+  targetAudience,
+  selectedVibes,
+  brandPersonality,
 }: BuildBrandKitRefinementRequestInput): {
   sectionKey: BrandKitSectionKey;
   request: BrandKitJsonRequest;
@@ -319,11 +363,19 @@ export function buildBrandKitRefinementRequest({
       ? "You are refining the brand presentation tagline and description story. Make sure it incorporates the user's instructions while remaining professional and catchy."
       : "You are refining the color palette of a brand. Keep it cohesive and professional.";
 
+  let context = `Brand Name: ${brandName}\n`;
+  if (industry) context += `Industry: ${industry}\n`;
+  if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
+  if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
+  if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
+  
+  context += `Refinement Request: ${refinementPrompt}\nOriginal JSON state for context: ${JSON.stringify(currentResults[sectionKey])}`;
+
   return {
     sectionKey,
     request: buildJsonBrandKitRequest(
       `You are an expert brand identity designer.\nOutput ONLY valid JSON matching this schema exactly. Do not include any text outside the JSON.\n${sectionSchema}\n${sectionInstruction}`,
-      `Brand Name: ${brandName}\nRefinement Request: ${refinementPrompt}\nOriginal JSON state for context: ${JSON.stringify(currentResults[sectionKey])}`,
+      context,
     ),
   };
 }
@@ -432,6 +484,11 @@ export function buildBrandPresentationGenerationParams({
   bodyFont,
   productImageUrl,
   logoStyleDescription,
+  industry,
+  targetAudience,
+  selectedVibes,
+  brandPersonality,
+  fallbackPrompt,
 }: {
   brandName: string;
   backendModel: string;
@@ -441,9 +498,21 @@ export function buildBrandPresentationGenerationParams({
   bodyFont?: string;
   productImageUrl?: string;
   logoStyleDescription?: string;
+  industry?: string;
+  targetAudience?: string;
+  selectedVibes?: string[];
+  brandPersonality?: string;
+  fallbackPrompt?: string;
 }): GenerationParams {
-  let basePrompt = `Stunning modern Dribbble-style UI bento layout for brand "${brandName}". High-end Behance portfolio presentation.`;
-  basePrompt += ` Beautiful soft gradients, rounded floating cards, subtle drop shadows, glassmorphism, and clean typography.`;
+  let basePrompt = `Create a stunning modern UI presentation layout for brand "${brandName}".`;
+  
+  if (selectedVibes?.length || brandPersonality) {
+    basePrompt += ` Brand aesthetic: ${selectedVibes?.join(", ") || "modern"}. Personality: ${brandPersonality || "professional"}.`;
+  } else if (fallbackPrompt) {
+    basePrompt += ` Context: ${fallbackPrompt}.`;
+  }
+  
+  basePrompt += ` Include clean typography`;
   basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup`;
   if (logoStyleDescription) basePrompt += ` (${logoStyleDescription})`;
   if (productImageUrl) basePrompt += `, a sleek product showcase`;

@@ -9,6 +9,7 @@ import { uploadFileToImageKit } from "@/lib/imagekit";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
+import type { StructuredBrandContext } from "@quicklogo/shared";
 
 interface UseBrandKitOptions {
   imageId?: string;
@@ -39,6 +40,8 @@ export function useBrandKit({
     setProductImageUrls,
     extractedColors,
     setExtractedColors,
+    structuredContext,
+    updateStructuredContext,
     hydrateFromBrandKit: hydrateSession,
   } = session;
 
@@ -265,15 +268,17 @@ export function useBrandKit({
 
   // Conversational Submit Handler
   const handleGenerate = useCallback(
-    async (customPrompt?: string) => {
+    async (customPrompt?: string, customContext?: Partial<StructuredBrandContext>) => {
       const activePrompt =
         customPrompt !== undefined ? customPrompt : prompt;
+      
+      const contextToUse = customContext || structuredContext;
 
       if (!logoUrl && !brandKitId) {
         toast.error("Please upload or select a logo first");
         return;
       }
-      if (!activePrompt.trim() && !targetSection) {
+      if (!activePrompt.trim() && !targetSection && Object.keys(contextToUse).length === 0) {
         toast.error("Please describe your brand identity");
         return;
       }
@@ -319,6 +324,7 @@ export function useBrandKit({
             brandPresentation: deliverables.brandPresentation.enabled,
             brandGuidelines: deliverables.brandGuidelines.enabled,
           },
+          ...contextToUse,
         });
       }
     },
@@ -336,6 +342,7 @@ export function useBrandKit({
       extractedColors,
       brandKitId,
       mutateGenerate,
+      structuredContext,
     ],
   );
 
@@ -354,6 +361,8 @@ export function useBrandKit({
     productImageUrls,
     setProductImageUrls,
     extractedColors,
+    structuredContext,
+    updateStructuredContext,
 
     // Upload Progress States
     isLoadingLogo,

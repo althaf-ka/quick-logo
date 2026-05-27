@@ -5,6 +5,7 @@ import {
   generateBrandKitSchema,
   refineBrandKitSectionSchema,
   restoreSectionSchema,
+  buildBrandContextSummary,
 } from "@quicklogo/shared";
 import {
   brandKits,
@@ -39,6 +40,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       if (data.deliverables.businessCard) cost += 2;
       if (data.deliverables.favicon) cost += 1;
       if (data.deliverables.brandPresentation) cost += 3;
+      if (data.deliverables.brandGuidelines) cost += 0; // V1: no extra cost
 
       const [updated] = await db
         .update(users)
@@ -48,23 +50,35 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       if (!updated) throw new InsufficientCreditsError(cost, user.credits);
 
+      const promptSummary = buildBrandContextSummary(data, data.prompt);
+
       const brandKitId = createId();
       await db.insert(brandKits).values({
         id: brandKitId,
         userId: user.id,
         brandName: data.brandName || "",
-        prompt: data.prompt,
+        prompt: promptSummary,
         sourceImageId: data.sourceImageId,
         customLogoUrl: data.customLogoUrl,
         productImageUrls: data.productImageUrls,
         extractedColors: data.extractedColors,
         typographyStyle: data.typographyStyle,
+        industry: data.industry,
+        tagline: data.tagline,
+        targetAudience: data.targetAudience,
+        brandPersonality: data.brandPersonality,
+        additionalContext: data.additionalContext,
+        selectedVibes: data.selectedVibes,
+        socials: data.socials,
+        contact: data.contact,
+        guidelines: data.guidelines,
       });
 
       await c.env.GENERATION_QUEUE.send({
         type: "brand-kit-generate",
         brandKitId,
         ...data,
+        prompt: promptSummary,
         brandName: data.brandName || "",
       });
 

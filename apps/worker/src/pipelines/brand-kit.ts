@@ -64,6 +64,10 @@ export class BrandKitPipeline {
         brandName,
         description: prompt,
         extractedColors,
+        industry: message.industry,
+        targetAudience: message.targetAudience,
+        selectedVibes: message.selectedVibes,
+        brandPersonality: message.brandPersonality,
       });
 
       let actualLogoUrl = message.customLogoUrl;
@@ -141,6 +145,10 @@ export class BrandKitPipeline {
         const presentationRequest = buildBrandPresentationTextRequest({
           brandName,
           description: prompt,
+          industry: message.industry,
+          targetAudience: message.targetAudience,
+          selectedVibes: message.selectedVibes,
+          brandPersonality: message.brandPersonality,
         });
         const presentationResponse = await this.ai.run(
           "@cf/meta/llama-3.1-8b-instruct-fp8",
@@ -176,6 +184,10 @@ export class BrandKitPipeline {
                   ? productImageUrls[0]
                   : undefined,
               brandDescription: prompt,
+              industry: message.industry,
+              targetAudience: message.targetAudience,
+              selectedVibes: message.selectedVibes,
+              brandPersonality: message.brandPersonality,
             })
           : "https://placehold.co/1376x768/000/FFF?text=Brand+Presentation";
 
@@ -195,6 +207,31 @@ export class BrandKitPipeline {
           brandPresentation: brandPresentationOutput,
         }),
       };
+
+      if (deliverables?.brandGuidelines) {
+        finalResultsJSON.brandGuidelines = {
+          brandName,
+          missionStatement: brandPresentationOutput?.description || prompt,
+          tagline: brandPresentationOutput?.tagline || message.tagline || "",
+          personality: message.brandPersonality || "",
+          targetAudience: message.targetAudience || "",
+          selectedVibes: message.selectedVibes || [],
+          industry: message.industry || "",
+          colors:
+            colorOutput.colorPalette?.map((c) => ({
+              role: c.role,
+              hex: c.hex,
+            })) || [],
+          typography: {
+            heading: typographyOutput.heading.family,
+            body: typographyOutput.body.family,
+          },
+          additionalContext: message.additionalContext || "",
+          socials: message.socials || {},
+          contact: message.contact || {},
+          rules: message.guidelines || {},
+        };
+      }
 
       let darkAndIconUrls: {
         darkModeUrl?: string;

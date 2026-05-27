@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeftIcon,
   CheckSquareIcon,
+  CheckCircleIcon,
   SparkleIcon,
   UploadIcon,
   XIcon,
@@ -14,6 +15,8 @@ import {
   PresentationChartIcon,
   BookOpenTextIcon,
   PaletteIcon,
+  UserCircleIcon,
+  ArrowRightIcon,
   TextTIcon,
   CaretDownIcon,
 } from "@phosphor-icons/react";
@@ -22,7 +25,9 @@ import { Button } from "@quicklogo/ui/components/button";
 import { Label } from "@quicklogo/ui/components/label";
 import { Input } from "@quicklogo/ui/components/input";
 import { Textarea } from "@quicklogo/ui/components/textarea";
+import { toast } from "@quicklogo/ui/components/sonner";
 import type { DeliverablesConfig } from "@/types/brand-kit";
+import { BrandProfileEditor } from "../components/brand-profile-editor";
 
 const DELIVERABLES_CONFIG = [
   {
@@ -77,9 +82,8 @@ const DELIVERABLES_CONFIG = [
 ] as const;
 
 const DELIVERABLES_WITH_SETTINGS: Array<keyof DeliverablesConfig> = [
-  "socialMedia",
-  "brandGuidelines",
   "businessCard",
+  "brandGuidelines",
   "brandPresentation",
 ];
 
@@ -166,6 +170,7 @@ export function DeliverablesStep({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorKeys, setErrorKeys] = useState<Set<string>>(new Set());
   const [activeAccordions, setActiveAccordions] = useState<string[]>([]);
+  const [isBrandProfileOpen, setIsBrandProfileOpen] = useState(false);
 
   const [localMockupFiles, setLocalMockupFiles] = useState<File[]>([]);
   const [localMockupPreviews, setLocalMockupPreviews] = useState<string[]>([]);
@@ -220,7 +225,12 @@ export function DeliverablesStep({
     deliverables.socialMedia.enabled &&
     !socialHasData;
 
-  const contactHasData = Object.values(contact).some((v) => v.trim() !== "");
+  const contactHasData =
+    !!contact.name.trim() &&
+    !!contact.title.trim() &&
+    !!contact.phone.trim() &&
+    !!contact.email.trim() &&
+    !!contact.address.trim();
   const contactError =
     errorKeys.has("businessCard") &&
     deliverables.businessCard.enabled &&
@@ -487,48 +497,6 @@ export function DeliverablesStep({
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4">
-                        {key === "socialMedia" ? (
-                          <div className="space-y-3 pt-2">
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                              {[
-                                [
-                                  "instagram",
-                                  "Instagram",
-                                  "@brand or profile URL",
-                                ],
-                                [
-                                  "twitter",
-                                  "X / Twitter",
-                                  "@brand or profile URL",
-                                ],
-                                [
-                                  "linkedin",
-                                  "LinkedIn",
-                                  "Company page URL or ID",
-                                ],
-                                ["youtube", "YouTube", "Channel URL or handle"],
-                                ["tiktok", "TikTok", "@brand or profile URL"],
-                              ].map(([id, label, placeholder]) => (
-                                <label key={id} className="space-y-1">
-                                  <span className="text-muted-foreground/50 text-[10px] font-semibold tracking-wider uppercase">
-                                    {label}
-                                  </span>
-                                  <Input
-                                    placeholder={placeholder}
-                                    value={socials[id as keyof typeof socials]}
-                                    onChange={(e) =>
-                                      setSocials({
-                                        ...socials,
-                                        [id]: e.target.value,
-                                      })
-                                    }
-                                    className={inputClassName}
-                                  />
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
                         {key === "brandGuidelines" ? (
                           <div className="space-y-4 pt-2">
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -577,91 +545,20 @@ export function DeliverablesStep({
                         ) : null}
                         {key === "businessCard" ? (
                           <div className="space-y-3 pt-2">
-                            <div className="grid grid-cols-2 gap-2.5">
-                              <div className="col-span-2">
-                                <Input
-                                  placeholder="Any suggestions / ideas for the card?"
-                                  value={contact.suggestion}
-                                  onChange={(e) =>
-                                    setContact({
-                                      ...contact,
-                                      suggestion: e.target.value,
-                                    })
-                                  }
-                                  className={inputClassName}
-                                />
-                              </div>
-                              <Input
-                                placeholder="Full Name"
-                                value={contact.name}
-                                onChange={(e) =>
-                                  setContact({
-                                    ...contact,
-                                    name: e.target.value,
-                                  })
-                                }
-                                className={inputClassName}
-                              />
-                              <Input
-                                placeholder="Job Title"
-                                value={contact.title}
-                                onChange={(e) =>
-                                  setContact({
-                                    ...contact,
-                                    title: e.target.value,
-                                  })
-                                }
-                                className={inputClassName}
-                              />
-                              <Input
-                                placeholder="Phone"
-                                value={contact.phone}
-                                onChange={(e) =>
-                                  setContact({
-                                    ...contact,
-                                    phone: e.target.value,
-                                  })
-                                }
-                                className={inputClassName}
-                              />
-                              <Input
-                                placeholder="Email"
-                                value={contact.email}
-                                onChange={(e) =>
-                                  setContact({
-                                    ...contact,
-                                    email: e.target.value,
-                                  })
-                                }
-                                className={inputClassName}
-                              />
-                              <div className="col-span-2">
-                                <Input
-                                  placeholder="Address"
-                                  value={contact.address}
-                                  onChange={(e) =>
-                                    setContact({
-                                      ...contact,
-                                      address: e.target.value,
-                                    })
-                                  }
-                                  className={inputClassName}
-                                />
-                              </div>
-                              <div className="col-span-2">
-                                <Input
-                                  placeholder="Website"
-                                  value={contact.website}
-                                  onChange={(e) =>
-                                    setContact({
-                                      ...contact,
-                                      website: e.target.value,
-                                    })
-                                  }
-                                  className={inputClassName}
-                                />
-                              </div>
-                            </div>
+                            <Input
+                              placeholder="Any suggestions / ideas for the card?"
+                              value={contact.suggestion}
+                              onChange={(e) =>
+                                setContact({
+                                  ...contact,
+                                  suggestion: e.target.value,
+                                })
+                              }
+                              className={inputClassName}
+                            />
+                            <p className="text-[10px] text-muted-foreground/50">
+                              Note: Contact details for the card can be configured in your Brand Profile below.
+                            </p>
                           </div>
                         ) : null}
                         {key === "brandPresentation" ? (
@@ -763,7 +660,74 @@ export function DeliverablesStep({
             className="text-foreground placeholder:text-muted-foreground/25 focus-visible:border-primary/45 focus-visible:ring-primary/20 min-h-[80px] resize-none rounded-none border-white/[0.08] bg-zinc-950/70 p-3 text-xs"
           />
         </div>
+
+        {(deliverables.businessCard.enabled || deliverables.socialMedia.enabled) && (
+          <div className="space-y-1.5 pt-4">
+            <div className="text-muted-foreground/50 text-[10px] font-semibold tracking-wider uppercase select-text flex items-center justify-between">
+              <span>Brand Profile & Socials</span>
+              {(socialHasData || contactHasData) && (
+                <span className="text-emerald-500 font-mono text-[8px] flex items-center gap-1">
+                  <CheckCircleIcon weight="fill" className="size-3" />
+                  Configured
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setIsBrandProfileOpen(true)}
+              className={cn(
+                "group relative flex w-full cursor-pointer items-center justify-between border border-white/[0.08] bg-white/[0.02] p-4 transition-all hover:border-primary/40 hover:bg-primary/[0.03]",
+                ((socialError || contactError) && !isBrandProfileOpen) && "border-red-500/50 bg-red-500/[0.03] hover:border-red-500 hover:bg-red-500/[0.05]"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "flex size-8 items-center justify-center bg-white/[0.02] ring-1 ring-white/[0.06] transition-colors group-hover:bg-primary/10 group-hover:ring-primary/20",
+                  ((socialError || contactError) && !isBrandProfileOpen) && "ring-red-500/30 bg-red-500/10"
+                )}>
+                  <UserCircleIcon weight="duotone" className={cn(
+                    "size-4 text-muted-foreground/50 transition-colors group-hover:text-primary",
+                    ((socialError || contactError) && !isBrandProfileOpen) && "text-red-500"
+                  )} />
+                </div>
+                <div className="text-left">
+                  <p className={cn(
+                    "font-mono text-[11px] font-bold tracking-widest uppercase transition-colors group-hover:text-primary",
+                    ((socialError || contactError) && !isBrandProfileOpen) ? "text-red-500" : "text-foreground/80"
+                  )}>
+                    Edit Brand Profile
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground/40 leading-snug">
+                    Contact details & social media links
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "font-mono text-[9px] tracking-wider uppercase",
+                  (socialError || contactError) ? "text-red-500 font-bold" : "text-muted-foreground/50"
+                )}>
+                  {(socialError || contactError) ? "Required" : "Required for add-ons"}
+                </span>
+                <ArrowRightIcon className={cn(
+                  "size-4 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary",
+                  ((socialError || contactError) && !isBrandProfileOpen) && "text-red-500"
+                )} />
+              </div>
+            </button>
+          </div>
+        )}
       </div>
+
+      <BrandProfileEditor
+        isOpen={isBrandProfileOpen}
+        onOpenChange={setIsBrandProfileOpen}
+        contact={contact}
+        setContact={setContact}
+        socials={socials}
+        setSocials={setSocials}
+        isBusinessCardRequired={deliverables.businessCard.enabled}
+        isSocialMediaRequired={deliverables.socialMedia.enabled}
+      />
 
       {/* Generate Footer */}
       <div className="flex flex-col items-center justify-between gap-4 border-t border-white/[0.04] pt-8 sm:flex-row">
@@ -806,6 +770,12 @@ export function DeliverablesStep({
                 )
                   newErrors.add("brandPresentation");
                 setErrorKeys(newErrors);
+                
+                if (newErrors.has("socialMedia") || newErrors.has("businessCard")) {
+                  setIsBrandProfileOpen(true);
+                  toast.error("Please fill in the required brand profile information.");
+                }
+                
                 return;
               }
               if (localMockupFiles.length > 0) {

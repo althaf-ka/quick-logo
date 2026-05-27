@@ -19,6 +19,18 @@ export const brandKits = sqliteTable("brand_kit", {
   productImageUrls: text("product_image_urls", { mode: "json" }), // Optional uploaded mockups
   extractedColors: text("extracted_colors", { mode: "json" }).notNull(),
   typographyStyle: text("typography_style").notNull().default("modern-sans"),
+  
+  // Structured Questionnaire Context
+  industry: text("industry"),
+  tagline: text("tagline"),
+  targetAudience: text("target_audience"),
+  brandPersonality: text("brand_personality"),
+  additionalContext: text("additional_context"),
+  selectedVibes: text("selected_vibes", { mode: "json" }),
+  socials: text("socials", { mode: "json" }),
+  contact: text("contact", { mode: "json" }),
+  guidelines: text("guidelines", { mode: "json" }),
+
   status: text("status", {
     enum: ["pending", "processing", "completed", "failed"],
   })

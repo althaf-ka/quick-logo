@@ -1,3 +1,5 @@
+import type { StructuredBrandContext } from "../utils/brand-kit-context";
+
 export interface GenerateImageMessage {
   type?: "image";
   imageId: string;
@@ -21,7 +23,7 @@ export interface GenerateImageMessage {
   };
 }
 
-export interface GenerateBrandKitMessage {
+export interface GenerateBrandKitMessage extends StructuredBrandContext {
   type: "brand-kit-generate";
   brandKitId: string;
   sourceImageId?: string;
@@ -37,6 +39,7 @@ export interface GenerateBrandKitMessage {
     favicon: boolean;
     brandedBackdrops?: boolean;
     brandPresentation?: boolean;
+    brandGuidelines?: boolean;
   };
   extractedColors: string[];
 }

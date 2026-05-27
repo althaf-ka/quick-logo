@@ -102,6 +102,8 @@ export function BrandKitWorkspace({
                   onGenerate={bk.handleGenerate}
                   isGenerating={bk.isGenerating}
                   totalCredits={bk.totalCredits}
+                  structuredContext={bk.structuredContext}
+                  updateStructuredContext={bk.updateStructuredContext}
                 />
               </motion.div>
             ) : (
@@ -220,21 +222,25 @@ const GENERATING_STEPS = [
   "Analyzing brand identity",
   "Curating typography system",
   "Generating color palettes",
-  "Rendering mockups",
+  "Drafting presentation copy",
+  "Structuring brand guidelines",
+  "Rendering asset mockups",
+  "Finalizing brand kit",
 ];
 
 function GeneratingState() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const timer1 = setTimeout(() => setStep(1), 2000);
-    const timer2 = setTimeout(() => setStep(2), 5000);
-    const timer3 = setTimeout(() => setStep(3), 9000);
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
+    const timers = [
+      setTimeout(() => setStep(1), 2500),
+      setTimeout(() => setStep(2), 5000),
+      setTimeout(() => setStep(3), 7500),
+      setTimeout(() => setStep(4), 10000),
+      setTimeout(() => setStep(5), 12500),
+      setTimeout(() => setStep(6), 15000),
+    ];
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   const steps = GENERATING_STEPS;

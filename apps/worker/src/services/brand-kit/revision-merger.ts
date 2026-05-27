@@ -183,6 +183,10 @@ export async function mergeRevisionResults({
       sectionId,
       refinementPrompt,
       currentResults: newMergedJSON,
+      industry: currentBrandKit?.industry,
+      targetAudience: currentBrandKit?.targetAudience,
+      selectedVibes: currentBrandKit?.selectedVibes,
+      brandPersonality: currentBrandKit?.brandPersonality,
     });
 
     if (!refinementRequest) {
@@ -238,6 +242,10 @@ export async function mergeRevisionResults({
                       : undefined,
                   brandDescription:
                     currentBrandKit?.prompt || "Professional brand kit",
+                  industry: currentBrandKit?.industry,
+                  targetAudience: currentBrandKit?.targetAudience,
+                  selectedVibes: currentBrandKit?.selectedVibes,
+                  brandPersonality: currentBrandKit?.brandPersonality,
                 })
               : newMergedJSON.brandPresentation?.presentationUrl;
 

@@ -9,6 +9,8 @@ import { FoundationStep } from "./steps/foundation-step";
 import { CreativeDirectionStep } from "./steps/creative-direction-step";
 import { DeliverablesStep } from "./steps/deliverables-step";
 
+import type { StructuredBrandContext } from "@quicklogo/shared";
+
 interface BrandQuestionnaireProps {
   workspaceState: WorkspaceState;
   setWorkspaceState: (state: WorkspaceState) => void;
@@ -19,9 +21,11 @@ interface BrandQuestionnaireProps {
   typography: string;
   setTypography: (v: string) => void;
   onMockupUpload: (files: File[]) => Promise<string[] | void> | void;
-  onGenerate: (prompt: string) => void;
+  onGenerate: (prompt?: string, context?: StructuredBrandContext) => void;
   isGenerating?: boolean;
   totalCredits: number;
+  structuredContext: StructuredBrandContext;
+  updateStructuredContext: (c: Partial<StructuredBrandContext>) => void;
 }
 
 // --- Section Pill (collapsed step) ---
@@ -67,98 +71,104 @@ export function BrandQuestionnaire({
   onGenerate,
   isGenerating,
   totalCredits,
+  structuredContext,
+  updateStructuredContext,
 }: BrandQuestionnaireProps) {
-  const [industry, setIndustry] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [targetAudience, setTargetAudience] = useState("");
-  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [additionalContext, setAdditionalContext] = useState("");
-  const [brandPersonality, setBrandPersonality] = useState("");
+  // Initialize local state from session (which handles hydration & drafts)
+  const [industry, setIndustry] = useState(structuredContext.industry || "");
+  const [tagline, setTagline] = useState(structuredContext.tagline || "");
+  const [targetAudience, setTargetAudience] = useState(structuredContext.targetAudience || "");
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(structuredContext.selectedVibes || []);
+  const [additionalContext, setAdditionalContext] = useState(structuredContext.additionalContext || "");
+  const [brandPersonality, setBrandPersonality] = useState(structuredContext.brandPersonality || "");
 
   const [socials, setSocials] = useState({
-    instagram: "",
-    twitter: "",
-    linkedin: "",
-    youtube: "",
-    tiktok: "",
+    instagram: structuredContext.socials?.instagram || "",
+    twitter: structuredContext.socials?.twitter || "",
+    linkedin: structuredContext.socials?.linkedin || "",
+    youtube: structuredContext.socials?.youtube || "",
+    tiktok: structuredContext.socials?.tiktok || "",
   });
 
   const [contact, setContact] = useState({
-    name: "",
-    title: "",
-    suggestion: "",
-    phone: "",
-    email: "",
-    address: "",
-    website: "",
+    name: structuredContext.contact?.name || "",
+    title: structuredContext.contact?.title || "",
+    suggestion: structuredContext.contact?.suggestion || "",
+    phone: structuredContext.contact?.phone || "",
+    email: structuredContext.contact?.email || "",
+    address: structuredContext.contact?.address || "",
+    website: structuredContext.contact?.website || "",
   });
 
   const [guidelines, setGuidelines] = useState({
-    depth: "essential" as "essential" | "complete",
+    depth: structuredContext.guidelines?.depth || ("essential" as "essential" | "complete"),
   });
 
+  useEffect(() => {
+    // Re-hydrate local state ONLY if an external hydration event occurred (e.g. loading a past brand kit)
+    if (!structuredContext._hydratedAt) return;
+    
+    setIndustry(structuredContext.industry || "");
+    setTagline(structuredContext.tagline || "");
+    setTargetAudience(structuredContext.targetAudience || "");
+    setSelectedVibes(structuredContext.selectedVibes || []);
+    setAdditionalContext(structuredContext.additionalContext || "");
+    setBrandPersonality(structuredContext.brandPersonality || "");
+    
+    if (structuredContext.socials) {
+      setSocials((prev) => ({ ...prev, ...structuredContext.socials }));
+    }
+    if (structuredContext.contact) {
+      setContact((prev) => ({ ...prev, ...structuredContext.contact }));
+    }
+    if (structuredContext.guidelines) {
+      setGuidelines((prev) => ({ ...prev, depth: structuredContext.guidelines?.depth || "essential" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [structuredContext._hydratedAt]); // Only trigger when hydration timestamp changes
+
+  const commitToSession = useCallback(() => {
+    updateStructuredContext({
+      industry,
+      tagline,
+      targetAudience,
+      selectedVibes,
+      additionalContext,
+      brandPersonality,
+      socials,
+      contact,
+      guidelines,
+    });
+  }, [industry, tagline, targetAudience, selectedVibes, additionalContext, brandPersonality, socials, contact, guidelines, updateStructuredContext]);
+
   const handleGenerate = useCallback(() => {
-    const prompt = [];
-    if (brandName) prompt.push(`Brand Name: ${brandName}`);
-    if (tagline) prompt.push(`Tagline: ${tagline}`);
-    if (industry) prompt.push(`Industry: ${industry}`);
-    if (targetAudience) prompt.push(`Target Audience: ${targetAudience}`);
-    if (selectedVibes.length > 0)
-      prompt.push(`Brand Vibe: ${selectedVibes.join(", ")}`);
-    if (typography)
-      prompt.push(
-        `Typography Preference: ${TYPOGRAPHY_REGISTRY[typography]?.label || typography}`,
-      );
-    if (brandPersonality.trim()) {
-      prompt.push(`\nBrand Personality:\n${brandPersonality.trim()}`);
-    }
-    if (additionalContext.trim()) {
-      prompt.push(`\nAdditional Instructions:\n${additionalContext.trim()}`);
-    }
-
-    if (deliverables.businessCard.enabled) {
-      prompt.push(`\nBusiness Card Details:`);
-      if (contact.name) prompt.push(`Name: ${contact.name}`);
-      if (contact.title) prompt.push(`Title: ${contact.title}`);
-      if (contact.suggestion)
-        prompt.push(`Suggestion/Notes: ${contact.suggestion}`);
-      if (contact.phone) prompt.push(`Phone: ${contact.phone}`);
-      if (contact.email) prompt.push(`Email: ${contact.email}`);
-      if (contact.address) prompt.push(`Address: ${contact.address}`);
-      if (contact.website) prompt.push(`Website: ${contact.website}`);
-    }
-
-    if (deliverables.socialMedia.enabled) {
-      prompt.push(`\nSocial Media Links:`);
-      if (socials.instagram) prompt.push(`Instagram: ${socials.instagram}`);
-      if (socials.twitter) prompt.push(`Twitter/X: ${socials.twitter}`);
-      if (socials.linkedin) prompt.push(`LinkedIn: ${socials.linkedin}`);
-      if (socials.youtube) prompt.push(`YouTube: ${socials.youtube}`);
-      if (socials.tiktok) prompt.push(`TikTok: ${socials.tiktok}`);
-    }
-
-    if (deliverables.brandGuidelines.enabled) {
-      prompt.push(`\nBrand Guidelines Settings:`);
-      prompt.push(`Depth: ${guidelines.depth}`);
-    }
-
-    onGenerate(prompt.join("\n"));
+    commitToSession();
+    
+    // Instead of stringifying the prompt, we pass the local context.
+    // The flat string `prompt` will be derived server-side.
+    onGenerate(undefined, {
+      industry,
+      tagline,
+      targetAudience,
+      selectedVibes,
+      additionalContext,
+      brandPersonality,
+      socials,
+      contact,
+      guidelines,
+    });
   }, [
-    brandName,
-    tagline,
+    commitToSession,
+    onGenerate,
     industry,
+    tagline,
     targetAudience,
     selectedVibes,
-    typography,
-    brandPersonality,
-    deliverables.businessCard.enabled,
-    deliverables.socialMedia.enabled,
-    deliverables.brandGuidelines.enabled,
-    contact,
-    socials,
-    guidelines,
     additionalContext,
-    onGenerate,
+    brandPersonality,
+    socials,
+    contact,
+    guidelines,
   ]);
 
   const canProceedToCreative =
@@ -186,11 +196,13 @@ export function BrandQuestionnaire({
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         if (workspaceState === "foundation" && canProceedToCreative) {
+          commitToSession();
           setWorkspaceState("creative-direction");
         } else if (
           workspaceState === "creative-direction" &&
           canProceedToDeliverables
         ) {
+          commitToSession();
           setWorkspaceState("deliverables");
         } else if (
           workspaceState === "deliverables" &&
@@ -211,6 +223,7 @@ export function BrandQuestionnaire({
     isGenerating,
     handleGenerate,
     setWorkspaceState,
+    commitToSession,
   ]);
 
   return (
@@ -228,7 +241,10 @@ export function BrandQuestionnaire({
               setTagline={setTagline}
               targetAudience={targetAudience}
               setTargetAudience={setTargetAudience}
-              onContinue={() => setWorkspaceState("creative-direction")}
+              onContinue={() => {
+                commitToSession();
+                setWorkspaceState("creative-direction");
+              }}
             />
           ) : (
             <SectionPill
@@ -249,7 +265,10 @@ export function BrandQuestionnaire({
                 typography={typography}
                 setTypography={setTypography}
                 onBack={() => setWorkspaceState("foundation")}
-                onContinue={() => setWorkspaceState("deliverables")}
+                onContinue={() => {
+                  commitToSession();
+                  setWorkspaceState("deliverables");
+                }}
               />
             ) : (
               <SectionPill

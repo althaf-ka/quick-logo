@@ -25,6 +25,10 @@ export async function generateBrandPresentationImage({
   bodyFont,
   productImageUrl,
   brandDescription,
+  industry,
+  targetAudience,
+  selectedVibes,
+  brandPersonality,
 }: {
   ai: Ai;
   env: Env;
@@ -37,6 +41,10 @@ export async function generateBrandPresentationImage({
   bodyFont?: string;
   productImageUrl?: string;
   brandDescription?: string;
+  industry?: string;
+  targetAudience?: string;
+  selectedVibes?: string[];
+  brandPersonality?: string;
 }): Promise<string> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
@@ -74,6 +82,11 @@ export async function generateBrandPresentationImage({
           bodyFont,
           productImageUrl,
           logoStyleDescription,
+          industry,
+          targetAudience,
+          selectedVibes,
+          brandPersonality,
+          fallbackPrompt: brandDescription,
         }),
       );
       if (!result.success || !result.imageData) {
