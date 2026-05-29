@@ -34,12 +34,12 @@ export function useBrandProfileForm({
   // Sync to parent on debounce only when sheet is open
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const handler = setTimeout(() => {
       setContact(localContact);
       setSocials(localSocials);
     }, 400);
-    
+
     return () => clearTimeout(handler);
   }, [localContact, localSocials, setContact, setSocials, isOpen]);
 
@@ -52,14 +52,14 @@ export function useBrandProfileForm({
     (field: keyof ContactData, value: string) => {
       setLocalContact((prev) => ({ ...prev, [field]: value }));
     },
-    []
+    [],
   );
 
   const updateSocialField = useCallback(
     (platform: keyof SocialsData, value: string) => {
       setLocalSocials((prev) => ({ ...prev, [platform]: value }));
     },
-    []
+    [],
   );
 
   const handleSocialBlur = useCallback(
@@ -67,19 +67,19 @@ export function useBrandProfileForm({
       const username = extractUsername(value);
       setLocalSocials((prev) => ({ ...prev, [platform]: username }));
     },
-    []
+    [],
   );
 
   const contactHasData = useMemo(
     () => contactSchema.safeParse(localContact).success,
-    [localContact]
+    [localContact],
   );
 
   const socialsHasData = useMemo(
     () => Object.values(localSocials).some((v) => v.trim() !== ""),
-    [localSocials]
+    [localSocials],
   );
-  
+
   // Memoize parsing result to show inline errors
   const contactValidation = useMemo(() => {
     return contactSchema.safeParse(localContact);
@@ -89,10 +89,13 @@ export function useBrandProfileForm({
     (field: keyof ContactData) => {
       if (contactValidation.success) return undefined;
       const error = contactValidation.error.format();
-      const typedError = error as unknown as Record<string, { _errors?: string[] } | undefined>;
+      const typedError = error as unknown as Record<
+        string,
+        { _errors?: string[] } | undefined
+      >;
       return typedError[field as string]?._errors?.[0];
     },
-    [contactValidation]
+    [contactValidation],
   );
 
   return {

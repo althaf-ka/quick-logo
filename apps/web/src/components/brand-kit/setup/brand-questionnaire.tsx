@@ -77,10 +77,18 @@ export function BrandQuestionnaire({
   // Initialize local state from session (which handles hydration & drafts)
   const [industry, setIndustry] = useState(structuredContext.industry || "");
   const [tagline, setTagline] = useState(structuredContext.tagline || "");
-  const [targetAudience, setTargetAudience] = useState(structuredContext.targetAudience || "");
-  const [selectedVibes, setSelectedVibes] = useState<string[]>(structuredContext.selectedVibes || []);
-  const [additionalContext, setAdditionalContext] = useState(structuredContext.additionalContext || "");
-  const [brandPersonality, setBrandPersonality] = useState(structuredContext.brandPersonality || "");
+  const [targetAudience, setTargetAudience] = useState(
+    structuredContext.targetAudience || "",
+  );
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(
+    structuredContext.selectedVibes || [],
+  );
+  const [additionalContext, setAdditionalContext] = useState(
+    structuredContext.additionalContext || "",
+  );
+  const [brandPersonality, setBrandPersonality] = useState(
+    structuredContext.brandPersonality || "",
+  );
 
   const [socials, setSocials] = useState({
     instagram: structuredContext.socials?.instagram || "",
@@ -101,20 +109,22 @@ export function BrandQuestionnaire({
   });
 
   const [guidelines, setGuidelines] = useState({
-    depth: structuredContext.guidelines?.depth || ("essential" as "essential" | "complete"),
+    depth:
+      structuredContext.guidelines?.depth ||
+      ("essential" as "essential" | "complete"),
   });
 
   useEffect(() => {
     // Re-hydrate local state ONLY if an external hydration event occurred (e.g. loading a past brand kit)
     if (!structuredContext._hydratedAt) return;
-    
+
     setIndustry(structuredContext.industry || "");
     setTagline(structuredContext.tagline || "");
     setTargetAudience(structuredContext.targetAudience || "");
     setSelectedVibes(structuredContext.selectedVibes || []);
     setAdditionalContext(structuredContext.additionalContext || "");
     setBrandPersonality(structuredContext.brandPersonality || "");
-    
+
     if (structuredContext.socials) {
       setSocials((prev) => ({ ...prev, ...structuredContext.socials }));
     }
@@ -122,7 +132,10 @@ export function BrandQuestionnaire({
       setContact((prev) => ({ ...prev, ...structuredContext.contact }));
     }
     if (structuredContext.guidelines) {
-      setGuidelines((prev) => ({ ...prev, depth: structuredContext.guidelines?.depth || "essential" }));
+      setGuidelines((prev) => ({
+        ...prev,
+        depth: structuredContext.guidelines?.depth || "essential",
+      }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structuredContext._hydratedAt]); // Only trigger when hydration timestamp changes
@@ -139,11 +152,22 @@ export function BrandQuestionnaire({
       contact,
       guidelines,
     });
-  }, [industry, tagline, targetAudience, selectedVibes, additionalContext, brandPersonality, socials, contact, guidelines, updateStructuredContext]);
+  }, [
+    industry,
+    tagline,
+    targetAudience,
+    selectedVibes,
+    additionalContext,
+    brandPersonality,
+    socials,
+    contact,
+    guidelines,
+    updateStructuredContext,
+  ]);
 
   const handleGenerate = useCallback(() => {
     commitToSession();
-    
+
     // Instead of stringifying the prompt, we pass the local context.
     // The flat string `prompt` will be derived server-side.
     onGenerate(undefined, {

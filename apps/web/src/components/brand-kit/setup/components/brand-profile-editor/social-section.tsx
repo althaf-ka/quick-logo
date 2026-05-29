@@ -22,7 +22,9 @@ const SOCIAL_PLATFORMS = [
   {
     id: "instagram",
     label: "Instagram",
-    icon: <InstagramLogoIcon weight="duotone" className="size-3.5 text-pink-500" />,
+    icon: (
+      <InstagramLogoIcon weight="duotone" className="size-3.5 text-pink-500" />
+    ),
   },
   {
     id: "twitter",
@@ -32,17 +34,23 @@ const SOCIAL_PLATFORMS = [
   {
     id: "linkedin",
     label: "LinkedIn",
-    icon: <LinkedinLogoIcon weight="duotone" className="size-3.5 text-blue-500" />,
+    icon: (
+      <LinkedinLogoIcon weight="duotone" className="size-3.5 text-blue-500" />
+    ),
   },
   {
     id: "youtube",
     label: "YouTube",
-    icon: <YoutubeLogoIcon weight="duotone" className="size-3.5 text-red-500" />,
+    icon: (
+      <YoutubeLogoIcon weight="duotone" className="size-3.5 text-red-500" />
+    ),
   },
   {
     id: "tiktok",
     label: "TikTok",
-    icon: <TiktokLogoIcon weight="duotone" className="size-3.5 text-zinc-300" />,
+    icon: (
+      <TiktokLogoIcon weight="duotone" className="size-3.5 text-zinc-300" />
+    ),
   },
 ] as const;
 

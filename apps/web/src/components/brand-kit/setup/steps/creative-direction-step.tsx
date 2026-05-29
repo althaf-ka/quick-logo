@@ -25,7 +25,7 @@ const VIBES = [
   "Luxurious",
   "Earthy",
   "Retro",
-  "Handcrafted"
+  "Handcrafted",
 ];
 
 const TYPOGRAPHY_SPECIMENS: Record<string, { char: string; category: string }> =
@@ -71,7 +71,7 @@ export function CreativeDirectionStep({
 
   const handleVibeToggle = (vibe: string) => {
     setSelectedVibes((prev) =>
-      prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe]
+      prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe],
     );
     if (showErrors) setShowErrors(false);
   };

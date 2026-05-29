@@ -1,19 +1,24 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
 import { createId } from "@paralleldrive/cuid2";
 import {
   generateBrandKitSchema,
   refineBrandKitSectionSchema,
   restoreSectionSchema,
   buildBrandContextSummary,
+  listQuerySchema,
 } from "@quicklogo/shared";
 import {
   brandKits,
   brandKitRevisions,
   users,
+  images,
   eq,
+  lt,
   sql,
   and,
+  desc,
 } from "@quicklogo/db";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
@@ -83,6 +88,53 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       });
 
       return c.json({ brandKitId }, 202);
+    },
+  )
+  .get(
+    "/",
+    requireAuth,
+    zValidator("query", listQuerySchema, validationHook),
+    async (c) => {
+      const db = c.get("db");
+      const user = c.get("user");
+      const { cursor, limit } = c.req.valid("query");
+
+      const rows = await db
+        .select({
+          id: brandKits.id,
+          brandName: brandKits.brandName,
+          extractedColors: brandKits.extractedColors,
+          typographyStyle: brandKits.typographyStyle,
+          customLogoUrl: sql<
+            string | null
+          >`COALESCE(${brandKits.customLogoUrl}, ${images.imageUrl})`.as(
+            "customLogoUrl",
+          ),
+          industry: brandKits.industry,
+          status: brandKits.status,
+          createdAt: brandKits.createdAt,
+          updatedAt: brandKits.updatedAt,
+        })
+        .from(brandKits)
+        .leftJoin(images, eq(brandKits.sourceImageId, images.id))
+        .where(
+          and(
+            eq(brandKits.userId, user.id),
+            cursor ? lt(brandKits.createdAt, new Date(cursor)) : undefined,
+          ),
+        )
+        .orderBy(desc(brandKits.createdAt))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const items = rows.slice(0, limit);
+
+      return c.json({
+        items,
+        nextCursor: hasMore
+          ? (items[items.length - 1]?.createdAt.toISOString() ?? null)
+          : null,
+      });
     },
   )
   .post(

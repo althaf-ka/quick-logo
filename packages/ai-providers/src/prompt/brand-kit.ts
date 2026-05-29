@@ -72,8 +72,6 @@ interface BuildBackdropParamsInput {
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
 }
 
-
-
 interface BuildTypographyRequestInput {
   brandName: string;
   description: string;
@@ -87,8 +85,6 @@ interface BuildLogoStyleAnalysisInput {
   description: string;
   logoUrl: string;
 }
-
-
 
 const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
   colorPalette:
@@ -191,7 +187,12 @@ CRITICAL: Respond with ONLY the "colorPalette" key. Never add brandName, typogra
   if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
   if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
   if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
-  if (!industry && !targetAudience && !selectedVibes?.length && !brandPersonality) {
+  if (
+    !industry &&
+    !targetAudience &&
+    !selectedVibes?.length &&
+    !brandPersonality
+  ) {
     context += `Description: ${description}\n`;
   } else {
     context += `Additional Context: ${description}\n`;
@@ -230,7 +231,12 @@ Schema:
   if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
   if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
   if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
-  if (!industry && !targetAudience && !selectedVibes?.length && !brandPersonality) {
+  if (
+    !industry &&
+    !targetAudience &&
+    !selectedVibes?.length &&
+    !brandPersonality
+  ) {
     context += `Description: ${description}\n`;
   } else {
     context += `Additional Context: ${description}\n`;
@@ -368,7 +374,7 @@ export function buildBrandKitRefinementRequest({
   if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
   if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
   if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
-  
+
   context += `Refinement Request: ${refinementPrompt}\nOriginal JSON state for context: ${JSON.stringify(currentResults[sectionKey])}`;
 
   return {
@@ -505,13 +511,13 @@ export function buildBrandPresentationGenerationParams({
   fallbackPrompt?: string;
 }): GenerationParams {
   let basePrompt = `Create a stunning modern UI presentation layout for brand "${brandName}".`;
-  
+
   if (selectedVibes?.length || brandPersonality) {
     basePrompt += ` Brand aesthetic: ${selectedVibes?.join(", ") || "modern"}. Personality: ${brandPersonality || "professional"}.`;
   } else if (fallbackPrompt) {
     basePrompt += ` Context: ${fallbackPrompt}.`;
   }
-  
+
   basePrompt += ` Include clean typography`;
   basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup`;
   if (logoStyleDescription) basePrompt += ` (${logoStyleDescription})`;

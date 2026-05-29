@@ -322,23 +322,23 @@ export function GenerationSidebar({
         </Combobox>
 
         {selectedPalette &&
-          selectedPalette.id !== "auto" &&
-          selectedPalette.id !== "custom" &&
-          selectedPalette.colors.length > 0 ? (
-            <div className="animate-in fade-in flex items-center gap-1.5 pt-1 duration-150">
-              {selectedPalette.colors.map((color, i) => (
-                <div
-                  key={i}
-                  className="ring-border size-6 ring-1"
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              ))}
-              <span className="text-muted-foreground/50 ml-1 text-[10px]">
-                {selectedPalette.colors.length} colors
-              </span>
-            </div>
-          ) : null}
+        selectedPalette.id !== "auto" &&
+        selectedPalette.id !== "custom" &&
+        selectedPalette.colors.length > 0 ? (
+          <div className="animate-in fade-in flex items-center gap-1.5 pt-1 duration-150">
+            {selectedPalette.colors.map((color, i) => (
+              <div
+                key={i}
+                className="ring-border size-6 ring-1"
+                style={{ backgroundColor: color }}
+                title={color}
+              />
+            ))}
+            <span className="text-muted-foreground/50 ml-1 text-[10px]">
+              {selectedPalette.colors.length} colors
+            </span>
+          </div>
+        ) : null}
 
         {config.colorPalette === "custom" ? (
           <div className="animate-in fade-in slide-in-from-top-1 bg-muted/20 space-y-2.5 border p-3 duration-150">

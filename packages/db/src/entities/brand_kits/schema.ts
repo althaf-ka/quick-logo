@@ -19,7 +19,7 @@ export const brandKits = sqliteTable("brand_kit", {
   productImageUrls: text("product_image_urls", { mode: "json" }), // Optional uploaded mockups
   extractedColors: text("extracted_colors", { mode: "json" }).notNull(),
   typographyStyle: text("typography_style").notNull().default("modern-sans"),
-  
+
   // Structured Questionnaire Context
   industry: text("industry"),
   tagline: text("tagline"),

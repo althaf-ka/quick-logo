@@ -20,11 +20,11 @@ export function SectionHeader({
 
   return (
     <div>
-      <h3 className="text-foreground/50 text-[10px] font-bold tracking-widest uppercase flex items-center">
+      <h3 className="text-foreground/50 flex items-center text-[10px] font-bold tracking-widest uppercase">
         {title}
         {showRedStar && <span className="ml-1 text-red-500">*</span>}
         {showConfigured && (
-          <span className="ml-2 text-emerald-500 font-mono text-[8px] inline-flex items-center gap-1 normal-case tracking-normal font-medium">
+          <span className="ml-2 inline-flex items-center gap-1 font-mono text-[8px] font-medium tracking-normal text-emerald-500 normal-case">
             <CheckCircleIcon weight="fill" className="size-3" />
             Configured
           </span>

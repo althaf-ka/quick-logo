@@ -57,10 +57,10 @@ export function ResultsSidebar({
       </motion.div>
 
       {/* Brand DNA */}
-      {(results?.brandPresentation?.tagline ||
-        results?.brandPresentation?.description ||
-        (results?.colorPalette && results.colorPalette.length > 0) ||
-        results?.typography) ? (
+      {results?.brandPresentation?.tagline ||
+      results?.brandPresentation?.description ||
+      (results?.colorPalette && results.colorPalette.length > 0) ||
+      results?.typography ? (
         <motion.div variants={staggerItem} className="space-y-3">
           <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
             Brand DNA
@@ -94,14 +94,16 @@ export function ResultsSidebar({
                   Color System
                 </span>
                 <div className="flex gap-2">
-                  {results.colorPalette.map((c: { hex: string; name?: string; role?: string }) => (
-                    <div
-                      key={c.hex}
-                      className="size-5 rounded-full border border-white/10 shadow-sm"
-                      style={{ backgroundColor: c.hex }}
-                      title={c.name || c.hex}
-                    />
-                  ))}
+                  {results.colorPalette.map(
+                    (c: { hex: string; name?: string; role?: string }) => (
+                      <div
+                        key={c.hex}
+                        className="size-5 rounded-full border border-white/10 shadow-sm"
+                        style={{ backgroundColor: c.hex }}
+                        title={c.name || c.hex}
+                      />
+                    ),
+                  )}
                 </div>
               </div>
             ) : null}
@@ -162,7 +164,7 @@ export function ResultsSidebar({
               </div>
             </div>
           ))}
-          {(!revisions || revisions.length === 0) ? (
+          {!revisions || revisions.length === 0 ? (
             <div className="text-muted-foreground/30 border border-dashed border-white/[0.06] p-4 text-center font-mono text-[10px] tracking-wider">
               No revisions yet
             </div>

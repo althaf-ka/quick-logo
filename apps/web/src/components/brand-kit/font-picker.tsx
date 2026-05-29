@@ -56,7 +56,6 @@ export function FontPicker({
     }
   }, []);
 
-
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const target = event.currentTarget;

@@ -55,7 +55,8 @@ export interface RefineBrandKitMessage {
     | "business-card"
     | "favicon"
     | "branded-backdrops"
-    | "brand-presentation";
+    | "brand-presentation"
+    | "brand-guidelines";
   refinementPrompt: string;
   typographyStyle?: string;
 }

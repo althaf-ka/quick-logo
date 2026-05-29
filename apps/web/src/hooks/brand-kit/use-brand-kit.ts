@@ -97,12 +97,7 @@ export function useBrandKit({
         setWorkspaceState("results");
       }
     }
-  }, [
-    normalizedData,
-    hydrateSession,
-    setWorkspaceState,
-    hydrateRefinement,
-  ]);
+  }, [normalizedData, hydrateSession, setWorkspaceState, hydrateRefinement]);
 
   const { data: imageDetails } = useQuery({
     queryKey: ["image-details", imageId],
@@ -123,12 +118,7 @@ export function useBrandKit({
       };
       if (img.imageUrl && !logoUrl) {
         setLogoUrl(img.imageUrl);
-        setExtractedColors([
-          "#3b82f6",
-          "#1d4ed8",
-          "#1e3a8a",
-          "#eff6ff",
-        ]);
+        setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
       }
       if (img.brandName && !brandName) {
         setBrandName(img.brandName);
@@ -172,12 +162,7 @@ export function useBrandKit({
         const url = await uploadFileToImageKit(file, user?.id);
         setLogoUrl(url);
         // Optimistically seed palette derived from placeholder/image
-        setExtractedColors([
-          "#3b82f6",
-          "#1d4ed8",
-          "#1e3a8a",
-          "#eff6ff",
-        ]);
+        setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
       } catch {
         toast.error("Failed to upload logo. Please try again.");
       } finally {
@@ -223,7 +208,8 @@ export function useBrandKit({
             ...current,
             revisions: current.revisions.map((revision) => {
               if (!revision.isActive) return revision;
-              const revisionResults = revision.results as unknown as BrandKitResultsData;
+              const revisionResults =
+                revision.results as unknown as BrandKitResultsData;
               return {
                 ...revision,
                 results: {
@@ -268,17 +254,23 @@ export function useBrandKit({
 
   // Conversational Submit Handler
   const handleGenerate = useCallback(
-    async (customPrompt?: string, customContext?: Partial<StructuredBrandContext>) => {
-      const activePrompt =
-        customPrompt !== undefined ? customPrompt : prompt;
-      
+    async (
+      customPrompt?: string,
+      customContext?: Partial<StructuredBrandContext>,
+    ) => {
+      const activePrompt = customPrompt !== undefined ? customPrompt : prompt;
+
       const contextToUse = customContext || structuredContext;
 
       if (!logoUrl && !brandKitId) {
         toast.error("Please upload or select a logo first");
         return;
       }
-      if (!activePrompt.trim() && !targetSection && Object.keys(contextToUse).length === 0) {
+      if (
+        !activePrompt.trim() &&
+        !targetSection &&
+        Object.keys(contextToUse).length === 0
+      ) {
         toast.error("Please describe your brand identity");
         return;
       }
@@ -312,9 +304,7 @@ export function useBrandKit({
           typographyStyle: typographyPreference.mood,
           extractedColors: extractedColors,
           productImageUrls:
-            productImageUrls.length > 0
-              ? productImageUrls
-              : undefined,
+            productImageUrls.length > 0 ? productImageUrls : undefined,
           deliverables: {
             logoVariations: deliverables.logoVariations.enabled,
             socialMedia: deliverables.socialMedia.enabled,

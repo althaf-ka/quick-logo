@@ -12,3 +12,5 @@ export * from "./constants/favicon";
 export * from "./types/index";
 export * from "./utils/brand-kit-context";
 export * from "./constants/tips";
+export * from "./validators/brand-profile";
+export * from "./validators/pagination";

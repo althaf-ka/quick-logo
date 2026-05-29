@@ -445,7 +445,7 @@ export function DeliverablesStep({
 
                 {/* Configure Button (Visible when selected) */}
                 <AnimatePresence initial={false}>
-                  {(hasSettings && isSelected) ? (
+                  {hasSettings && isSelected ? (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -488,7 +488,7 @@ export function DeliverablesStep({
 
                 {/* Settings Content (Visible when expanded) */}
                 <AnimatePresence initial={false}>
-                  {(hasSettings && isSelected && isExpanded) ? (
+                  {hasSettings && isSelected && isExpanded ? (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -556,8 +556,9 @@ export function DeliverablesStep({
                               }
                               className={inputClassName}
                             />
-                            <p className="text-[10px] text-muted-foreground/50">
-                              Note: Contact details for the card can be configured in your Brand Profile below.
+                            <p className="text-muted-foreground/50 text-[10px]">
+                              Note: Contact details for the card can be
+                              configured in your Brand Profile below.
                             </p>
                           </div>
                         ) : null}
@@ -661,12 +662,13 @@ export function DeliverablesStep({
           />
         </div>
 
-        {(deliverables.businessCard.enabled || deliverables.socialMedia.enabled) && (
+        {(deliverables.businessCard.enabled ||
+          deliverables.socialMedia.enabled) && (
           <div className="space-y-1.5 pt-4">
-            <div className="text-muted-foreground/50 text-[10px] font-semibold tracking-wider uppercase select-text flex items-center justify-between">
+            <div className="text-muted-foreground/50 flex items-center justify-between text-[10px] font-semibold tracking-wider uppercase select-text">
               <span>Brand Profile & Socials</span>
               {(socialHasData || contactHasData) && (
-                <span className="text-emerald-500 font-mono text-[8px] flex items-center gap-1">
+                <span className="flex items-center gap-1 font-mono text-[8px] text-emerald-500">
                   <CheckCircleIcon weight="fill" className="size-3" />
                   Configured
                 </span>
@@ -675,43 +677,68 @@ export function DeliverablesStep({
             <button
               onClick={() => setIsBrandProfileOpen(true)}
               className={cn(
-                "group relative flex w-full cursor-pointer items-center justify-between border border-white/[0.08] bg-white/[0.02] p-4 transition-all hover:border-primary/40 hover:bg-primary/[0.03]",
-                ((socialError || contactError) && !isBrandProfileOpen) && "border-red-500/50 bg-red-500/[0.03] hover:border-red-500 hover:bg-red-500/[0.05]"
+                "group hover:border-primary/40 hover:bg-primary/[0.03] relative flex w-full cursor-pointer items-center justify-between border border-white/[0.08] bg-white/[0.02] p-4 transition-all",
+                (socialError || contactError) &&
+                  !isBrandProfileOpen &&
+                  "border-red-500/50 bg-red-500/[0.03] hover:border-red-500 hover:bg-red-500/[0.05]",
               )}
             >
               <div className="flex items-center gap-3">
-                <div className={cn(
-                  "flex size-8 items-center justify-center bg-white/[0.02] ring-1 ring-white/[0.06] transition-colors group-hover:bg-primary/10 group-hover:ring-primary/20",
-                  ((socialError || contactError) && !isBrandProfileOpen) && "ring-red-500/30 bg-red-500/10"
-                )}>
-                  <UserCircleIcon weight="duotone" className={cn(
-                    "size-4 text-muted-foreground/50 transition-colors group-hover:text-primary",
-                    ((socialError || contactError) && !isBrandProfileOpen) && "text-red-500"
-                  )} />
+                <div
+                  className={cn(
+                    "group-hover:bg-primary/10 group-hover:ring-primary/20 flex size-8 items-center justify-center bg-white/[0.02] ring-1 ring-white/[0.06] transition-colors",
+                    (socialError || contactError) &&
+                      !isBrandProfileOpen &&
+                      "bg-red-500/10 ring-red-500/30",
+                  )}
+                >
+                  <UserCircleIcon
+                    weight="duotone"
+                    className={cn(
+                      "text-muted-foreground/50 group-hover:text-primary size-4 transition-colors",
+                      (socialError || contactError) &&
+                        !isBrandProfileOpen &&
+                        "text-red-500",
+                    )}
+                  />
                 </div>
                 <div className="text-left">
-                  <p className={cn(
-                    "font-mono text-[11px] font-bold tracking-widest uppercase transition-colors group-hover:text-primary",
-                    ((socialError || contactError) && !isBrandProfileOpen) ? "text-red-500" : "text-foreground/80"
-                  )}>
+                  <p
+                    className={cn(
+                      "group-hover:text-primary font-mono text-[11px] font-bold tracking-widest uppercase transition-colors",
+                      (socialError || contactError) && !isBrandProfileOpen
+                        ? "text-red-500"
+                        : "text-foreground/80",
+                    )}
+                  >
                     Edit Brand Profile
                   </p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground/40 leading-snug">
+                  <p className="text-muted-foreground/40 mt-0.5 text-[10px] leading-snug">
                     Contact details & social media links
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={cn(
-                  "font-mono text-[9px] tracking-wider uppercase",
-                  (socialError || contactError) ? "text-red-500 font-bold" : "text-muted-foreground/50"
-                )}>
-                  {(socialError || contactError) ? "Required" : "Required for add-ons"}
+                <span
+                  className={cn(
+                    "font-mono text-[9px] tracking-wider uppercase",
+                    socialError || contactError
+                      ? "font-bold text-red-500"
+                      : "text-muted-foreground/50",
+                  )}
+                >
+                  {socialError || contactError
+                    ? "Required"
+                    : "Required for add-ons"}
                 </span>
-                <ArrowRightIcon className={cn(
-                  "size-4 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary",
-                  ((socialError || contactError) && !isBrandProfileOpen) && "text-red-500"
-                )} />
+                <ArrowRightIcon
+                  className={cn(
+                    "text-muted-foreground/30 group-hover:text-primary size-4 transition-transform group-hover:translate-x-0.5",
+                    (socialError || contactError) &&
+                      !isBrandProfileOpen &&
+                      "text-red-500",
+                  )}
+                />
               </div>
             </button>
           </div>
@@ -770,12 +797,17 @@ export function DeliverablesStep({
                 )
                   newErrors.add("brandPresentation");
                 setErrorKeys(newErrors);
-                
-                if (newErrors.has("socialMedia") || newErrors.has("businessCard")) {
+
+                if (
+                  newErrors.has("socialMedia") ||
+                  newErrors.has("businessCard")
+                ) {
                   setIsBrandProfileOpen(true);
-                  toast.error("Please fill in the required brand profile information.");
+                  toast.error(
+                    "Please fill in the required brand profile information.",
+                  );
                 }
-                
+
                 return;
               }
               if (localMockupFiles.length > 0) {
@@ -795,11 +827,11 @@ export function DeliverablesStep({
             )}
           >
             {/* Shimmer effect */}
-            {(!(errorKeys.size > 0 && hasErrors) &&
-              !isGenerating &&
-              !isUploadingMockups) ? (
-                <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-              ) : null}
+            {!(errorKeys.size > 0 && hasErrors) &&
+            !isGenerating &&
+            !isUploadingMockups ? (
+              <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+            ) : null}
 
             {isGenerating || isUploadingMockups ? (
               <span className="relative z-10 flex items-center gap-2">

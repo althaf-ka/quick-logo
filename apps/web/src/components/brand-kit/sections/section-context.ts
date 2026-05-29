@@ -6,12 +6,15 @@ type BrandKitSectionContextValue = {
   cancelRefine?: () => void;
 };
 
-export const BrandKitSectionContext = createContext<BrandKitSectionContextValue | null>(null);
+export const BrandKitSectionContext =
+  createContext<BrandKitSectionContextValue | null>(null);
 
 export function useBrandKitSection() {
   const ctx = useContext(BrandKitSectionContext);
   if (!ctx) {
-    throw new Error("useBrandKitSection must be used within <BrandKitResults />");
+    throw new Error(
+      "useBrandKitSection must be used within <BrandKitResults />",
+    );
   }
   return ctx;
 }

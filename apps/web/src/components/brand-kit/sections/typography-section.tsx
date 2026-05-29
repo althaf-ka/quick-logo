@@ -75,7 +75,7 @@ export function TypographySection({
         ) : null}
       </div>
       <SectionContent isRefining={isRefining}>
-        {(isEditing && onFontChange) ? (
+        {isEditing && onFontChange ? (
           <div className="bg-muted/20 mb-4 space-y-3 border border-dashed p-4">
             <p className="text-muted-foreground/50 font-mono text-[9px] leading-relaxed tracking-wide">
               Select a font for each role. Your brand kit uses two fonts — one

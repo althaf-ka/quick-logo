@@ -6,10 +6,7 @@ import {
   ClockIcon,
   LightbulbIcon,
 } from "@phosphor-icons/react";
-import {
-  staggerContainer,
-  staggerItem,
-} from "@/lib/motion/variants";
+import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import type { DeliverablesConfig } from "@/types/brand-kit";
 
 import { GENERATING_TIPS } from "@quicklogo/shared";
@@ -45,7 +42,7 @@ export function GeneratingSidebar({
   return (
     <div className="flex flex-col gap-8">
       {/* Dynamic Timer */}
-      <div className="relative overflow-hidden border border-primary/20 bg-primary/5 p-6 text-center">
+      <div className="border-primary/20 bg-primary/5 relative overflow-hidden border p-6 text-center">
         <div
           className="absolute inset-0 animate-pulse bg-[radial-gradient(ellipse_at_center,rgba(var(--primary),0.15),transparent_70%)]"
           style={{ animationDuration: "3s" }}
@@ -56,7 +53,10 @@ export function GeneratingSidebar({
             className="text-primary size-5 animate-pulse"
           />
           <div className="text-foreground font-mono text-2xl font-black tracking-widest tabular-nums">
-            {Math.floor(elapsed / 60).toString().padStart(2, "0")}:{(elapsed % 60).toString().padStart(2, "0")}
+            {Math.floor(elapsed / 60)
+              .toString()
+              .padStart(2, "0")}
+            :{(elapsed % 60).toString().padStart(2, "0")}
           </div>
           <span className="text-primary/60 font-mono text-[9px] font-bold tracking-widest uppercase">
             Crafting Brand Kit
@@ -65,7 +65,7 @@ export function GeneratingSidebar({
       </div>
 
       {/* Generation Summary */}
-      {(deliverables || totalCredits !== undefined) ? (
+      {deliverables || totalCredits !== undefined ? (
         <motion.div
           variants={staggerContainer}
           initial="hidden"

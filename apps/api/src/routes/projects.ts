@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { projects, images, users, eq, lt, desc, and, sql } from "@quicklogo/db";
 import { ImageKitProvider } from "@quicklogo/storage";
+import { listQuerySchema } from "@quicklogo/shared";
 import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
 import { validationHook } from "../lib/validator";
@@ -13,11 +14,6 @@ const logger = createLogger("api");
 
 const EXTEND_COST = 10;
 const EXTEND_DAYS = 30;
-
-const listQuerySchema = z.object({
-  cursor: z.string().optional(),
-  limit: z.coerce.number().min(1).max(50).default(12),
-});
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 

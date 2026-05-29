@@ -1,7 +1,13 @@
 import { useRef } from "react";
 import { motion } from "motion/react";
 import { Button } from "@quicklogo/ui/components/button";
-import { UploadSimpleIcon, CopyIcon, CircleIcon, CheckCircleIcon, LightningIcon } from "@phosphor-icons/react";
+import {
+  UploadSimpleIcon,
+  CopyIcon,
+  CircleIcon,
+  CheckCircleIcon,
+  LightningIcon,
+} from "@phosphor-icons/react";
 import {
   Tooltip,
   TooltipContent,
@@ -178,7 +184,7 @@ export function SetupSidebar({
                 <TooltipTrigger
                   render={
                     <button
-                      className="group relative cursor-pointer outline-none transition-all duration-200 hover:scale-110 hover:z-10 focus:outline-none"
+                      className="group relative cursor-pointer transition-all duration-200 outline-none hover:z-10 hover:scale-110 focus:outline-none"
                       onClick={() => {
                         navigator.clipboard.writeText(color);
                         toast.success(`Copied ${color}`);
@@ -187,14 +193,19 @@ export function SetupSidebar({
                   }
                 >
                   <div
-                    className="size-10 shrink-0 ring-1 ring-white/[0.1] shadow-sm rounded-none"
+                    className="size-10 shrink-0 rounded-none shadow-sm ring-1 ring-white/[0.1]"
                     style={{ backgroundColor: color }}
                   />
                 </TooltipTrigger>
-                <TooltipContent className="font-mono text-[10px] uppercase flex items-center gap-2 border border-white/20 bg-zinc-800 text-white shadow-xl px-2.5 py-1.5">
-                  <div className="size-2 shrink-0 border border-white/20 rounded-none" style={{ backgroundColor: color }} />
+                <TooltipContent className="flex items-center gap-2 border border-white/20 bg-zinc-800 px-2.5 py-1.5 font-mono text-[10px] text-white uppercase shadow-xl">
+                  <div
+                    className="size-2 shrink-0 rounded-none border border-white/20"
+                    style={{ backgroundColor: color }}
+                  />
                   <span className="font-bold tracking-wider">{color}</span>
-                  <span className="text-zinc-400 ml-1 text-[8px] lowercase">click to copy</span>
+                  <span className="ml-1 text-[8px] text-zinc-400 lowercase">
+                    click to copy
+                  </span>
                 </TooltipContent>
               </Tooltip>
             ))}
@@ -209,7 +220,7 @@ export function SetupSidebar({
       </motion.div>
 
       {/* Order Summary */}
-      {(deliverables || totalCredits !== undefined) ? (
+      {deliverables || totalCredits !== undefined ? (
         <motion.div variants={staggerItem} className="space-y-3">
           <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
             Order Summary
