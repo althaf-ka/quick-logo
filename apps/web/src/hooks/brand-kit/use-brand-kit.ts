@@ -99,7 +99,7 @@ export function useBrandKit({
     }
   }, [normalizedData, hydrateSession, setWorkspaceState, hydrateRefinement]);
 
-  const { data: imageDetails } = useQuery({
+  const { data: imageDetails, isError: isImageError } = useQuery({
     queryKey: ["image-details", imageId],
     queryFn: async () => {
       if (!imageId) return null;
@@ -135,6 +135,8 @@ export function useBrandKit({
 
   // Derived state
   const status = normalizedData?.status;
+  const isImageLoading = !!imageId && !logoUrl && !isImageError;
+
   const isGenerating =
     status === "pending" ||
     status === "processing" ||
@@ -364,6 +366,7 @@ export function useBrandKit({
     results,
     isGenerating,
     isQueryLoading,
+    isImageLoading,
     error: generationError,
     totalCredits,
     isFromPlatform: !!imageId,

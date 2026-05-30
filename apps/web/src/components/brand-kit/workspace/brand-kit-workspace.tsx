@@ -41,7 +41,20 @@ export function BrandKitWorkspace({
       <div className="relative flex flex-1 flex-col overflow-hidden px-4">
         <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 pb-24 md:p-6">
           <AnimatePresence mode="wait">
-            {bk.isGenerating ? (
+            {bk.isQueryLoading || bk.isImageLoading || (!!imageId && !bk.logoUrl) ? (
+              <motion.div
+                key="query-loading"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="flex h-full min-h-[60vh] w-full items-center justify-center"
+              >
+                <QueryLoadingState 
+                  text={imageId ? "Importing Source Logo..." : "Loading Brand Kit..."} 
+                />
+              </motion.div>
+            ) : bk.isGenerating ? (
               <motion.div
                 key="generating"
                 variants={pageTransition}
@@ -113,7 +126,7 @@ export function BrandKitWorkspace({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="flex w-full flex-1"
+                className="flex h-full min-h-[60vh] w-full flex-1 items-center justify-center"
               >
                 <EmptyState
                   isMobile={isMobile}
@@ -400,6 +413,17 @@ function EmptyState({
           </button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function QueryLoadingState({ text = "Loading Brand Kit..." }: { text?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <CircleDashedIcon className="text-muted-foreground/30 size-12 animate-spin" />
+      <p className="text-muted-foreground/50 mt-6 font-mono text-[10px] font-black tracking-widest uppercase">
+        {text}
+      </p>
     </div>
   );
 }

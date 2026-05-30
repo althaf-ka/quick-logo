@@ -1,6 +1,7 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { downloadImage } from "@/lib/download";
+import { ZoomableImage } from "@/components/global/zoomable-image";
 import { Button } from "@quicklogo/ui/components/button";
 import {
   InstagramLogoIcon,
@@ -106,7 +107,7 @@ export function SocialMediaSection({
                 <div className="bg-muted/10 relative flex w-full flex-1 items-center justify-center overflow-hidden">
                   <div
                     className={cn(
-                      "relative w-full",
+                      "relative w-full overflow-hidden",
                       isProfile
                         ? "aspect-square"
                         : isFirstBanner
@@ -114,7 +115,7 @@ export function SocialMediaSection({
                           : "aspect-[21/9] sm:aspect-[4/1]",
                     )}
                   >
-                    <img
+                    <ZoomableImage
                       src={asset.url}
                       alt={
                         isProfile
@@ -122,7 +123,7 @@ export function SocialMediaSection({
                           : `${asset.platform} ${asset.type}`
                       }
                       className={cn(
-                        "relative z-10 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]",
+                        "absolute inset-0 z-10 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.01]",
                         isPlaceholder && "opacity-40 grayscale filter",
                       )}
                     />

@@ -237,7 +237,7 @@ export function BrandKitResults({
             {data.businessCard ? (
               <FocusWrapper
                 id="business-card"
-                className="w-full"
+                className="w-full md:col-span-2 lg:col-span-3"
                 refiningSectionId={refiningSectionId}
                 isMobile={isMobile}
                 anyRefining={anyRefining}
@@ -253,13 +253,14 @@ export function BrandKitResults({
             {data.favicons && data.favicons.length > 0 ? (
               <FocusWrapper
                 id="favicon"
-                className="w-full"
+                className="w-full md:col-span-2 lg:col-span-3"
                 refiningSectionId={refiningSectionId}
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
                 <FaviconSection
                   icons={data.favicons}
+                  brandName={data.brandName}
                   onRefine={onRefine}
                   isRefining={refiningSectionId === "favicon"}
                 />
@@ -269,7 +270,7 @@ export function BrandKitResults({
             {data.brandedBackdrops ? (
               <FocusWrapper
                 id="branded-backdrops"
-                className="w-full"
+                className="w-full md:col-span-2 lg:col-span-3"
                 refiningSectionId={refiningSectionId}
                 isMobile={isMobile}
                 anyRefining={anyRefining}

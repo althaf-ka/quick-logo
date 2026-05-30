@@ -1,5 +1,6 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import { cn } from "@quicklogo/ui/lib/utils";
+import { ZoomableImage } from "@/components/global/zoomable-image";
 
 export interface LogoVariation {
   id: string;
@@ -35,7 +36,7 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
           : undefined
       }
     >
-      <img
+      <ZoomableImage
         src={v.url}
         alt={v.label}
         className={cn(

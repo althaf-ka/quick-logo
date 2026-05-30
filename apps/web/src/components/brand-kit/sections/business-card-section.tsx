@@ -1,5 +1,6 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import { downloadImage } from "@/lib/download";
+import { ZoomableImage } from "@/components/global/zoomable-image";
 import { Button } from "@quicklogo/ui/components/button";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 
@@ -31,7 +32,7 @@ export function BusinessCardSection({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="group border-border/50 hover:border-primary/40 bg-card flex flex-col overflow-hidden border transition-colors">
             <div className="bg-muted/10 relative flex aspect-[16/9] w-full flex-1 items-center justify-center overflow-hidden">
-              <img
+              <ZoomableImage
                 src={card.frontUrl}
                 alt="Business Card — Front"
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
@@ -64,7 +65,7 @@ export function BusinessCardSection({
           {card.backUrl ? (
             <div className="group border-border/50 hover:border-primary/40 bg-card flex flex-col overflow-hidden border transition-colors">
               <div className="bg-muted/10 relative flex aspect-[16/9] w-full flex-1 items-center justify-center overflow-hidden">
-                <img
+                <ZoomableImage
                   src={card.backUrl}
                   alt="Business Card — Back"
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
