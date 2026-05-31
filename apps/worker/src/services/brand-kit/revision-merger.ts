@@ -1,3 +1,4 @@
+import { normalizeBrandContext } from "@quicklogo/ai-providers/prompt";
 import { buildBrandKitRefinementRequest } from "@quicklogo/ai-providers/prompt";
 import { resolveTypographyStyle } from "./typography-resolver";
 import { normalizeTypographyOutput } from "./typography-normalizer";
@@ -37,6 +38,21 @@ export async function mergeRevisionResults({
 }) {
   let newMergedJSON = { ...activeRevisionResults };
 
+  const brandAssetContext = normalizeBrandContext(
+    currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+    {
+      industry: currentBrandKit?.industry,
+      tagline: currentBrandKit?.tagline || newMergedJSON.brandPresentation?.tagline,
+      targetAudience: currentBrandKit?.targetAudience,
+      brandPersonality: currentBrandKit?.brandPersonality,
+      selectedVibes: currentBrandKit?.selectedVibes,
+      additionalContext: currentBrandKit?.additionalContext,
+      socials: currentBrandKit?.socials,
+      contact: currentBrandKit?.contact,
+    }
+  );
+
+
   if (sectionId === "social-media") {
     const actualLogoUrl =
       currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
@@ -50,6 +66,7 @@ export async function mergeRevisionResults({
           currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
         sourceLogoUrl: actualLogoUrl,
         refinementPrompt,
+        context: brandAssetContext,
       });
       newMergedJSON.socialMedia = [
         {
@@ -97,6 +114,7 @@ export async function mergeRevisionResults({
           currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
         sourceLogoUrl: actualLogoUrl,
         refinementPrompt,
+        context: brandAssetContext,
       });
       newMergedJSON.brandedBackdrops = {
         feedUrl: backdropUrls.feedUrl,
@@ -116,6 +134,7 @@ export async function mergeRevisionResults({
           currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
         sourceLogoUrl: actualLogoUrl,
         refinementPrompt,
+        context: brandAssetContext,
       });
       newMergedJSON.businessCard = {
         frontUrl: businessCardUrls.frontUrl,

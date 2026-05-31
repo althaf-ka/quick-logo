@@ -13,6 +13,8 @@ import type { Env } from "../../types";
 import { generateWithFallback } from "../../core/pipeline-helpers";
 import { findReusableLogoVariationUrls } from "./reusable-url-finder";
 import type { Database } from "@quicklogo/db";
+import type { ValidatedBrandContext } from "@quicklogo/ai-providers/prompt";
+
 import { createLogger } from "@quicklogo/server-telemetry";
 
 const logger = createLogger("worker");
@@ -100,6 +102,7 @@ export async function generateSocialMediaAssets({
   brandName,
   sourceLogoUrl,
   refinementPrompt,
+  context,
 }: {
   ai: Ai;
   env: Env;
@@ -108,6 +111,7 @@ export async function generateSocialMediaAssets({
   brandName: string;
   sourceLogoUrl: string;
   refinementPrompt?: string;
+  context?: ValidatedBrandContext;
 }): Promise<{
   socialProfileUrl: string;
   masterBannerUrl: string;
@@ -128,6 +132,7 @@ export async function generateSocialMediaAssets({
               backendModel: mapping.backendModel,
               defaultParams: mapping.defaultParams,
               refinementPrompt,
+              context,
             }),
           );
           if (!result.success || !result.imageData) {
@@ -155,6 +160,7 @@ export async function generateSocialMediaAssets({
               backendModel: mapping.backendModel,
               defaultParams: mapping.defaultParams,
               refinementPrompt,
+              context,
             }),
           );
           if (!result.success || !result.imageData) {
@@ -182,6 +188,7 @@ export async function generateSocialMediaAssets({
               backendModel: mapping.backendModel,
               defaultParams: mapping.defaultParams,
               refinementPrompt,
+              context,
             }),
           );
           if (!result.success || !result.imageData) {
@@ -212,6 +219,7 @@ export async function generateBrandedBackdrops({
   brandName,
   sourceLogoUrl,
   refinementPrompt,
+  context,
 }: {
   ai: Ai;
   env: Env;
@@ -220,6 +228,7 @@ export async function generateBrandedBackdrops({
   brandName: string;
   sourceLogoUrl: string;
   refinementPrompt?: string;
+  context?: ValidatedBrandContext;
 }): Promise<{ feedUrl: string; storyUrl: string }> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
@@ -235,6 +244,7 @@ export async function generateBrandedBackdrops({
             backendModel: mapping.backendModel,
             defaultParams: mapping.defaultParams,
             refinementPrompt,
+              context,
           }),
         );
         if (!result.success || !result.imageData) {
@@ -262,6 +272,7 @@ export async function generateBrandedBackdrops({
             backendModel: mapping.backendModel,
             defaultParams: mapping.defaultParams,
             refinementPrompt,
+              context,
           }),
         );
         if (!result.success || !result.imageData) {
@@ -292,6 +303,7 @@ export async function generateBusinessCardAssets({
   brandName,
   sourceLogoUrl,
   refinementPrompt,
+  context,
 }: {
   ai: Ai;
   env: Env;
@@ -300,6 +312,7 @@ export async function generateBusinessCardAssets({
   brandName: string;
   sourceLogoUrl: string;
   refinementPrompt?: string;
+  context?: ValidatedBrandContext;
 }): Promise<{ frontUrl: string; backUrl: string }> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
@@ -321,6 +334,7 @@ export async function generateBusinessCardAssets({
               },
             },
             refinementPrompt,
+              context,
           }),
         );
         if (!result.success || !result.imageData) {
@@ -355,6 +369,7 @@ export async function generateBusinessCardAssets({
               },
             },
             refinementPrompt,
+              context,
           }),
         );
         if (!result.success || !result.imageData) {

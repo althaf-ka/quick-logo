@@ -11,6 +11,7 @@ import type {
 } from "@quicklogo/shared";
 import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
 import type { Env } from "../types";
+import { normalizeBrandContext } from "@quicklogo/ai-providers/prompt";
 import { extractWorkersAiResponseText } from "../core/ai-response-parser";
 import { createLogger } from "@quicklogo/server-telemetry";
 import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
@@ -53,7 +54,26 @@ export class BrandKitPipeline {
       typographyStyle,
       deliverables,
       productImageUrls,
+      industry,
+      tagline,
+      targetAudience,
+      selectedVibes,
+      brandPersonality,
+      additionalContext,
+      socials,
+      contact,
     } = message;
+
+    const brandAssetContext = normalizeBrandContext(brandName || "", {
+      industry,
+      tagline,
+      targetAudience,
+      selectedVibes,
+      brandPersonality,
+      additionalContext,
+      socials,
+      contact,
+    });
 
     this.logger.info(`Starting brand kit pipeline`, { brandKitId });
 
@@ -292,6 +312,7 @@ export class BrandKitPipeline {
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
+              context: brandAssetContext,
             })
           : null;
 
@@ -347,6 +368,7 @@ export class BrandKitPipeline {
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
+              context: brandAssetContext,
             })
           : null;
 
@@ -368,6 +390,7 @@ export class BrandKitPipeline {
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
+              context: brandAssetContext,
             })
           : null;
 

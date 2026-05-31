@@ -1,90 +1,85 @@
 import type { GenerationParams } from "../types";
+import { 
+  LogoVariationKind, 
+  SocialMediaVariationKind, 
+  BackdropVariationKind, 
+  BusinessCardVariationKind, 
+  BrandKitSectionKey,
+  BrandKitJsonRequest,
+  BrandKitMessage,
+  BrandKitVisionMessage,
+  BrandKitVisionRequest,
+  ValidatedBrandContext
+} from "./types";
+import { normalizeBrandContext, buildBrandDesignContext } from "./normalize-context";
+import { buildBusinessCardContentStrategy } from "./business-card-strategy";
 
-type LogoVariationKind = "dark-mode" | "icon-only";
-type SocialMediaVariationKind =
-  | "social-profile"
-  | "master-banner"
-  | "facebook-banner";
-type BusinessCardVariationKind = "front" | "back";
-type BackdropVariationKind = "feed-backdrop" | "story-backdrop";
-type BrandKitSectionKey = "colorPalette" | "brandPresentation";
+const JSON_RESPONSE_MAX_TOKENS = 600;
 
-interface BrandKitMessage {
-  role: "system" | "user";
-  content: string;
-}
+export const LOGO_VARIATION_PROMPTS = {
+  "dark-mode": ({ brandName }: { brandName: string }) =>
+    `You are an expert graphic designer. Take the provided logo for "${brandName}" and prepare a dark-background version. Preserve the exact original canvas, logo scale, typography position, spacing, composition, and art style. The output must match the original layout and size exactly. Do not move text, enlarge the mark, shrink the mark, crop, rotate, or redesign any element. Keep the colored icon intact. Only recolor dark or low-contrast text and strokes to white or a light contrasting color so the existing logo remains legible on a pitch-black background.`,
+  "icon-only": () =>
+    "You are an expert graphic designer. Create an icon-only logomark from this image. Completely remove all typography, text, and words if they exist. Preserve the symbol's original proportions, colors, and art style. If removing text leaves the symbol visually too small, scale the symbol up tastefully to use the freed space while keeping comfortable margins. If the input is already icon-only or has no typography, preserve the original symbol scale or make only a subtle professional sizing adjustment. Do not shrink the symbol, crop, distort, or add new elements.",
+} satisfies Record<
+  LogoVariationKind,
+  (context: { brandName: string }) => string
+>;
 
-interface BrandKitJsonRequest {
-  messages: BrandKitMessage[];
-  response_format: { type: "json_object" };
-  max_tokens?: number;
-}
+export const SOCIAL_MEDIA_PROMPTS = {
+  "social-profile": (context: ValidatedBrandContext) =>
+    `You are an expert social media designer. Take the logo for "${context.brandName}" and center it perfectly for a circular profile crop, leaving enough breathing room (padding) around the edges. CRITICAL: The background MUST be a solid, opaque color (not transparent) so it renders correctly on dark mode interfaces.${buildBrandDesignContext(context)}`,
+  "master-banner": (context: ValidatedBrandContext) =>
+    `You are an expert social media designer. Create a striking wide panoramic banner background for "${context.brandName}" for X/LinkedIn. Use the provided logo to derive a cohesive background pattern or atmospheric scene. CRITICAL: Keep the bottom-left area minimal/empty as the profile picture will overlap there. Place primary visual weight and subtle watermarks on the right side.${context.hasSocials ? ' Subtle social watermarks are permitted.' : ''}${buildBrandDesignContext(context)}`,
+  "facebook-banner": (context: ValidatedBrandContext) =>
+    `You are an expert social media designer. Create a Facebook cover photo for "${context.brandName}". Use the provided logo to derive a cohesive background pattern. CRITICAL: Keep the left side clean for the profile picture, and place visual weight on the right side.${context.hasSocials ? ' Subtle social watermarks are permitted.' : ''}${buildBrandDesignContext(context)}`,
+} satisfies Record<
+  SocialMediaVariationKind,
+  (context: ValidatedBrandContext) => string
+>;
 
-interface BrandKitVisionMessage {
-  role: "system" | "user";
-  content:
-    | string
-    | Array<
-        | { type: "text"; text: string }
-        | { type: "image_url"; image_url: { url: string } }
-      >;
-}
+export const BACKDROP_PROMPTS = {
+  "feed-backdrop": (context: ValidatedBrandContext) =>
+    `You are an expert graphic designer. Create a beautiful abstract background or gradient derived from the brand's color palette for "${context.brandName}". It should be suitable as an Instagram feed post backdrop for writing text or quotes over. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.${context.hasSocials ? ' Subtle social watermarks are permitted.' : ''}${buildBrandDesignContext(context)}`,
+  "story-backdrop": (context: ValidatedBrandContext) =>
+    `You are an expert graphic designer. Create a 9:16 vertical story backdrop for "${context.brandName}". Create a beautiful abstract background or gradient derived from the brand's color palette. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.${context.hasSocials ? ' Subtle social watermarks are permitted.' : ''}${buildBrandDesignContext(context)}`,
+} satisfies Record<
+  BackdropVariationKind,
+  (context: ValidatedBrandContext) => string
+>;
 
-interface BrandKitVisionRequest {
-  messages: BrandKitVisionMessage[];
-  max_tokens?: number;
-  response_format?: { type: "json_object" };
-}
+const RELIABILITY_WARNING = "\nRender any included text carefully and legibly. Do not invent, alter, or add extra contact details.";
 
-interface LogoVariationPromptContext {
-  brandName: string;
-}
+export const BUSINESS_CARD_PROMPTS = {
+  front: (context: ValidatedBrandContext) => {
+    const strategy = buildBusinessCardContentStrategy(context);
+    let hierarchy = "Center the provided logo beautifully.\n";
+    if (strategy.tagline) hierarchy += `Include tagline: "${strategy.tagline}" below the logo.\n`;
+    if (strategy.frontDetail) {
+      hierarchy += `Feature one primary detail only: ${strategy.frontDetail.label}: ${strategy.frontDetail.value}\n`;
+      hierarchy += "Do not include any other contact or social details on the front.";
+    } else {
+      hierarchy += "Keep the front minimalist — no contact or social text elements. Clean brand-colored background. Print-ready.";
+    }
 
-interface BuildLogoVariationParamsInput {
-  variation: LogoVariationKind;
-  brandName: string;
-  sourceLogoUrl: string;
-  backendModel: string;
-  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
-}
+    return `You are an expert graphic designer. Create a premium standalone business card front for "${context.brandName}". CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card mockup on a background. Clean typographic hierarchy. Generous spacing. High readability.\n\nFront content hierarchy:\n${hierarchy}${RELIABILITY_WARNING}`;
+  },
+  back: (context: ValidatedBrandContext) => {
+    const strategy = buildBusinessCardContentStrategy(context);
+    let hierarchy = "";
+    if (strategy.backDetails.length === 0) {
+      hierarchy = "Elegant abstract pattern or gradient from brand palette. No text elements. Matching minimalist back design.";
+    } else {
+      const detailsList = strategy.backDetails.map(d => `${d.label}: ${d.value}`).join("\n  ");
+      hierarchy = `Create a matching minimalist back design.\nInclude these exact contact details in a clean grid or stacked layout:\n  ${detailsList}\nKeep generous spacing and strong readability.`;
+    }
 
-interface BuildSocialMediaParamsInput {
-  variation: SocialMediaVariationKind;
-  brandName: string;
-  sourceLogoUrl: string;
-  backendModel: string;
-  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
-}
-
-interface BuildBusinessCardParamsInput {
-  variation: BusinessCardVariationKind;
-  brandName: string;
-  sourceLogoUrl: string;
-  backendModel: string;
-  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
-}
-
-interface BuildBackdropParamsInput {
-  variation: BackdropVariationKind;
-  brandName: string;
-  sourceLogoUrl: string;
-  backendModel: string;
-  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
-}
-
-interface BuildTypographyRequestInput {
-  brandName: string;
-  description: string;
-  typographyStyleHint: string;
-  visualAnalysis?: string;
-  typographyStyleKey?: string;
-}
-
-interface BuildLogoStyleAnalysisInput {
-  brandName: string;
-  description: string;
-  logoUrl: string;
-}
+    return `You are an expert graphic designer. Create a premium standalone business card back for "${context.brandName}". CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card mockup on a background. Clean typographic hierarchy. Generous spacing. High readability.\n\nBack content hierarchy:\n${hierarchy}${RELIABILITY_WARNING}`;
+  },
+} satisfies Record<
+  BusinessCardVariationKind,
+  (context: ValidatedBrandContext) => string
+>;
 
 const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
   colorPalette:
@@ -98,51 +93,7 @@ const REFINEMENT_SECTION_KEYS: Partial<Record<string, BrandKitSectionKey>> = {
   "brand-presentation": "brandPresentation",
 };
 
-const JSON_RESPONSE_MAX_TOKENS = 600;
-
-const LOGO_VARIATION_PROMPTS = {
-  "dark-mode": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Take the provided logo for "${brandName}" and prepare a dark-background version. Preserve the exact original canvas, logo scale, typography position, spacing, composition, and art style. The output must match the original layout and size exactly. Do not move text, enlarge the mark, shrink the mark, crop, rotate, or redesign any element. Keep the colored icon intact. Only recolor dark or low-contrast text and strokes to white or a light contrasting color so the existing logo remains legible on a pitch-black background.`,
-  "icon-only": () =>
-    "You are an expert graphic designer. Create an icon-only logomark from this image. Completely remove all typography, text, and words if they exist. Preserve the symbol's original proportions, colors, and art style. If removing text leaves the symbol visually too small, scale the symbol up tastefully to use the freed space while keeping comfortable margins. If the input is already icon-only or has no typography, preserve the original symbol scale or make only a subtle professional sizing adjustment. Do not shrink the symbol, crop, distort, or add new elements.",
-} satisfies Record<
-  LogoVariationKind,
-  (context: LogoVariationPromptContext) => string
->;
-
-const SOCIAL_MEDIA_PROMPTS = {
-  "social-profile": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert social media designer. Take the logo for "${brandName}" and center it perfectly for a circular profile crop, leaving enough breathing room (padding) around the edges. CRITICAL: The background MUST be a solid, opaque color (not transparent) so it renders correctly on dark mode interfaces.`,
-  "master-banner": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert social media designer. Create a striking wide panoramic banner background for "${brandName}" for X/LinkedIn. Use the provided logo to derive a cohesive background pattern or atmospheric scene. CRITICAL: Keep the bottom-left area minimal/empty as the profile picture will overlap there. Place primary visual weight and subtle watermarks on the right side.`,
-  "facebook-banner": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert social media designer. Create a Facebook cover photo for "${brandName}". Use the provided logo to derive a cohesive background pattern. CRITICAL: Keep the left side clean for the profile picture, and place visual weight on the right side.`,
-} satisfies Record<
-  SocialMediaVariationKind,
-  (context: LogoVariationPromptContext) => string
->;
-
-const BACKDROP_PROMPTS = {
-  "feed-backdrop": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Create a beautiful abstract background or gradient derived from the brand's color palette for "${brandName}". It should be suitable as an Instagram feed post backdrop for writing text or quotes over. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.`,
-  "story-backdrop": ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Create a 9:16 vertical story backdrop for "${brandName}". Create a beautiful abstract background or gradient derived from the brand's color palette. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.`,
-} satisfies Record<
-  BackdropVariationKind,
-  (context: LogoVariationPromptContext) => string
->;
-
-const BUSINESS_CARD_PROMPTS = {
-  front: ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Create a premium standalone business card front for "${brandName}". Center the provided logo beautifully. CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card on a background. Clean brand-colored background. Print-ready quality.`,
-  back: ({ brandName }: LogoVariationPromptContext) =>
-    `You are an expert graphic designer. Create a premium standalone business card back for "${brandName}". Matching minimalist back, abstract pattern/gradient from brand palette. CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card on a background. Clean center space. Print-ready quality.`,
-} satisfies Record<
-  BusinessCardVariationKind,
-  (context: LogoVariationPromptContext) => string
->;
-
-function buildJsonBrandKitRequest(
+export function buildJsonBrandKitRequest(
   systemPrompt: string,
   userPrompt: string,
 ): BrandKitJsonRequest {
@@ -156,7 +107,7 @@ function buildJsonBrandKitRequest(
   };
 }
 
-interface BuildBrandKitIdentityRequestInput {
+export interface BuildBrandKitIdentityRequestInput {
   brandName: string;
   description: string;
   extractedColors: string[];
@@ -201,7 +152,7 @@ CRITICAL: Respond with ONLY the "colorPalette" key. Never add brandName, typogra
   return buildJsonBrandKitRequest(systemPrompt, context);
 }
 
-interface BuildBrandPresentationTextRequestInput {
+export interface BuildBrandPresentationTextRequestInput {
   brandName: string;
   description: string;
   industry?: string;
@@ -245,51 +196,52 @@ Schema:
   return buildJsonBrandKitRequest(systemPrompt, context);
 }
 
+export interface BuildLogoStyleAnalysisInput {
+  brandName: string;
+  description: string;
+  logoUrl: string;
+}
+
 export function buildLogoStyleAnalysisRequest({
   brandName,
   description,
   logoUrl,
 }: BuildLogoStyleAnalysisInput): BrandKitVisionRequest {
+  const systemPrompt = `You are an expert brand identity designer and design historian.
+Analyze the provided logo image. Output ONLY valid JSON containing a short, descriptive "style" string.
+Your analysis must describe the visual style, form, texture, geometry, linework, and mood. For example: "A minimalist, geometric sans-serif mark with thick, monolinear strokes and rounded corners" or "An intricate, illustrative badge with organic textures and a vintage woodcut feel." Do NOT use words like "The logo is" or "This image shows". Just the description.
+Schema:
+{ "style": "Your description here" }`;
+
   return {
     messages: [
-      {
-        role: "system",
-        content: `You are an expert brand identity analyst specializing in typography and visual design.
-Analyze the provided logo image and describe its visual style characteristics.
-Output a concise, single-paragraph analysis covering:
-- The overall design style (e.g., modern, traditional, playful, elegant, minimal, tech, luxury)
-- Key visual characteristics (e.g., geometric shapes, hand-drawn feel, thick lines, negative space, curves)
-- Recommended font categories or moods that would complement this logo
-Do NOT suggest specific font names. Only describe the visual style.
-Keep your response under 4 sentences.`,
-      },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: [
+          { type: "text", text: `Brand: ${brandName}\nContext: ${description}` },
           { type: "image_url", image_url: { url: logoUrl } },
-          {
-            type: "text",
-            text: `Brand Name: "${brandName}"\nBrand Description: "${description}"\n\nAnalyze this logo's visual style for font selection.`,
-          },
         ],
       },
     ],
-    max_tokens: 512,
+    max_tokens: 300,
   };
+}
+
+export interface BuildTypographyRequestInput {
+  brandName: string;
+  description: string;
+  typographyStyleHint: string;
+  visualAnalysis?: string;
+  typographyStyleKey?: string;
 }
 
 const STYLE_FONT_GUIDANCE: Record<string, string> = {
   "modern-sans":
-    "Select clean, geometric SANS-SERIF fonts. Examples: Inter, Montserrat, DM Sans, Outfit.",
+    "Select clean, geometric SANS-SERIF fonts. Examples: Inter, Roboto, Montserrat, Poppins, Outfit.",
   "classic-serif":
-    "Select elegant SERIF fonts. Examples: Merriweather, Playfair Display, Lora, PT Serif.",
-  "playful-display":
-    "Select rounded, decorative DISPLAY fonts. Examples: Fredoka, Baloo 2, Bangers, Bubblegum Sans.",
-  "elegant-script":
-    "Select flowing SCRIPT or handwriting fonts. Examples: Pacifico, Dancing Script, Alex Brush, Great Vibes.",
-  "tech-mono":
-    "Select MONOSPACE or techy sans-serif fonts. Examples: JetBrains Mono, Fira Code, Space Mono, IBM Plex Mono.",
-  "bold-impact":
+    "Select elegant, traditional SERIF fonts. Examples: Playfair Display, Merriweather, Lora, PT Serif.",
+  "bold-display":
     "Select bold, high-weight SANS-SERIF or display fonts. Examples: Bebas Neue, Oswald, Anton, Rubik Dirt.",
   "friendly-round":
     "Select warm, ROUNDED sans-serif fonts. Examples: Nunito, Quicksand, Varela Round, M PLUS Rounded 1c.",
@@ -310,7 +262,7 @@ export function buildBrandKitTypographyRequest({
 
   const styleGuidance =
     typographyStyleKey && STYLE_FONT_GUIDANCE[typographyStyleKey]
-      ? `\n\nStyle-specific guidance: ${STYLE_FONT_GUIDANCE[typographyStyleKey]}`
+      ? `\n\nStyle-specific guidance: ${STYLE_FONT_GUIDANCE[typographyStyleKey]}\n`
       : "";
 
   const systemPrompt = `You are an expert brand identity typographer selecting Google Fonts.
@@ -336,7 +288,7 @@ Schema:
   };
 }
 
-interface BuildBrandKitRefinementRequestInput {
+export interface BuildBrandKitRefinementRequestInput {
   brandName: string;
   sectionId: string;
   refinementPrompt: string;
@@ -362,7 +314,6 @@ export function buildBrandKitRefinementRequest({
 } | null {
   const sectionKey = REFINEMENT_SECTION_KEYS[sectionId];
   if (!sectionKey) return null;
-
   const sectionSchema = BRAND_KIT_SECTION_SCHEMAS[sectionKey];
   const sectionInstruction =
     sectionId === "brand-presentation"
@@ -386,6 +337,55 @@ export function buildBrandKitRefinementRequest({
   };
 }
 
+export function buildAssetParams({
+  prompt,
+  referenceImage,
+  referenceStrength,
+  width,
+  height,
+  backendModel,
+  defaultParams,
+  refinementPrompt,
+}: {
+  prompt: string;
+  referenceImage?: string;
+  referenceStrength?: number;
+  width: number;
+  height: number;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+  refinementPrompt?: string;
+}): GenerationParams {
+  const finalPrompt = refinementPrompt
+    ? `${prompt} Refinement instruction: ${refinementPrompt}`
+    : prompt;
+
+  const params: GenerationParams = {
+    ...defaultParams,
+    backendModel,
+    prompt: finalPrompt,
+    width,
+    height,
+  };
+
+  if (referenceImage) {
+    params.referenceImage = referenceImage;
+  }
+  if (referenceStrength !== undefined) {
+    params.referenceStrength = referenceStrength;
+  }
+
+  return params;
+}
+
+export interface BuildLogoVariationParamsInput {
+  variation: LogoVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+}
+
 export function buildLogoVariationGenerationParams({
   variation,
   brandName,
@@ -393,13 +393,24 @@ export function buildLogoVariationGenerationParams({
   backendModel,
   defaultParams,
 }: BuildLogoVariationParamsInput): GenerationParams {
-  return {
-    ...defaultParams,
-    backendModel,
+  return buildAssetParams({
     prompt: LOGO_VARIATION_PROMPTS[variation]({ brandName }),
     referenceImage: sourceLogoUrl,
     referenceStrength: 75,
-  };
+    width: 1024,
+    height: 1024, // Assumed default if missing, though it wasn't there originally. Let's just omit width/height for logo? Wait, buildAssetParams requires width and height. I'll provide 1024. Or make them optional in buildAssetParams.
+    backendModel,
+    defaultParams,
+  });
+}
+
+export interface BuildSocialMediaParamsInput {
+  variation: SocialMediaVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+  context?: ValidatedBrandContext;
 }
 
 export function buildSocialMediaGenerationParams({
@@ -409,26 +420,30 @@ export function buildSocialMediaGenerationParams({
   backendModel,
   defaultParams,
   refinementPrompt,
+  context,
 }: BuildSocialMediaParamsInput & {
   refinementPrompt?: string;
 }): GenerationParams {
-  const basePrompt = SOCIAL_MEDIA_PROMPTS[variation]({ brandName });
-  const finalPrompt = refinementPrompt
-    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
-    : basePrompt;
-
-  const width = 1024;
-  const height = 1024;
-
-  return {
-    ...defaultParams,
-    backendModel,
-    prompt: finalPrompt,
+  const ctx = context || normalizeBrandContext(brandName, {});
+  return buildAssetParams({
+    prompt: SOCIAL_MEDIA_PROMPTS[variation](ctx),
     referenceImage: sourceLogoUrl,
     referenceStrength: variation === "social-profile" ? 90 : 40,
-    width,
-    height,
-  };
+    width: 1024,
+    height: 1024,
+    backendModel,
+    defaultParams,
+    refinementPrompt,
+  });
+}
+
+export interface BuildBackdropParamsInput {
+  variation: BackdropVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+  context?: ValidatedBrandContext;
 }
 
 export function buildBackdropGenerationParams({
@@ -438,21 +453,28 @@ export function buildBackdropGenerationParams({
   backendModel,
   defaultParams,
   refinementPrompt,
+  context,
 }: BuildBackdropParamsInput & { refinementPrompt?: string }): GenerationParams {
-  const basePrompt = BACKDROP_PROMPTS[variation]({ brandName });
-  const finalPrompt = refinementPrompt
-    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
-    : basePrompt;
-
-  return {
-    ...defaultParams,
-    backendModel,
-    prompt: finalPrompt,
+  const ctx = context || normalizeBrandContext(brandName, {});
+  return buildAssetParams({
+    prompt: BACKDROP_PROMPTS[variation](ctx),
     referenceImage: sourceLogoUrl,
     referenceStrength: 40,
     width: 1024,
     height: 1024,
-  };
+    backendModel,
+    defaultParams,
+    refinementPrompt,
+  });
+}
+
+export interface BuildBusinessCardParamsInput {
+  variation: BusinessCardVariationKind;
+  brandName: string;
+  sourceLogoUrl: string;
+  backendModel: string;
+  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
+  context?: ValidatedBrandContext;
 }
 
 export function buildBusinessCardGenerationParams({
@@ -462,23 +484,21 @@ export function buildBusinessCardGenerationParams({
   backendModel,
   defaultParams,
   refinementPrompt,
+  context,
 }: BuildBusinessCardParamsInput & {
   refinementPrompt?: string;
 }): GenerationParams {
-  const basePrompt = BUSINESS_CARD_PROMPTS[variation]({ brandName });
-  const finalPrompt = refinementPrompt
-    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
-    : basePrompt;
-
-  return {
-    ...defaultParams,
-    backendModel,
-    prompt: finalPrompt,
+  const ctx = context || normalizeBrandContext(brandName, {});
+  return buildAssetParams({
+    prompt: BUSINESS_CARD_PROMPTS[variation](ctx),
     referenceImage: sourceLogoUrl,
-    referenceStrength: variation === "front" ? 90 : 40,
+    referenceStrength: variation === "front" ? (ctx.hasAnyDetails ? 60 : 90) : 40,
     width: 1376,
     height: 768,
-  };
+    backendModel,
+    defaultParams,
+    refinementPrompt,
+  });
 }
 
 export function buildBrandPresentationGenerationParams({
@@ -519,26 +539,21 @@ export function buildBrandPresentationGenerationParams({
   }
 
   basePrompt += ` Include clean typography`;
-  basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup`;
+  basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup\n`;
   if (logoStyleDescription) basePrompt += ` (${logoStyleDescription})`;
   if (productImageUrl) basePrompt += `, a sleek product showcase`;
   basePrompt += `, subtle typography integration (${headingFont || "Inter"} & ${bodyFont || "Montserrat"}), and beautiful modern color palette swatches.`;
   basePrompt += ` Background should feature abstract organic shapes and sleek brand textures.`;
   basePrompt += ` CRITICAL: NO literal instruction text (do NOT write "Logo Mockup" or "Art:"). Create a cohesive, highly polished, aesthetic graphic design composition.`;
 
-  const finalPrompt = refinementPrompt
-    ? `${basePrompt} Refinement instruction: ${refinementPrompt}`
-    : basePrompt;
-
-  return {
-    ...defaultParams,
-    backendModel,
-    prompt: finalPrompt,
-    ...(productImageUrl && {
-      referenceImage: productImageUrl,
-      referenceStrength: 45,
-    }),
+  return buildAssetParams({
+    prompt: basePrompt,
+    referenceImage: productImageUrl,
+    referenceStrength: productImageUrl ? 45 : undefined, 
     width: 1376,
     height: 768,
-  };
+    backendModel,
+    defaultParams,
+    refinementPrompt,
+  });
 }
