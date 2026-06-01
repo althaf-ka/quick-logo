@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 
 type BrandKitSectionContextValue = {
   targetSectionId?: string | null;
+  targetItemId?: string | null;
   refiningSectionId?: string | null;
   cancelRefine?: () => void;
 };

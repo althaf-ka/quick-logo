@@ -428,7 +428,7 @@ export class BrandKitPipeline {
   }
 
   async processRefinement(message: RefineBrandKitMessage) {
-    const { brandKitId, sectionId, refinementPrompt } = message;
+    const { brandKitId, sectionId, refinementPrompt, targetItemId } = message;
 
     try {
       const activeRevision =
@@ -445,6 +445,7 @@ export class BrandKitPipeline {
         brandKitId,
         sectionId,
         refinementPrompt,
+        targetItemId,
         currentBrandKit,
         activeRevisionResults: activeRevision.results,
       });

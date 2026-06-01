@@ -557,3 +557,51 @@ export function buildBrandPresentationGenerationParams({
     refinementPrompt,
   });
 }
+
+export interface BuildBrandKitGlobalRefinementRequestInput {
+  brandName: string;
+  refinementPrompt: string;
+  currentResults: Record<string, unknown>;
+  industry?: string;
+  targetAudience?: string;
+  selectedVibes?: string[];
+  brandPersonality?: string;
+  hasBrandGuidelines: boolean;
+}
+
+export function buildBrandKitGlobalRefinementRequest({
+  brandName,
+  refinementPrompt,
+  currentResults,
+  industry,
+  targetAudience,
+  selectedVibes,
+  brandPersonality,
+  hasBrandGuidelines,
+}: BuildBrandKitGlobalRefinementRequestInput): BrandKitJsonRequest {
+  const systemPrompt = `You are an expert brand identity designer.
+You are processing a global refinement request for a brand kit.
+Output ONLY valid JSON matching this schema exactly. Do not include any text outside the JSON.
+The user wants to update the brand kit based on their request.
+You may update any of the supported optional fields if the user's request affects them.
+Do NOT include fields that are not impacted by the request.
+Schema:
+{
+  "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }],
+  "brandPresentation": { "tagline": "...", "description": "..." },
+  "typography": {
+    "heading": { "family": "...", "weight": "...", "name": "..." },
+    "body": { "family": "...", "weight": "...", "name": "..." }
+  }${hasBrandGuidelines ? `,\n  "brandGuidelines": { "missionStatement": "...", "tagline": "...", "personality": "...", "targetAudience": "...", "industry": "...", "additionalContext": "..." }` : ''}
+}`;
+
+  let context = `Brand Name: ${brandName}\n`;
+  if (industry) context += `Industry: ${industry}\n`;
+  if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
+  if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
+  if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
+
+  context += `Refinement Request: ${refinementPrompt}\nOriginal JSON state for context: ${JSON.stringify(currentResults)}`;
+
+  return buildJsonBrandKitRequest(systemPrompt, context);
+}

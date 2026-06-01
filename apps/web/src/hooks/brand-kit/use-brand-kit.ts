@@ -9,7 +9,7 @@ import { uploadFileToImageKit } from "@/lib/imagekit";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
-import type { StructuredBrandContext } from "@quicklogo/shared";
+import type { StructuredBrandContext, RefinementSectionId, RestoreSectionId } from "@quicklogo/shared";
 
 interface UseBrandKitOptions {
   imageId?: string;
@@ -81,11 +81,14 @@ export function useBrandKit({
     targetSection,
     setTargetSection,
     refiningSectionId,
+    targetItemId,
+    setTargetItemId,
     conversationHistory,
     refinementHistory,
     hydrateFromBrandKit: hydrateRefinement,
     mutateRefine,
     mutateRestore,
+    mutateRestoreFull,
   } = refinement;
 
   // 2. Hydration Flow (Sync query changes exactly once)
@@ -260,6 +263,7 @@ export function useBrandKit({
       customPrompt?: string,
       customContext?: Partial<StructuredBrandContext>,
     ) => {
+      if (isGeneratingKit || isRefiningKit) return;
       const activePrompt = customPrompt !== undefined ? customPrompt : prompt;
 
       const contextToUse = customContext || structuredContext;
@@ -294,7 +298,13 @@ export function useBrandKit({
 
       if (targetSection) {
         mutateRefine({
-          sectionId: targetSection,
+          sectionId: targetSection as RefinementSectionId,
+          refinementPrompt: activePrompt,
+          targetItemId: targetItemId || undefined,
+        });
+      } else if (brandKitId) {
+        mutateRefine({
+          sectionId: "global",
           refinementPrompt: activePrompt,
         });
       } else {
@@ -321,6 +331,8 @@ export function useBrandKit({
       }
     },
     [
+      isGeneratingKit,
+      isRefiningKit,
       imageId,
       prompt,
       targetSection,
@@ -335,6 +347,7 @@ export function useBrandKit({
       brandKitId,
       mutateGenerate,
       structuredContext,
+      targetItemId,
     ],
   );
 
@@ -376,6 +389,8 @@ export function useBrandKit({
     setPrompt,
     targetSection,
     setTargetSection,
+    targetItemId,
+    setTargetItemId,
     refiningSectionId,
     conversationHistory,
     refinementHistory,
@@ -390,10 +405,18 @@ export function useBrandKit({
     handleMockupUpload,
     handleFontChange,
     handleGenerate,
-    handleRefine: (sectionId: string, refinementPrompt: string) =>
-      mutateRefine({ sectionId, refinementPrompt }),
-    handleRestore: (sectionId: string, sourceRevisionId: string) =>
-      mutateRestore({ sectionId, sourceRevisionId }),
+    handleRefine: (sectionId: string, refinementPrompt: string, targetItemId?: string) => {
+      if (isRefiningKit || refinement.isRestoringKit || refinement.isRestoringFull) return;
+      mutateRefine({ sectionId: sectionId as RefinementSectionId, refinementPrompt, targetItemId });
+    },
+    handleRestore: (sectionId: string, sourceRevisionId: string) => {
+      if (isRefiningKit || refinement.isRestoringKit || refinement.isRestoringFull) return;
+      mutateRestore({ sectionId: sectionId as RestoreSectionId, sourceRevisionId });
+    },
+    handleRestoreFull: (sourceRevisionId: string) => {
+      if (isRefiningKit || refinement.isRestoringKit || refinement.isRestoringFull) return;
+      mutateRestoreFull({ sourceRevisionId });
+    },
     getSectionHistory: (sectionPrefix: string) => {
       if (!normalizedData) return [];
       return normalizedData.revisions.filter((r) => {
@@ -408,23 +431,40 @@ export function useBrandKit({
   };
 }
 
-export function getSectionLabel(sectionId: string): string {
+export function getSectionLabel(sectionId: string, targetItemId?: string | null): string {
+  let label = sectionId;
   switch (sectionId) {
     case "logoVariations":
-      return "Logo Variations";
+    case "logo-variations":
+      label = "Logo Variations";
+      break;
     case "socialMedia":
-      return "Social Media Kit";
+    case "social-media":
+      label = "Social Media Kit";
+      break;
     case "businessCard":
-      return "Business Cards";
+    case "business-card":
+      label = "Business Cards";
+      break;
     case "favicon":
-      return "Favicons";
+      label = "Favicons";
+      break;
     case "brandedBackdrops":
-      return "Branded Backdrops";
+    case "branded-backdrops":
+      label = "Branded Backdrops";
+      break;
     case "brandPresentation":
-      return "Brand Presentation";
+    case "brand-presentation":
+      label = "Brand Presentation";
+      break;
     case "typography":
-      return "Typography System";
-    default:
-      return sectionId;
+      label = "Typography System";
+      break;
   }
+  
+  if (targetItemId) {
+    const formattedTarget = targetItemId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return `${label} · ${formattedTarget}`;
+  }
+  return label;
 }

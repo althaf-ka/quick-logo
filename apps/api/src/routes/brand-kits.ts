@@ -1,13 +1,14 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import { createId } from "@paralleldrive/cuid2";
 import {
   generateBrandKitSchema,
   refineBrandKitSectionSchema,
   restoreSectionSchema,
+  restoreFullBrandKitSchema,
   buildBrandContextSummary,
   listQuerySchema,
+  getSocialAssetTargetId,
 } from "@quicklogo/shared";
 import {
   brandKits,
@@ -28,6 +29,27 @@ import {
   BadRequestError,
 } from "../lib/errors";
 import type { Bindings, Variables } from "../types";
+
+function deepEqual(obj1: any, obj2: any): boolean {
+  if (obj1 === obj2) return true;
+  if (
+    typeof obj1 !== "object" ||
+    typeof obj2 !== "object" ||
+    obj1 == null ||
+    obj2 == null
+  ) {
+    return false;
+  }
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  if (keys1.length !== keys2.length) return false;
+  for (const key of keys1) {
+    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) {
+      return false;
+    }
+  }
+  return true;
+}
 
 const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .post(
@@ -153,6 +175,38 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
       if (!brandKit) throw new NotFoundError("Brand kit");
 
+      if (data.targetItemId) {
+        const activeRevision = await db.query.brandKitRevisions.findFirst({
+          where: and(
+            eq(brandKitRevisions.brandKitId, id),
+            eq(brandKitRevisions.isActive, true),
+          ),
+        });
+        if (!activeRevision || !activeRevision.results) {
+          throw new BadRequestError("No active revision to refine");
+        }
+
+        const results = activeRevision.results as Record<string, unknown>;
+
+        if (data.sectionId === "business-card") {
+          const bc = results.businessCard as Record<string, string> | undefined;
+          if (!bc) throw new BadRequestError("Business card does not exist in active revision");
+          if (data.targetItemId === "front" && !bc.frontUrl) throw new BadRequestError("Business card front does not exist in active revision");
+          if (data.targetItemId === "back" && !bc.backUrl) throw new BadRequestError("Business card back does not exist in active revision");
+        } else if (data.sectionId === "branded-backdrops") {
+          const bb = results.brandedBackdrops as Record<string, string> | undefined;
+          if (!bb) throw new BadRequestError("Branded backdrops do not exist in active revision");
+          if (data.targetItemId === "feed" && !bb.feedUrl) throw new BadRequestError("Branded backdrop feed does not exist in active revision");
+          if (data.targetItemId === "story" && !bb.storyUrl) throw new BadRequestError("Branded backdrop story does not exist in active revision");
+        } else if (data.sectionId === "social-media") {
+          const socialAssets = results.socialMedia;
+          if (!Array.isArray(socialAssets)) throw new BadRequestError("Social media assets do not exist in active revision");
+          
+          const found = socialAssets.some((asset: any) => getSocialAssetTargetId(asset) === data.targetItemId);
+          if (!found) throw new BadRequestError(`Social asset '${data.targetItemId}' does not exist in active revision`);
+        }
+      }
+
       const cost = 2; // Refinement cost
       const [updated] = await db
         .update(users)
@@ -227,6 +281,10 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const currentResults = activeRevision.results as Record<string, unknown>;
       const sourceResults = sourceRevision.results as Record<string, unknown>;
 
+      if (deepEqual(currentResults, sourceResults)) {
+        return c.json({ status: "success" });
+      }
+
       let newMergedJSON = { ...currentResults };
 
       // depending on sectionId, map it to the JSON key
@@ -237,11 +295,18 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         "social-media": "socialMedia",
         "business-card": "businessCard",
         favicon: "favicons",
+        "branded-backdrops": "brandedBackdrops",
+        "brand-presentation": "brandPresentation",
+        "brand-guidelines": "brandGuidelines",
       };
 
       const key = sectionKeyMap[sectionId];
       if (key && sourceResults[key]) {
         newMergedJSON[key] = sourceResults[key];
+      }
+
+      if (deepEqual(currentResults, newMergedJSON)) {
+        return c.json({ status: "success" });
       }
 
       const [maxRev] = await db
@@ -271,6 +336,70 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       return c.json({ status: "success" });
     },
+  )
+  .post(
+    "/:id/restore-full",
+    requireAuth,
+    zValidator("json", restoreFullBrandKitSchema, validationHook),
+    async (c) => {
+      const db = c.get("db");
+      const user = c.get("user");
+      const id = c.req.param("id");
+      const { sourceRevisionId } = c.req.valid("json");
+
+      const [brandKit] = await db
+        .select()
+        .from(brandKits)
+        .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
+      if (!brandKit) throw new NotFoundError("Brand kit");
+
+      const activeRevision = await db.query.brandKitRevisions.findFirst({
+        where: and(
+          eq(brandKitRevisions.brandKitId, id),
+          eq(brandKitRevisions.isActive, true),
+        ),
+      });
+
+      const sourceRevision = await db.query.brandKitRevisions.findFirst({
+        where: and(
+          eq(brandKitRevisions.id, sourceRevisionId),
+          eq(brandKitRevisions.brandKitId, id),
+        ),
+      });
+
+      if (!activeRevision || !sourceRevision) {
+        throw new BadRequestError("Revisions not found");
+      }
+
+      if (activeRevision.id === sourceRevision.id) {
+        throw new BadRequestError("Cannot restore to the currently active revision");
+      }
+
+      const sourceResults = sourceRevision.results as Record<string, unknown>;
+
+      if (deepEqual(activeRevision.results, sourceResults)) {
+        return c.json({ status: "success" });
+      }
+
+      await db.batch([
+        db
+          .update(brandKitRevisions)
+          .set({ isActive: false })
+          .where(
+            and(
+              eq(brandKitRevisions.brandKitId, id),
+              eq(brandKitRevisions.isActive, true),
+            ),
+          ),
+
+        db
+          .update(brandKitRevisions)
+          .set({ isActive: true })
+          .where(eq(brandKitRevisions.id, sourceRevisionId)),
+      ]);
+
+      return c.json({ status: "success" });
+    }
   );
 
 export type BrandKitsType = typeof brandKitsRoute;

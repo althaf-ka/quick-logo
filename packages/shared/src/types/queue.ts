@@ -56,9 +56,11 @@ export interface RefineBrandKitMessage {
     | "favicon"
     | "branded-backdrops"
     | "brand-presentation"
-    | "brand-guidelines";
+    | "brand-guidelines"
+    | "global";
   refinementPrompt: string;
   typographyStyle?: string;
+  targetItemId?: string;
 }
 
 export type QueueMessage =

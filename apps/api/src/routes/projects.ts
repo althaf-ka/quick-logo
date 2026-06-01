@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import { projects, images, users, eq, lt, desc, and, sql } from "@quicklogo/db";
 import { ImageKitProvider } from "@quicklogo/storage";
 import { listQuerySchema } from "@quicklogo/shared";

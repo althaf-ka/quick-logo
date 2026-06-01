@@ -54,7 +54,7 @@ export function BrandKitWorkspace({
                   text={imageId ? "Importing Source Logo..." : "Loading Brand Kit..."} 
                 />
               </motion.div>
-            ) : bk.isGenerating ? (
+            ) : bk.isGenerating && !bk.results ? (
               <motion.div
                 key="generating"
                 variants={pageTransition}
@@ -77,10 +77,15 @@ export function BrandKitWorkspace({
                 <BrandKitResults
                   data={bk.results}
                   typographyStyle={bk.typography}
-                  onRefine={(sectionId) => bk.setTargetSection(sectionId)}
+                  onRefine={(sectionId, targetItemId) => {
+                    bk.setTargetSection(sectionId);
+                    if (targetItemId) bk.setTargetItemId(targetItemId);
+                    else bk.setTargetItemId(null);
+                  }}
                   onFontChange={bk.handleFontChange}
                   refiningSectionId={bk.refiningSectionId}
                   targetSectionId={bk.targetSection}
+                  targetItemId={bk.targetItemId}
                 />
               </motion.div>
             ) : bk.logoUrl ? (
@@ -156,7 +161,7 @@ export function BrandKitWorkspace({
                   credits={bk.totalCredits}
                   targetContext={
                     bk.targetSection
-                      ? getSectionLabel(bk.targetSection)
+                      ? getSectionLabel(bk.targetSection, bk.targetItemId)
                       : undefined
                   }
                   onClearTarget={() => bk.setTargetSection(null)}
@@ -191,6 +196,7 @@ export function BrandKitWorkspace({
           revisions={bk.normalizedData?.revisions}
           refiningSectionId={bk.refiningSectionId ?? null}
           onCloseRefinement={() => bk.setTargetSection(null)}
+          onRestoreRevision={bk.handleRestoreFull}
           deliverables={bk.deliverables}
           totalCredits={bk.totalCredits}
         />
@@ -219,6 +225,7 @@ export function BrandKitWorkspace({
                 revisions={bk.normalizedData?.revisions}
                 refiningSectionId={bk.refiningSectionId ?? null}
                 onCloseRefinement={() => bk.setTargetSection(null)}
+                onRestoreRevision={bk.handleRestoreFull}
                 deliverables={bk.deliverables}
                 totalCredits={bk.totalCredits}
                 className="h-auto max-h-none w-full overflow-visible border-none"

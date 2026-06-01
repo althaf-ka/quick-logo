@@ -12,7 +12,9 @@ import {
   GlobeIcon,
   DownloadSimpleIcon,
   WarningCircleIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
+import { getSocialAssetTargetId } from "@quicklogo/shared";
 
 export interface SocialMediaAsset {
   platform: string;
@@ -23,8 +25,9 @@ export interface SocialMediaAsset {
 
 interface SocialMediaSectionProps {
   assets: SocialMediaAsset[];
-  onRefine?: (sectionId: string) => void;
+  onRefine?: (sectionId: string, targetItemId?: string) => void;
   isRefining?: boolean;
+  refiningItemId?: string | null;
 }
 
 function PlatformIcon({ platform }: { platform: string }) {
@@ -64,6 +67,7 @@ export function SocialMediaSection({
   assets,
   onRefine,
   isRefining,
+  refiningItemId,
 }: SocialMediaSectionProps) {
   // Sort assets so Profile is first, followed by Facebook banner to sit next to it
   const displayAssets = [...assets].sort((a, b) => {
@@ -82,7 +86,7 @@ export function SocialMediaSection({
         onRefine={onRefine}
         isRefining={isRefining}
       />
-      <SectionContent isRefining={isRefining}>
+      <SectionContent isRefining={isRefining && !refiningItemId}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {displayAssets.map((asset, i) => {
             const isProfile = asset.type === "Profile";
@@ -115,6 +119,7 @@ export function SocialMediaSection({
                           : "aspect-[21/9] sm:aspect-[4/1]",
                     )}
                   >
+                    <SectionContent isRefining={isRefining && refiningItemId === getSocialAssetTargetId(asset)} className="absolute inset-0 z-30" />
                     <ZoomableImage
                       src={asset.url}
                       alt={
@@ -137,7 +142,18 @@ export function SocialMediaSection({
                           AI asset generation is queued or encountered an issue.
                         </p>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-20 backdrop-blur-sm pointer-events-none">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="pointer-events-auto"
+                          onClick={() => onRefine?.("social-media", getSocialAssetTargetId(asset))}
+                        >
+                          <SparkleIcon weight="fill" className="size-4 mr-2 text-primary" /> Refine Asset
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="bg-muted/5 flex w-full shrink-0 items-center justify-between border-t px-4 py-2.5">

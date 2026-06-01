@@ -1,10 +1,13 @@
-import { normalizeBrandContext } from "@quicklogo/ai-providers/prompt";
+import { normalizeBrandContext, buildBrandKitGlobalRefinementRequest } from "@quicklogo/ai-providers/prompt";
 import { buildBrandKitRefinementRequest } from "@quicklogo/ai-providers/prompt";
 import { resolveTypographyStyle } from "./typography-resolver";
 import { normalizeTypographyOutput } from "./typography-normalizer";
 import { runVisionTypographyRequest } from "./vision-analysis";
 import { extractWorkersAiResponseText } from "../../core/ai-response-parser";
-import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
+import { 
+  brandKitColorPaletteResponseSchema,
+  brandKitGlobalRefinementResponseSchema,
+} from "@quicklogo/shared";
 import {
   generateSocialMediaAssets,
   generateBrandedBackdrops,
@@ -24,6 +27,7 @@ export async function mergeRevisionResults({
   brandKitId,
   sectionId,
   refinementPrompt,
+  targetItemId,
   currentBrandKit,
   activeRevisionResults,
 }: {
@@ -33,6 +37,7 @@ export async function mergeRevisionResults({
   brandKitId: string;
   sectionId: string;
   refinementPrompt: string;
+  targetItemId?: string;
   currentBrandKit: any;
   activeRevisionResults: any;
 }) {
@@ -67,39 +72,56 @@ export async function mergeRevisionResults({
         sourceLogoUrl: actualLogoUrl,
         refinementPrompt,
         context: brandAssetContext,
+        targetItemId,
       });
-      newMergedJSON.socialMedia = [
-        {
-          platform: "Instagram",
-          type: "Profile",
-          dimensions: "1080x1080",
-          url: socialMediaUrls.socialProfileUrl,
-        },
-        {
-          platform: "Twitter",
-          type: "Header",
-          dimensions: "1500x500",
-          url: socialMediaUrls.masterBannerUrl,
-        },
-        {
-          platform: "LinkedIn",
-          type: "Header",
-          dimensions: "1584x396",
-          url: socialMediaUrls.masterBannerUrl,
-        },
-        {
-          platform: "Facebook",
-          type: "Header",
-          dimensions: "820x360",
-          url: socialMediaUrls.facebookBannerUrl,
-        },
-        {
-          platform: "YouTube",
-          type: "Channel Art",
-          dimensions: "2560x1440",
-          url: socialMediaUrls.masterBannerUrl,
-        },
-      ];
+      
+      const { getSocialAssetTargetId } = await import("@quicklogo/shared");
+      
+      if (targetItemId && newMergedJSON.socialMedia && Array.isArray(newMergedJSON.socialMedia)) {
+        newMergedJSON.socialMedia = newMergedJSON.socialMedia.map((asset: any) => {
+          if (getSocialAssetTargetId(asset) === targetItemId) {
+            let newUrl = asset.url;
+            if (targetItemId.endsWith("-profile") && socialMediaUrls.socialProfileUrl) newUrl = socialMediaUrls.socialProfileUrl;
+            else if (targetItemId === "facebook-header" && socialMediaUrls.facebookBannerUrl) newUrl = socialMediaUrls.facebookBannerUrl;
+            else if (socialMediaUrls.masterBannerUrl) newUrl = socialMediaUrls.masterBannerUrl;
+            return { ...asset, url: newUrl };
+          }
+          return asset;
+        });
+      } else {
+        newMergedJSON.socialMedia = [
+          {
+            platform: "Instagram",
+            type: "Profile",
+            dimensions: "1080x1080",
+            url: socialMediaUrls.socialProfileUrl,
+          },
+          {
+            platform: "Twitter",
+            type: "Header",
+            dimensions: "1500x500",
+            url: socialMediaUrls.masterBannerUrl,
+          },
+          {
+            platform: "LinkedIn",
+            type: "Header",
+            dimensions: "1584x396",
+            url: socialMediaUrls.masterBannerUrl,
+          },
+          {
+            platform: "Facebook",
+            type: "Header",
+            dimensions: "820x360",
+            url: socialMediaUrls.facebookBannerUrl,
+          },
+          {
+            platform: "YouTube",
+            type: "Channel Art",
+            dimensions: "2560x1440",
+            url: socialMediaUrls.masterBannerUrl,
+          },
+        ];
+      }
     }
   } else if (sectionId === "branded-backdrops") {
     const actualLogoUrl =
@@ -115,10 +137,11 @@ export async function mergeRevisionResults({
         sourceLogoUrl: actualLogoUrl,
         refinementPrompt,
         context: brandAssetContext,
+        targetItemId,
       });
       newMergedJSON.brandedBackdrops = {
-        feedUrl: backdropUrls.feedUrl,
-        storyUrl: backdropUrls.storyUrl,
+        feedUrl: backdropUrls.feedUrl ?? newMergedJSON.brandedBackdrops?.feedUrl,
+        storyUrl: backdropUrls.storyUrl ?? newMergedJSON.brandedBackdrops?.storyUrl,
       };
     }
   } else if (sectionId === "business-card") {
@@ -135,10 +158,11 @@ export async function mergeRevisionResults({
         sourceLogoUrl: actualLogoUrl,
         refinementPrompt,
         context: brandAssetContext,
+        targetItemId,
       });
       newMergedJSON.businessCard = {
-        frontUrl: businessCardUrls.frontUrl,
-        backUrl: businessCardUrls.backUrl,
+        frontUrl: businessCardUrls.frontUrl ?? newMergedJSON.businessCard?.frontUrl,
+        backUrl: businessCardUrls.backUrl ?? newMergedJSON.businessCard?.backUrl,
       };
     }
   } else if (
@@ -196,6 +220,139 @@ export async function mergeRevisionResults({
         }
       }
     }
+  } else if (sectionId === "global") {
+    const globalRequest = buildBrandKitGlobalRefinementRequest({
+      brandName: newMergedJSON.brandName || "Unknown",
+      refinementPrompt,
+      currentResults: newMergedJSON,
+      industry: currentBrandKit?.industry,
+      targetAudience: currentBrandKit?.targetAudience,
+      selectedVibes: currentBrandKit?.selectedVibes,
+      brandPersonality: currentBrandKit?.brandPersonality,
+      hasBrandGuidelines: !!(currentBrandKit?.guidelines || newMergedJSON.brandGuidelines),
+    });
+
+    const response = await ai.run(
+      "@cf/meta/llama-3.1-8b-instruct-fp8",
+      globalRequest,
+    );
+
+    const responseText = extractWorkersAiResponseText(response);
+
+    try {
+      const parsedJson = JSON.parse(responseText);
+      if (!parsedJson || typeof parsedJson !== "object") {
+        throw new Error("AI response is not a valid JSON object");
+      }
+
+      const schema = brandKitGlobalRefinementResponseSchema.shape;
+      let appliedGlobalPatch = false;
+
+      if (parsedJson.colorPalette) {
+        const validated = schema.colorPalette.safeParse(parsedJson.colorPalette);
+        if (validated.success && validated.data) {
+          newMergedJSON.colorPalette = validated.data;
+          appliedGlobalPatch = true;
+        } else {
+          logger.warn("[revision-merger] Global refine: colorPalette invalid, keeping current", { error: !validated.success ? validated.error : null });
+        }
+      }
+
+      if (parsedJson.brandPresentation) {
+        const validated = schema.brandPresentation.safeParse(parsedJson.brandPresentation);
+        if (validated.success && validated.data) {
+          const brandPresentation = validated.data;
+          const hasPresentationPatch =
+            typeof brandPresentation.tagline === "string" ||
+            typeof brandPresentation.description === "string";
+
+          if (hasPresentationPatch) {
+            const actualLogoUrl =
+              newMergedJSON.logoVariations?.[0]?.url ||
+              currentBrandKit?.customLogoUrl;
+
+            const currentTagline = newMergedJSON.brandPresentation?.tagline;
+            const currentDescription = newMergedJSON.brandPresentation?.description;
+            const copyChanged =
+              (brandPresentation.tagline && brandPresentation.tagline !== currentTagline) ||
+              (brandPresentation.description && brandPresentation.description !== currentDescription);
+
+            let newPresentationUrl = newMergedJSON.brandPresentation?.presentationUrl;
+
+            if (copyChanged && actualLogoUrl) {
+              try {
+                newPresentationUrl = await generateBrandPresentationImage({
+                  ai,
+                  env,
+                  storage,
+                  brandKitId,
+                  brandName: currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+                  sourceLogoUrl: actualLogoUrl,
+                  refinementPrompt,
+                  headingFont: newMergedJSON.typography?.heading?.family,
+                  bodyFont: newMergedJSON.typography?.body?.family,
+                  productImageUrl:
+                    currentBrandKit?.productImageUrls && currentBrandKit.productImageUrls.length > 0
+                      ? currentBrandKit.productImageUrls[0]
+                      : undefined,
+                  brandDescription: currentBrandKit?.prompt || "Professional brand kit",
+                  industry: currentBrandKit?.industry,
+                  targetAudience: currentBrandKit?.targetAudience,
+                  selectedVibes: currentBrandKit?.selectedVibes,
+                  brandPersonality: currentBrandKit?.brandPersonality,
+                });
+              } catch (err) {
+                logger.error("[revision-merger] Global refine: presentation image generation failed", err);
+              }
+            }
+
+            newMergedJSON.brandPresentation = {
+              ...newMergedJSON.brandPresentation,
+              ...(brandPresentation.tagline ? { tagline: brandPresentation.tagline } : {}),
+              ...(brandPresentation.description ? { description: brandPresentation.description } : {}),
+              presentationUrl: newPresentationUrl,
+            };
+            appliedGlobalPatch = true;
+          }
+        } else {
+          logger.warn("[revision-merger] Global refine: brandPresentation invalid, keeping current");
+        }
+      }
+
+      if (parsedJson.typography) {
+        const validated = schema.typography.safeParse(parsedJson.typography);
+        if (validated.success && validated.data) {
+          newMergedJSON.typography = normalizeTypographyOutput(validated.data);
+          appliedGlobalPatch = true;
+        } else {
+          logger.warn("[revision-merger] Global refine: typography invalid, keeping current");
+        }
+      }
+
+      if (parsedJson.brandGuidelines) {
+        const validated = schema.brandGuidelines.safeParse(parsedJson.brandGuidelines);
+        if (validated.success && validated.data) {
+          const hasGuidelinesPatch = Object.keys(validated.data).length > 0;
+          if (hasGuidelinesPatch) {
+            newMergedJSON.brandGuidelines = {
+              ...newMergedJSON.brandGuidelines,
+              ...validated.data,
+            };
+            appliedGlobalPatch = true;
+          }
+        } else {
+          logger.warn("[revision-merger] Global refine: brandGuidelines invalid, keeping current");
+        }
+      }
+
+      if (!appliedGlobalPatch) {
+        throw new Error("AI returned no valid global refinement fields");
+      }
+
+    } catch (e) {
+      logger.error("[revision-merger] Failed to process Global Refinement JSON:", e, { responseText });
+      throw new Error(e instanceof Error ? e.message : "AI returned invalid JSON on global refinement");
+    }
   } else {
     const refinementRequest = buildBrandKitRefinementRequest({
       brandName: newMergedJSON.brandName || "Unknown",
@@ -212,6 +369,7 @@ export async function mergeRevisionResults({
       logger.info(
         `[revision-merger] Refinement for ${sectionId} is not text-LLM driven yet.`,
       );
+      throw new Error(`Refinement for section '${sectionId}' is not currently supported`);
     } else {
       const response = await ai.run(
         "@cf/meta/llama-3.1-8b-instruct-fp8",

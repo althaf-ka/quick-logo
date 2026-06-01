@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@quicklogo/ui/components/button";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
@@ -68,12 +69,14 @@ export function SectionHeader({
 export function SectionContent({
   isRefining,
   children,
+  className,
 }: {
   isRefining?: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="relative">
+    <div className={cn("relative", className)}>
       {children}
       {isRefining ? (
         <div className="animate-in fade-in absolute inset-0 z-10 flex items-center justify-center duration-200">

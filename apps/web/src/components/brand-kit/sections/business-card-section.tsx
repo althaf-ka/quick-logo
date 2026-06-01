@@ -2,7 +2,7 @@ import { SectionHeader, SectionContent } from "./section-header";
 import { downloadImage } from "@/lib/download";
 import { ZoomableImage } from "@/components/global/zoomable-image";
 import { Button } from "@quicklogo/ui/components/button";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, SparkleIcon } from "@phosphor-icons/react";
 
 export interface BusinessCardData {
   frontUrl: string;
@@ -11,14 +11,16 @@ export interface BusinessCardData {
 
 interface BusinessCardSectionProps {
   card: BusinessCardData;
-  onRefine?: (sectionId: string) => void;
+  onRefine?: (sectionId: string, targetItemId?: string) => void;
   isRefining?: boolean;
+  refiningItemId?: string | null;
 }
 
 export function BusinessCardSection({
   card,
   onRefine,
   isRefining,
+  refiningItemId,
 }: BusinessCardSectionProps) {
   return (
     <div>
@@ -28,15 +30,26 @@ export function BusinessCardSection({
         onRefine={onRefine}
         isRefining={isRefining}
       />
-      <SectionContent isRefining={isRefining}>
+      <SectionContent isRefining={isRefining && !refiningItemId}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="group border-border/50 hover:border-primary/40 bg-card flex flex-col overflow-hidden border transition-colors">
             <div className="bg-muted/10 relative flex aspect-[16/9] w-full flex-1 items-center justify-center overflow-hidden">
+              <SectionContent isRefining={isRefining && refiningItemId === "front"} className="absolute inset-0 z-30" />
               <ZoomableImage
                 src={card.frontUrl}
                 alt="Business Card — Front"
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
               />
+              <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-20 backdrop-blur-sm pointer-events-none">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="pointer-events-auto"
+                  onClick={() => onRefine?.("business-card", "front")}
+                >
+                  <SparkleIcon weight="fill" className="size-4 mr-2 text-primary" /> Refine Asset
+                </Button>
+              </div>
             </div>
             <div className="bg-muted/5 flex w-full shrink-0 items-center justify-between border-t px-4 py-2.5">
               <span className="text-muted-foreground font-mono text-[9px] tracking-wider uppercase">
@@ -65,11 +78,22 @@ export function BusinessCardSection({
           {card.backUrl ? (
             <div className="group border-border/50 hover:border-primary/40 bg-card flex flex-col overflow-hidden border transition-colors">
               <div className="bg-muted/10 relative flex aspect-[16/9] w-full flex-1 items-center justify-center overflow-hidden">
+                <SectionContent isRefining={isRefining && refiningItemId === "back"} className="absolute inset-0 z-30" />
                 <ZoomableImage
                   src={card.backUrl}
                   alt="Business Card — Back"
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
                 />
+                <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-20 backdrop-blur-sm pointer-events-none">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="pointer-events-auto"
+                    onClick={() => onRefine?.("business-card", "back")}
+                  >
+                    <SparkleIcon weight="fill" className="size-4 mr-2 text-primary" /> Refine Asset
+                  </Button>
+                </div>
               </div>
               <div className="bg-muted/5 flex w-full shrink-0 items-center justify-between border-t px-4 py-2.5">
                 <span className="text-muted-foreground font-mono text-[9px] tracking-wider uppercase">

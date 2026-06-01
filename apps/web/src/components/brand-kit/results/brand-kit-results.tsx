@@ -50,10 +50,11 @@ export interface BrandKitResultsData {
 interface BrandKitResultsProps {
   data: BrandKitResultsData;
   typographyStyle?: string;
-  onRefine: (sectionId: string | null, itemIndex?: number) => void;
+  onRefine: (sectionId: string | null, targetItemId?: string) => void;
   onFontChange: (role: "heading" | "body", family: string) => void;
   refiningSectionId?: string | null;
   targetSectionId?: string | null;
+  targetItemId?: string | null;
 }
 
 interface FocusWrapperProps {
@@ -117,6 +118,7 @@ export function BrandKitResults({
   onFontChange,
   refiningSectionId,
   targetSectionId,
+  targetItemId,
 }: BrandKitResultsProps) {
   useGoogleFontLoader(data.typography?.heading?.family);
   useGoogleFontLoader(data.typography?.body?.family);
@@ -127,6 +129,7 @@ export function BrandKitResults({
     <BrandKitSectionContext.Provider
       value={{
         targetSectionId,
+        targetItemId,
         refiningSectionId,
         cancelRefine: () => onRefine(null),
       }}
@@ -230,6 +233,7 @@ export function BrandKitResults({
                   assets={data.socialMedia}
                   onRefine={onRefine}
                   isRefining={refiningSectionId === "social-media"}
+                  refiningItemId={refiningSectionId === "social-media" ? targetItemId : undefined}
                 />
               </FocusWrapper>
             ) : null}
@@ -246,6 +250,7 @@ export function BrandKitResults({
                   card={data.businessCard}
                   onRefine={onRefine}
                   isRefining={refiningSectionId === "business-card"}
+                  refiningItemId={refiningSectionId === "business-card" ? targetItemId : undefined}
                 />
               </FocusWrapper>
             ) : null}
@@ -279,6 +284,7 @@ export function BrandKitResults({
                   data={data.brandedBackdrops}
                   onRefine={onRefine}
                   isRefining={refiningSectionId === "branded-backdrops"}
+                  refiningItemId={refiningSectionId === "branded-backdrops" ? targetItemId : undefined}
                 />
               </FocusWrapper>
             ) : null}

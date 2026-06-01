@@ -103,6 +103,7 @@ export async function generateSocialMediaAssets({
   sourceLogoUrl,
   refinementPrompt,
   context,
+  targetItemId,
 }: {
   ai: Ai;
   env: Env;
@@ -112,16 +113,27 @@ export async function generateSocialMediaAssets({
   sourceLogoUrl: string;
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
+  targetItemId?: string;
 }): Promise<{
-  socialProfileUrl: string;
-  masterBannerUrl: string;
-  facebookBannerUrl: string;
+  socialProfileUrl?: string;
+  masterBannerUrl?: string;
+  facebookBannerUrl?: string;
 }> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
 
-  const [socialProfileUrl, masterBannerUrl, facebookBannerUrl] =
-    await Promise.all([
+  let socialProfileUrl: string | undefined;
+  let masterBannerUrl: string | undefined;
+  let facebookBannerUrl: string | undefined;
+
+  const promises = [];
+
+  const shouldGenerateProfile = !targetItemId || targetItemId.endsWith("-profile");
+  const shouldGenerateFacebook = !targetItemId || targetItemId === "facebook-header";
+  const shouldGenerateMaster = !targetItemId || ["twitter-header", "linkedin-header", "youtube-channel-art"].includes(targetItemId);
+
+  if (shouldGenerateProfile) {
+    promises.push(
       generateWithFallback(
         async () => {
           const result = await provider.generate(
@@ -136,12 +148,10 @@ export async function generateSocialMediaAssets({
             }),
           );
           if (!result.success || !result.imageData) {
-            throw new Error(
-              result.error ?? `Variation generation failed for social-profile`,
-            );
+            throw new Error(result.error ?? `Variation generation failed for social-profile`);
           }
           const uploaded = await storage.upload(
-            `quick-logo/brand-kits/${brandKitId}/social-profile.${result.format ?? "png"}`,
+            `quick-logo/brand-kits/${brandKitId}/social-profile-${Date.now()}.${result.format ?? "png"}`,
             result.imageData,
           );
           return uploaded.url;
@@ -149,7 +159,12 @@ export async function generateSocialMediaAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ),
+      ).then(url => { socialProfileUrl = url; })
+    );
+  }
+
+  if (shouldGenerateMaster) {
+    promises.push(
       generateWithFallback(
         async () => {
           const result = await provider.generate(
@@ -164,12 +179,10 @@ export async function generateSocialMediaAssets({
             }),
           );
           if (!result.success || !result.imageData) {
-            throw new Error(
-              result.error ?? `Variation generation failed for master-banner`,
-            );
+            throw new Error(result.error ?? `Variation generation failed for master-banner`);
           }
           const uploaded = await storage.upload(
-            `quick-logo/brand-kits/${brandKitId}/social-master-banner.${result.format ?? "png"}`,
+            `quick-logo/brand-kits/${brandKitId}/social-master-banner-${Date.now()}.${result.format ?? "png"}`,
             result.imageData,
           );
           return uploaded.url;
@@ -177,7 +190,12 @@ export async function generateSocialMediaAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ),
+      ).then(url => { masterBannerUrl = url; })
+    );
+  }
+
+  if (shouldGenerateFacebook) {
+    promises.push(
       generateWithFallback(
         async () => {
           const result = await provider.generate(
@@ -192,12 +210,10 @@ export async function generateSocialMediaAssets({
             }),
           );
           if (!result.success || !result.imageData) {
-            throw new Error(
-              result.error ?? `Variation generation failed for facebook-banner`,
-            );
+            throw new Error(result.error ?? `Variation generation failed for facebook-banner`);
           }
           const uploaded = await storage.upload(
-            `quick-logo/brand-kits/${brandKitId}/social-facebook-banner.${result.format ?? "png"}`,
+            `quick-logo/brand-kits/${brandKitId}/social-facebook-banner-${Date.now()}.${result.format ?? "png"}`,
             result.imageData,
           );
           return uploaded.url;
@@ -205,9 +221,11 @@ export async function generateSocialMediaAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ),
-    ]);
+      ).then(url => { facebookBannerUrl = url; })
+    );
+  }
 
+  await Promise.all(promises);
   return { socialProfileUrl, masterBannerUrl, facebookBannerUrl };
 }
 
@@ -220,6 +238,7 @@ export async function generateBrandedBackdrops({
   sourceLogoUrl,
   refinementPrompt,
   context,
+  targetItemId,
 }: {
   ai: Ai;
   env: Env;
@@ -229,69 +248,83 @@ export async function generateBrandedBackdrops({
   sourceLogoUrl: string;
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
-}): Promise<{ feedUrl: string; storyUrl: string }> {
+  targetItemId?: string;
+}): Promise<{ feedUrl?: string; storyUrl?: string }> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
 
-  const [feedUrl, storyUrl] = await Promise.all([
-    generateWithFallback(
-      async () => {
-        const result = await provider.generate(
-          buildBackdropGenerationParams({
-            variation: "feed-backdrop",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
-            refinementPrompt,
-              context,
-          }),
-        );
-        if (!result.success || !result.imageData) {
-          throw new Error(
-            result.error ?? `Variation generation failed for feed-backdrop`,
-          );
-        }
-        const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/backdrop-feed.${result.format ?? "png"}`,
-          result.imageData,
-        );
-        return uploaded.url;
-      },
-      sourceLogoUrl,
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    ),
-    generateWithFallback(
-      async () => {
-        const result = await provider.generate(
-          buildBackdropGenerationParams({
-            variation: "story-backdrop",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
-            refinementPrompt,
-              context,
-          }),
-        );
-        if (!result.success || !result.imageData) {
-          throw new Error(
-            result.error ?? `Variation generation failed for story-backdrop`,
-          );
-        }
-        const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/backdrop-story.${result.format ?? "png"}`,
-          result.imageData,
-        );
-        return uploaded.url;
-      },
-      sourceLogoUrl,
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    ),
-  ]);
+  let feedUrl: string | undefined;
+  let storyUrl: string | undefined;
 
+  const promises = [];
+
+  if (!targetItemId || targetItemId === "feed") {
+    promises.push(
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildBackdropGenerationParams({
+              variation: "feed-backdrop",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: mapping.defaultParams,
+              refinementPrompt,
+              context,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ?? `Variation generation failed for feed-backdrop`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/backdrop-feed.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ).then(url => { feedUrl = url; })
+    );
+  }
+
+  if (!targetItemId || targetItemId === "story") {
+    promises.push(
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildBackdropGenerationParams({
+              variation: "story-backdrop",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: mapping.defaultParams,
+              refinementPrompt,
+              context,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ?? `Variation generation failed for story-backdrop`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/backdrop-story.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ).then(url => { storyUrl = url; })
+    );
+  }
+
+  await Promise.all(promises);
   return { feedUrl, storyUrl };
 }
 
@@ -304,6 +337,7 @@ export async function generateBusinessCardAssets({
   sourceLogoUrl,
   refinementPrompt,
   context,
+  targetItemId,
 }: {
   ai: Ai;
   env: Env;
@@ -313,82 +347,96 @@ export async function generateBusinessCardAssets({
   sourceLogoUrl: string;
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
-}): Promise<{ frontUrl: string; backUrl: string }> {
+  targetItemId?: string;
+}): Promise<{ frontUrl?: string; backUrl?: string }> {
   const mapping = getModelMapping("quick-nano-banana");
   const provider = createProvider(mapping, { ai, env });
 
-  const [frontUrl, backUrl] = await Promise.all([
-    generateWithFallback(
-      async () => {
-        const result = await provider.generate(
-          buildBusinessCardGenerationParams({
-            variation: "front",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: {
-              ...mapping.defaultParams,
-              providerOptions: {
-                ...mapping.defaultParams?.providerOptions,
-                styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
-              },
-            },
-            refinementPrompt,
-              context,
-          }),
-        );
-        if (!result.success || !result.imageData) {
-          throw new Error(
-            result.error ??
-              `Variation generation failed for business-card-front`,
-          );
-        }
-        const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/business-card-front.${result.format ?? "png"}`,
-          result.imageData,
-        );
-        return uploaded.url;
-      },
-      sourceLogoUrl,
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    ),
-    generateWithFallback(
-      async () => {
-        const result = await provider.generate(
-          buildBusinessCardGenerationParams({
-            variation: "back",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: {
-              ...mapping.defaultParams,
-              providerOptions: {
-                ...mapping.defaultParams?.providerOptions,
-                styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
-              },
-            },
-            refinementPrompt,
-              context,
-          }),
-        );
-        if (!result.success || !result.imageData) {
-          throw new Error(
-            result.error ??
-              `Variation generation failed for business-card-back`,
-          );
-        }
-        const uploaded = await storage.upload(
-          `quick-logo/brand-kits/${brandKitId}/business-card-back.${result.format ?? "png"}`,
-          result.imageData,
-        );
-        return uploaded.url;
-      },
-      sourceLogoUrl,
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    ),
-  ]);
+  let frontUrl: string | undefined;
+  let backUrl: string | undefined;
 
+  const promises = [];
+
+  if (!targetItemId || targetItemId === "front") {
+    promises.push(
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildBusinessCardGenerationParams({
+              variation: "front",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: {
+                ...mapping.defaultParams,
+                providerOptions: {
+                  ...mapping.defaultParams?.providerOptions,
+                  styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
+                },
+              },
+              refinementPrompt,
+              context,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ??
+                `Variation generation failed for business-card-front`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/business-card-front.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ).then(url => { frontUrl = url; })
+    );
+  }
+
+  if (!targetItemId || targetItemId === "back") {
+    promises.push(
+      generateWithFallback(
+        async () => {
+          const result = await provider.generate(
+            buildBusinessCardGenerationParams({
+              variation: "back",
+              brandName,
+              sourceLogoUrl,
+              backendModel: mapping.backendModel,
+              defaultParams: {
+                ...mapping.defaultParams,
+                providerOptions: {
+                  ...mapping.defaultParams?.providerOptions,
+                  styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
+                },
+              },
+              refinementPrompt,
+              context,
+            }),
+          );
+          if (!result.success || !result.imageData) {
+            throw new Error(
+              result.error ??
+                `Variation generation failed for business-card-back`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `quick-logo/brand-kits/${brandKitId}/business-card-back.${result.format ?? "png"}`,
+            result.imageData,
+          );
+          return uploaded.url;
+        },
+        sourceLogoUrl,
+        LOGO_VARIATION_TIMEOUT_MS,
+        "asset-generator",
+      ).then(url => { backUrl = url; })
+    );
+  }
+
+  await Promise.all(promises);
   return { frontUrl, backUrl };
 }

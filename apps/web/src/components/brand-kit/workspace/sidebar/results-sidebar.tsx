@@ -15,6 +15,7 @@ export interface ResultsSidebarProps {
   results?: BrandKitResultsData | null;
   onDownloadAll?: () => void;
   revisions?: NormalizedBrandKit["revisions"];
+  onRestoreRevision?: (sourceRevisionId: string) => void;
 }
 
 function getRevisionColor(triggerType: string) {
@@ -28,7 +29,10 @@ export function ResultsSidebar({
   results,
   onDownloadAll,
   revisions,
+  onRestoreRevision,
 }: ResultsSidebarProps) {
+  const reversedRevisions = [...(revisions || [])].reverse();
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -136,35 +140,68 @@ export function ResultsSidebar({
           Version History
         </h3>
         <div className="space-y-1.5">
-          {revisions?.map((rev, idx) => (
-            <div
-              key={rev.id}
-              className={cn(
-                "group flex cursor-pointer items-center gap-3 border border-white/[0.06] bg-white/[0.01] p-3 transition-all duration-200 hover:border-white/[0.1] hover:bg-white/[0.04]",
-                idx === 0 && "border-primary/20 bg-primary/[0.02]",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <CircleIcon
-                  weight="fill"
-                  className={cn("size-1.5", getRevisionColor(rev.triggerType))}
-                />
-                <ClockCounterClockwiseIcon className="text-muted-foreground/40 group-hover:text-muted-foreground size-3.5 transition-colors" />
+          {reversedRevisions.map((rev, idx) => {
+            const isCurrent = rev.isActive;
+            return (
+              <div
+                key={rev.id}
+                onClick={() => {
+                  if (!isCurrent && onRestoreRevision) {
+                    onRestoreRevision(rev.id);
+                  }
+                }}
+                className={cn(
+                  "group relative flex items-center gap-2.5 border px-2.5 py-2 transition-all duration-300",
+                  isCurrent
+                    ? "border-primary/30 bg-primary/[0.03] cursor-default shadow-[inset_2px_0_0_rgba(var(--primary),0.5)]"
+                    : "border-white/[0.06] bg-white/[0.01] cursor-pointer hover:border-white/[0.12] hover:bg-white/[0.03]",
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <CircleIcon
+                    weight="fill"
+                    className={cn(
+                      "size-1.5 transition-colors",
+                      isCurrent ? "text-primary shadow-[0_0_8px_rgba(var(--primary),0.5)] rounded-full" : getRevisionColor(rev.triggerType),
+                    )}
+                  />
+                  <ClockCounterClockwiseIcon 
+                    className={cn(
+                      "size-3 transition-colors",
+                      isCurrent ? "text-primary/50" : "text-muted-foreground/30 group-hover:text-muted-foreground"
+                    )} 
+                  />
+                </div>
+                <div className="flex min-w-0 flex-col gap-px">
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn(
+                      "font-mono text-[9px] font-bold tracking-wider uppercase transition-colors",
+                      isCurrent ? "text-primary" : "text-foreground/90"
+                    )}>
+                      V{reversedRevisions.length - idx}
+                    </span>
+                    {isCurrent ? (
+                      <span className="rounded-[2px] bg-primary/15 px-1 py-[1px] font-mono text-[7px] font-black tracking-widest text-primary uppercase">
+                        Current
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className={cn(
+                    "truncate font-mono text-[8px] transition-colors",
+                    isCurrent ? "text-primary/60" : "text-muted-foreground/50"
+                  )}>
+                    {new Date(rev.createdAt).toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
               </div>
-              <div className="flex min-w-0 flex-col">
-                <span className="text-foreground font-mono text-[10px] tracking-wider uppercase">
-                  v{revisions.length - idx}
-                  {idx === 0 ? (
-                    <span className="text-primary/60 ml-2">Current</span>
-                  ) : null}
-                </span>
-                <span className="text-muted-foreground/40 truncate font-mono text-[9px]">
-                  {new Date(rev.createdAt).toLocaleString()}
-                </span>
-              </div>
-            </div>
-          ))}
-          {!revisions || revisions.length === 0 ? (
+            );
+          })}
+          {reversedRevisions.length === 0 ? (
             <div className="text-muted-foreground/30 border border-dashed border-white/[0.06] p-4 text-center font-mono text-[10px] tracking-wider">
               No revisions yet
             </div>

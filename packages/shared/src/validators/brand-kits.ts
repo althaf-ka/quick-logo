@@ -62,7 +62,7 @@ export const generateBrandKitSchema = z
     },
   );
 
-export const refineBrandKitSectionSchema = z.object({
+const refineBrandKitSectionBase = z.object({
   sectionId: z.enum([
     "logo-variations",
     "color-palette",
@@ -73,10 +73,50 @@ export const refineBrandKitSectionSchema = z.object({
     "branded-backdrops",
     "brand-presentation",
     "brand-guidelines",
+    "global",
   ]),
   refinementPrompt: z.string().min(1, "Refinement instruction is required"),
   typographyStyle: z.string().optional(), // In case they are refining typography and changed the dropdown
+  targetItemId: z.string().optional(),
 });
+
+export const refineBrandKitSectionSchema = refineBrandKitSectionBase.superRefine((data, ctx) => {
+  if (data.targetItemId) {
+    if (data.sectionId === "business-card") {
+      if (data.targetItemId !== "front" && data.targetItemId !== "back") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid business card target item",
+          path: ["targetItemId"],
+        });
+      }
+    } else if (data.sectionId === "branded-backdrops") {
+      if (data.targetItemId !== "feed" && data.targetItemId !== "story") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid branded backdrops target item",
+          path: ["targetItemId"],
+        });
+      }
+    } else if (data.sectionId === "social-media") {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.targetItemId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid social media target item format",
+          path: ["targetItemId"],
+        });
+      }
+    } else {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Target items are not supported for section: ${data.sectionId}`,
+        path: ["targetItemId"],
+      });
+    }
+  }
+});
+
+export type RefinementSectionId = z.infer<typeof refineBrandKitSectionBase>["sectionId"];
 
 export const restoreSectionSchema = z.object({
   sourceRevisionId: z.string(),
@@ -92,6 +132,8 @@ export const restoreSectionSchema = z.object({
     "brand-guidelines",
   ]),
 });
+
+export type RestoreSectionId = z.infer<typeof restoreSectionSchema>["sectionId"];
 
 export const brandKitColorPaletteResponseSchema = z.object({
   colorPalette: z.array(
@@ -115,3 +157,37 @@ export const brandKitTypographyResponseSchema = z.object({
     name: z.string().optional(),
   }),
 });
+
+export const restoreFullBrandKitSchema = z.object({
+  sourceRevisionId: z.string(),
+});
+
+export const brandKitGlobalRefinementResponseSchema = z.object({
+  colorPalette: z
+    .array(
+      z.object({
+        hex: z.string(),
+        role: z.string(),
+        rgb: z.string().optional(),
+      })
+    )
+    .optional(),
+  brandPresentation: z
+    .object({
+      tagline: z.string().optional(),
+      description: z.string().optional(),
+    })
+    .optional(),
+  typography: brandKitTypographyResponseSchema.optional(),
+  brandGuidelines: z
+    .object({
+      missionStatement: z.string().optional(),
+      tagline: z.string().optional(),
+      personality: z.string().optional(),
+      targetAudience: z.string().optional(),
+      industry: z.string().optional(),
+      additionalContext: z.string().optional(),
+    })
+    .optional(),
+});
+
