@@ -15,3 +15,4 @@ export * from "./utils/social-targets";
 export * from "./constants/tips";
 export * from "./validators/brand-profile";
 export * from "./validators/pagination";
+export * from "./utils/target-labels";

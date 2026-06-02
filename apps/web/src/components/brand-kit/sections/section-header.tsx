@@ -55,7 +55,7 @@ export function SectionHeader({
             ? "Processing..."
             : isTargeted
               ? "Cancel Refine"
-              : "Refine"}
+              : "Refine Section"}
         </Button>
       ) : null}
     </div>

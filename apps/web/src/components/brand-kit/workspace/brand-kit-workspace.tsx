@@ -5,7 +5,8 @@ import { PromptInput } from "@/components/global/prompt-input";
 import { SidebarShell } from "@/components/brand-kit/workspace/sidebar/sidebar-shell";
 import { BrandKitResults } from "@/components/brand-kit/results/brand-kit-results";
 import { BrandQuestionnaire } from "@/components/brand-kit/setup/brand-questionnaire";
-import { useBrandKit, getSectionLabel } from "@/hooks/brand-kit/use-brand-kit";
+import { useBrandKit } from "@/hooks/brand-kit/use-brand-kit";
+import { getSectionLabel } from "@quicklogo/shared";
 import { downloadBrandKit } from "@/utils/download-kit";
 import {
   SlidersHorizontalIcon,
@@ -149,7 +150,7 @@ export function BrandKitWorkspace({
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="pointer-events-none absolute bottom-0 flex w-full justify-center p-6 pb-12"
+              className="pointer-events-none absolute bottom-0 flex w-full justify-center p-4 pb-6"
             >
               <div className="pointer-events-auto w-full max-w-4xl shadow-2xl">
                 <PromptInput

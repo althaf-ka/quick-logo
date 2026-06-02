@@ -489,9 +489,17 @@ export function buildBusinessCardGenerationParams({
   refinementPrompt?: string;
 }): GenerationParams {
   const ctx = context || normalizeBrandContext(brandName, {});
+
+  const LOGO_KEYWORDS = ["logo", "emblem", "symbol", "brandmark", "icon"];
+  const wantsLogo = refinementPrompt
+    ? LOGO_KEYWORDS.some(kw => refinementPrompt.toLowerCase().includes(kw))
+    : false;
+
+  const useReference = variation !== "back" || wantsLogo;
+
   return buildAssetParams({
     prompt: BUSINESS_CARD_PROMPTS[variation](ctx),
-    referenceImage: sourceLogoUrl,
+    referenceImage: useReference ? sourceLogoUrl : undefined,
     referenceStrength: variation === "front" ? (ctx.hasAnyDetails ? 60 : 90) : 40,
     width: 1376,
     height: 768,

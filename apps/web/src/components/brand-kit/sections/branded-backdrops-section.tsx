@@ -32,23 +32,45 @@ export function BrandedBackdropsSection({
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="border-border/50 relative flex flex-col rounded-none border-2 bg-transparent">
             <div className="bg-muted/10 border-border/50 relative flex w-full flex-1 items-center justify-center border-b-2 p-6 sm:p-8">
-              <div className="relative w-full max-w-[360px] overflow-hidden rounded-none shadow-2xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105">
-                <SectionContent isRefining={isRefining && refiningItemId === "feed"} className="absolute inset-0 z-30" />
+              <div className="group/image relative w-full max-w-[360px] overflow-hidden rounded-none shadow-2xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105">
+                <SectionContent
+                  isRefining={isRefining && refiningItemId === "feed"}
+                  className="pointer-events-none absolute inset-0 z-30"
+                />
                 <div className="aspect-square w-full">
                   <ZoomableImage
                     src={data.feedUrl}
                     alt="Instagram/LinkedIn Feed Backdrop"
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full cursor-pointer object-cover"
                   />
-                  <div className="absolute inset-0 bg-zinc-950/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity z-20 backdrop-blur-sm">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onRefine?.("branded-backdrops", "feed")}
-                    >
-                      <SparkleIcon weight="fill" className="size-4 mr-2 text-primary" /> Refine Asset
-                    </Button>
-                  </div>
+                </div>
+                <div className="pointer-events-none absolute top-3 right-3 z-40 flex items-center gap-1.5 opacity-0 transition-opacity duration-200 group-hover/image:opacity-100">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRefine?.("branded-backdrops", "feed");
+                    }}
+                    title="Refine Feed Backdrop"
+                  >
+                    <SparkleIcon className="text-primary size-4" />
+                    <span className="sr-only">Refine</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadImage(data.feedUrl, "feed-backdrop.png");
+                    }}
+                    title="Download 1080x1080"
+                  >
+                    <DownloadSimpleIcon className="size-4" />
+                    <span className="sr-only">Download</span>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -61,37 +83,49 @@ export function BrandedBackdropsSection({
                   1:1 Ratio
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground/40 hover:bg-primary/10 hover:text-primary h-6 w-6 cursor-pointer p-0 transition-colors"
-                onClick={() => downloadImage(data.feedUrl, "feed-backdrop.png")}
-                title="Download 1080x1080"
-              >
-                <DownloadSimpleIcon className="size-3.5" />
-                <span className="sr-only">Download</span>
-              </Button>
             </div>
           </div>
           <div className="border-border/50 relative flex flex-col rounded-none border-2 bg-transparent">
             <div className="bg-muted/10 border-border/50 relative flex w-full flex-1 items-center justify-center border-b-2 p-6 sm:p-8">
-              <div className="relative w-full max-w-[280px] overflow-hidden rounded-none shadow-2xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105">
-                <SectionContent isRefining={isRefining && refiningItemId === "story"} className="absolute inset-0 z-30" />
+              <div className="group/image relative w-full max-w-[280px] overflow-hidden rounded-none shadow-2xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105">
+                <SectionContent
+                  isRefining={isRefining && refiningItemId === "story"}
+                  className="pointer-events-none absolute inset-0 z-30"
+                />
                 <div className="aspect-[9/16] w-full">
                   <ZoomableImage
                     src={data.storyUrl}
                     alt="Instagram/TikTok Story Backdrop"
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full cursor-pointer object-cover"
                   />
-                  <div className="absolute inset-0 bg-zinc-950/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity z-20 backdrop-blur-sm">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onRefine?.("branded-backdrops", "story")}
-                    >
-                      <SparkleIcon weight="fill" className="size-4 mr-2 text-primary" /> Refine Asset
-                    </Button>
-                  </div>
+                </div>
+                <div className="pointer-events-none absolute top-3 right-3 z-40 flex items-center gap-1.5 opacity-0 transition-opacity duration-200 group-hover/image:opacity-100">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRefine?.("branded-backdrops", "story");
+                    }}
+                    title="Refine Story Backdrop"
+                  >
+                    <SparkleIcon className="text-primary size-4" />
+                    <span className="sr-only">Refine</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadImage(data.storyUrl, "story-backdrop.png");
+                    }}
+                    title="Download 1080x1920"
+                  >
+                    <DownloadSimpleIcon className="size-4" />
+                    <span className="sr-only">Download</span>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -104,16 +138,6 @@ export function BrandedBackdropsSection({
                   9:16 Ratio
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground/40 hover:bg-primary/10 hover:text-primary h-6 w-6 cursor-pointer p-0 transition-colors"
-                onClick={() => downloadImage(data.storyUrl, "story-backdrop.png")}
-                title="Download 1080x1920"
-              >
-                <DownloadSimpleIcon className="size-3.5" />
-                <span className="sr-only">Download</span>
-              </Button>
             </div>
           </div>
         </div>

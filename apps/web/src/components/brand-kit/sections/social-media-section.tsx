@@ -119,7 +119,13 @@ export function SocialMediaSection({
                           : "aspect-[21/9] sm:aspect-[4/1]",
                     )}
                   >
-                    <SectionContent isRefining={isRefining && refiningItemId === getSocialAssetTargetId(asset)} className="absolute inset-0 z-30" />
+                    <SectionContent
+                      isRefining={
+                        isRefining &&
+                        refiningItemId === getSocialAssetTargetId(asset)
+                      }
+                      className="pointer-events-none absolute inset-0 z-30"
+                    />
                     <ZoomableImage
                       src={asset.url}
                       alt={
@@ -128,7 +134,7 @@ export function SocialMediaSection({
                           : `${asset.platform} ${asset.type}`
                       }
                       className={cn(
-                        "absolute inset-0 z-10 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.01]",
+                        "absolute inset-0 z-10 h-full w-full cursor-pointer object-cover object-center transition-transform duration-300 group-hover:scale-[1.01]",
                         isPlaceholder && "opacity-40 grayscale filter",
                       )}
                     />
@@ -143,14 +149,38 @@ export function SocialMediaSection({
                         </p>
                       </div>
                     ) : (
-                      <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-20 backdrop-blur-sm pointer-events-none">
+                      <div className="pointer-events-none absolute top-2 right-2 z-40 flex items-center gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="pointer-events-auto"
-                          onClick={() => onRefine?.("social-media", getSocialAssetTargetId(asset))}
+                          className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRefine?.(
+                              "social-media",
+                              getSocialAssetTargetId(asset),
+                            );
+                          }}
+                          title={`Refine ${asset.platform} ${asset.type}`}
                         >
-                          <SparkleIcon weight="fill" className="size-4 mr-2 text-primary" /> Refine Asset
+                          <SparkleIcon className="text-primary size-4" />
+                          <span className="sr-only">Refine</span>
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadImage(
+                              asset.url,
+                              `${asset.platform.toLowerCase()}-${asset.type.toLowerCase()}.png`,
+                            );
+                          }}
+                          title={`Download ${asset.platform} ${asset.type}`}
+                        >
+                          <DownloadSimpleIcon className="size-4" />
+                          <span className="sr-only">Download</span>
                         </Button>
                       </div>
                     )}
@@ -170,26 +200,10 @@ export function SocialMediaSection({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground/40 font-mono text-[8px]">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground/40 mr-1 font-mono text-[8px]">
                       {asset.dimensions}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={isPlaceholder}
-                      className="text-muted-foreground/40 hover:text-primary hover:bg-primary/10 h-6 w-6 cursor-pointer p-0 transition-all disabled:cursor-not-allowed disabled:opacity-30"
-                      onClick={() =>
-                        downloadImage(
-                          asset.url,
-                          `${asset.platform.toLowerCase()}-${asset.type.toLowerCase()}.png`,
-                        )
-                      }
-                      title={`Download ${asset.platform} ${asset.type}`}
-                    >
-                      <DownloadSimpleIcon className="size-3.5" />
-                      <span className="sr-only">Download</span>
-                    </Button>
                   </div>
                 </div>
               </div>

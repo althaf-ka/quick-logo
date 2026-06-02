@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { XIcon, CrosshairIcon, LightbulbIcon } from "@phosphor-icons/react";
 import { Button } from "@quicklogo/ui/components/button";
-import { getSectionLabel } from "@/hooks/brand-kit/use-brand-kit";
+import { getSectionLabel } from "@quicklogo/shared";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 
 export interface RefinementSidebarProps {

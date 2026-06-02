@@ -15,13 +15,11 @@ export interface PaletteColor {
 
 interface ColorPaletteSectionProps {
   colors: PaletteColor[];
-  onRefine?: (sectionId: string) => void;
   isRefining?: boolean;
 }
 
 export function ColorPaletteSection({
   colors,
-  onRefine,
   isRefining,
 }: ColorPaletteSectionProps) {
   const handleCopy = (value: string) => {
@@ -34,7 +32,6 @@ export function ColorPaletteSection({
       <SectionHeader
         title="Color Palette"
         sectionId="color-palette"
-        onRefine={onRefine}
         isRefining={isRefining}
       />
       <SectionContent isRefining={isRefining}>
