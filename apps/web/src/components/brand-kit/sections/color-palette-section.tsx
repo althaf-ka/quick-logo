@@ -6,6 +6,7 @@ import {
 } from "@quicklogo/ui/components/tooltip";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { CopyIcon } from "@phosphor-icons/react";
+import { useBrandKitSection } from "./section-context";
 
 export interface PaletteColor {
   hex: string;
@@ -15,13 +16,13 @@ export interface PaletteColor {
 
 interface ColorPaletteSectionProps {
   colors: PaletteColor[];
-  isRefining?: boolean;
 }
 
 export function ColorPaletteSection({
   colors,
-  isRefining,
 }: ColorPaletteSectionProps) {
+  const { refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "color-palette";
   const handleCopy = (value: string) => {
     navigator.clipboard.writeText(value);
     toast.success(`Copied ${value}`);

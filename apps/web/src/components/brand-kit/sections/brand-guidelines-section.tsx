@@ -1,6 +1,7 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import type { PaletteColor } from "./color-palette-section";
 import type { TypographyPairing } from "./typography-section";
+import { useBrandKitSection } from "./section-context";
 
 export interface BrandGuidelinesData {
   logoUrl: string;
@@ -12,15 +13,13 @@ export interface BrandGuidelinesData {
 
 interface BrandGuidelinesSectionProps {
   data: BrandGuidelinesData;
-  onRefine?: (sectionId: string) => void;
-  isRefining?: boolean;
 }
 
 export function BrandGuidelinesSection({
   data,
-  onRefine,
-  isRefining,
 }: BrandGuidelinesSectionProps) {
+  const { onRefine, refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "brand-guidelines";
   const hasProducts = data.productImages && data.productImages.length > 0;
 
   return (

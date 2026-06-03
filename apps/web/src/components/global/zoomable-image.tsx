@@ -42,7 +42,7 @@ export function ZoomableImage({
             <Button
               variant="outline"
               size="icon"
-              className="rounded-full shadow-lg h-10 w-10 bg-black/50 hover:bg-black/70 text-white border-white/20 backdrop-blur-md"
+              className="rounded-none shadow-lg h-10 w-10 bg-black/50 hover:bg-black/70 text-white border-white/20 backdrop-blur-md"
               onClick={() => downloadImage(src, `${alt?.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'image'}.png`)}
               title="Download Image"
             >
@@ -55,7 +55,7 @@ export function ZoomableImage({
                 <Button
                   variant="outline"
                   size="icon"
-                  className="rounded-full shadow-lg h-10 w-10 bg-black/50 hover:bg-black/70 text-white border-white/20 backdrop-blur-md"
+                  className="rounded-none shadow-lg h-10 w-10 bg-black/50 hover:bg-black/70 text-white border-white/20 backdrop-blur-md"
                 />
               }
             >

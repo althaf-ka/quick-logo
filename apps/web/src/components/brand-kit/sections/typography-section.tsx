@@ -4,6 +4,8 @@ import { PencilSimpleIcon, CheckIcon } from "@phosphor-icons/react";
 import { FontPicker } from "../font-picker";
 import { useGoogleFontLoader } from "@/hooks/use-google-font-loader";
 import { SectionContent } from "./section-header";
+import { cn } from "@quicklogo/ui/lib/utils";
+import { useBrandKitSection } from "./section-context";
 
 export interface TypographyPairing {
   heading: {
@@ -23,16 +25,16 @@ export interface TypographyPairing {
 interface TypographySectionProps {
   pairing: TypographyPairing;
   brandName?: string;
-  isRefining?: boolean;
   onFontChange?: (role: "heading" | "body", family: string) => void;
 }
 
 export function TypographySection({
   pairing,
   brandName,
-  isRefining,
   onFontChange,
 }: TypographySectionProps) {
+  const { refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "typography";
   const [isEditing, setIsEditing] = useState(false);
   const headingSample =
     pairing.heading.sampleText || brandName || "Your Brand Name";
@@ -51,23 +53,24 @@ export function TypographySection({
         </h3>
         {onFontChange ? (
           <Button
-            variant={isEditing ? "default" : "ghost"}
+            variant="outline"
             size="sm"
-            className={
+            className={cn(
+              "h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all active:scale-95",
               isEditing
-                ? "h-auto cursor-pointer gap-1.5 px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase"
-                : "text-foreground/70 hover:text-primary hover:bg-primary/10 h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all"
-            }
+                ? "border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
+                : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
+            )}
             onClick={() => setIsEditing((current) => !current)}
           >
             {isEditing ? (
               <>
-                <CheckIcon weight="bold" className="size-3" />
+                <CheckIcon weight="bold" className="size-3 text-primary" />
                 Done
               </>
             ) : (
               <>
-                <PencilSimpleIcon weight="bold" className="size-3" />
+                <PencilSimpleIcon weight="bold" className="size-3 text-primary" />
                 Edit Fonts
               </>
             )}

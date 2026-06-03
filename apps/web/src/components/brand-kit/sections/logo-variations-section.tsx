@@ -1,6 +1,7 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { ZoomableImage } from "@/components/global/zoomable-image";
+import { useBrandKitSection } from "./section-context";
 
 export interface LogoVariation {
   id: string;
@@ -11,8 +12,6 @@ export interface LogoVariation {
 
 interface LogoVariationsSectionProps {
   variations: LogoVariation[];
-  onRefine?: (sectionId: string) => void;
-  isRefining?: boolean;
 }
 
 function LogoVariationImage({ v }: { v: LogoVariation }) {
@@ -50,9 +49,10 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
 
 export function LogoVariationsSection({
   variations,
-  onRefine,
-  isRefining,
 }: LogoVariationsSectionProps) {
+  const { onRefine, refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "logo-variations";
+
   return (
     <div className="relative">
       <SectionHeader

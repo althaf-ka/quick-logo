@@ -1,19 +1,18 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import type { BrandKitResultsData } from "../results/brand-kit-results";
+import { useBrandKitSection } from "./section-context";
 
 interface BrandPresentationSectionProps {
   data: BrandKitResultsData;
   typographyStyle?: string;
-  onRefine?: (sectionId: string) => void;
-  isRefining?: boolean;
 }
 
 export function BrandPresentationSection({
   data,
   typographyStyle,
-  onRefine,
-  isRefining,
 }: BrandPresentationSectionProps) {
+  const { onRefine, refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "brand-presentation";
   const presentationUrl = data.brandPresentation?.presentationUrl;
   const isPlaceholder =
     !presentationUrl || presentationUrl.includes("placehold.co");

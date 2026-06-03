@@ -28,6 +28,7 @@ import { FaviconSection, type FaviconSize } from "../sections/favicon-section";
 import { BrandGuidelinesSection } from "../sections/brand-guidelines-section";
 import { BrandedBackdropsSection } from "../sections/branded-backdrops-section";
 import { BrandPresentationSection } from "../sections/brand-presentation-section";
+import { ErrorBoundary } from "@/components/global/error-boundary";
 
 export interface BrandKitResultsData {
   logoVariations?: LogoVariation[];
@@ -105,7 +106,7 @@ const FocusWrapper = ({
               : ""
         }
       >
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </div>
     </motion.div>
   );
@@ -122,6 +123,7 @@ export function BrandKitResults({
 }: BrandKitResultsProps) {
   useGoogleFontLoader(data.typography?.heading?.family);
   useGoogleFontLoader(data.typography?.body?.family);
+  
   const isMobile = useIsMobile();
   const anyRefining = !!refiningSectionId;
 
@@ -132,6 +134,7 @@ export function BrandKitResults({
         targetItemId,
         refiningSectionId,
         cancelRefine: () => onRefine(null),
+        onRefine: (sectionId: string, targetItemId?: string) => onRefine(sectionId, targetItemId),
       }}
     >
       <div className="mx-auto w-full max-w-6xl px-6 pt-12 pb-4 sm:px-8 md:px-12 lg:px-16">
@@ -161,11 +164,7 @@ export function BrandKitResults({
               anyRefining={anyRefining}
               targetSectionId={targetSectionId}
             >
-              <LogoVariationsSection
-                variations={data.logoVariations}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "logo-variations"}
-              />
+              <LogoVariationsSection variations={data.logoVariations} />
             </FocusWrapper>
           ) : null}
 
@@ -183,7 +182,6 @@ export function BrandKitResults({
                 pairing={data.typography}
                 brandName={data.brandName}
                 onFontChange={onFontChange}
-                isRefining={refiningSectionId === "typography"}
               />
             </FocusWrapper>
 
@@ -194,11 +192,7 @@ export function BrandKitResults({
               isMobile={isMobile}
               anyRefining={anyRefining}
             >
-              <ColorPaletteSection
-                colors={data.colorPalette}
-                onRefine={onRefine}
-                isRefining={refiningSectionId === "color-palette"}
-              />
+              <ColorPaletteSection colors={data.colorPalette} />
             </FocusWrapper>
           </div>
 
@@ -215,8 +209,6 @@ export function BrandKitResults({
                 <BrandPresentationSection
                   data={data}
                   typographyStyle={typographyStyle}
-                  onRefine={onRefine}
-                  isRefining={refiningSectionId === "brand-presentation"}
                 />
               </FocusWrapper>
             ) : null}
@@ -229,12 +221,7 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <SocialMediaSection
-                  assets={data.socialMedia}
-                  onRefine={onRefine}
-                  isRefining={refiningSectionId === "social-media"}
-                  refiningItemId={refiningSectionId === "social-media" ? targetItemId : undefined}
-                />
+                <SocialMediaSection assets={data.socialMedia} />
               </FocusWrapper>
             ) : null}
 
@@ -246,12 +233,7 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <BusinessCardSection
-                  card={data.businessCard}
-                  onRefine={onRefine}
-                  isRefining={refiningSectionId === "business-card"}
-                  refiningItemId={refiningSectionId === "business-card" ? targetItemId : undefined}
-                />
+                <BusinessCardSection card={data.businessCard} />
               </FocusWrapper>
             ) : null}
 
@@ -266,8 +248,6 @@ export function BrandKitResults({
                 <FaviconSection
                   icons={data.favicons}
                   brandName={data.brandName}
-                  onRefine={onRefine}
-                  isRefining={refiningSectionId === "favicon"}
                 />
               </FocusWrapper>
             ) : null}
@@ -280,12 +260,7 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <BrandedBackdropsSection
-                  data={data.brandedBackdrops}
-                  onRefine={onRefine}
-                  isRefining={refiningSectionId === "branded-backdrops"}
-                  refiningItemId={refiningSectionId === "branded-backdrops" ? targetItemId : undefined}
-                />
+                <BrandedBackdropsSection data={data.brandedBackdrops} />
               </FocusWrapper>
             ) : null}
 
@@ -305,8 +280,6 @@ export function BrandKitResults({
                     typography: data.typography,
                     productImages: data.productImages,
                   }}
-                  onRefine={onRefine}
-                  isRefining={refiningSectionId === "brand-guidelines"}
                 />
               </FocusWrapper>
             ) : null}

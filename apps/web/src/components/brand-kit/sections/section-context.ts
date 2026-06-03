@@ -5,6 +5,7 @@ type BrandKitSectionContextValue = {
   targetItemId?: string | null;
   refiningSectionId?: string | null;
   cancelRefine?: () => void;
+  onRefine?: (sectionId: string, targetItemId?: string) => void;
 };
 
 export const BrandKitSectionContext =

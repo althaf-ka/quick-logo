@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@quicklogo/ui/components/button";
-import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
+import { SparkleIcon } from "@phosphor-icons/react";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { useBrandKitSection } from "./section-context";
@@ -9,6 +9,7 @@ interface SectionHeaderProps {
   title: string;
   sectionId: string;
   onRefine?: (sectionId: string) => void;
+  refineLabel?: string;
   isRefining?: boolean;
   className?: string;
 }
@@ -17,10 +18,11 @@ export function SectionHeader({
   title,
   sectionId,
   onRefine,
+  refineLabel = "Refine Section",
   isRefining,
   className,
 }: SectionHeaderProps) {
-  const { targetSectionId, cancelRefine } = useBrandKitSection();
+  const { targetSectionId } = useBrandKitSection();
   const isTargeted = targetSectionId === sectionId;
 
   return (
@@ -30,32 +32,23 @@ export function SectionHeader({
       </h3>
       {onRefine ? (
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           disabled={isRefining}
           className={cn(
-            "h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all",
+            "h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all active:scale-95",
             isTargeted
               ? "border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
               : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
           )}
-          onClick={() => {
-            if (isTargeted && cancelRefine) {
-              cancelRefine();
-            } else {
-              onRefine(sectionId);
-            }
-          }}
+          onClick={() => onRefine(isTargeted ? "" : sectionId)}
         >
-          <ArrowsClockwiseIcon
-            weight="bold"
-            className={cn("size-3", isRefining && "animate-spin")}
-          />
+          <SparkleIcon className="text-primary size-3" />
           {isRefining
             ? "Processing..."
             : isTargeted
-              ? "Cancel Refine"
-              : "Refine Section"}
+              ? "Cancel"
+              : refineLabel}
         </Button>
       ) : null}
     </div>

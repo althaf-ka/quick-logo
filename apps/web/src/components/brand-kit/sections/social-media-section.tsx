@@ -1,8 +1,6 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import { cn } from "@quicklogo/ui/lib/utils";
-import { downloadImage } from "@/lib/download";
 import { ZoomableImage } from "@/components/global/zoomable-image";
-import { Button } from "@quicklogo/ui/components/button";
 import {
   InstagramLogoIcon,
   XLogoIcon,
@@ -10,11 +8,11 @@ import {
   FacebookLogoIcon,
   YoutubeLogoIcon,
   GlobeIcon,
-  DownloadSimpleIcon,
   WarningCircleIcon,
-  SparkleIcon,
 } from "@phosphor-icons/react";
 import { getSocialAssetTargetId } from "@quicklogo/shared";
+import { useBrandKitSection } from "./section-context";
+import { AssetCard } from "./asset-card";
 
 export interface SocialMediaAsset {
   platform: string;
@@ -25,9 +23,6 @@ export interface SocialMediaAsset {
 
 interface SocialMediaSectionProps {
   assets: SocialMediaAsset[];
-  onRefine?: (sectionId: string, targetItemId?: string) => void;
-  isRefining?: boolean;
-  refiningItemId?: string | null;
 }
 
 function PlatformIcon({ platform }: { platform: string }) {
@@ -65,10 +60,10 @@ function getRatioLabel(asset: SocialMediaAsset): string {
 
 export function SocialMediaSection({
   assets,
-  onRefine,
-  isRefining,
-  refiningItemId,
 }: SocialMediaSectionProps) {
+  const { targetSectionId, targetItemId, cancelRefine, onRefine, refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "social-media";
+
   // Sort assets so Profile is first, followed by Facebook banner to sit next to it
   const displayAssets = [...assets].sort((a, b) => {
     if (a.type === "Profile") return -1;
@@ -84,15 +79,18 @@ export function SocialMediaSection({
         title="Social Media Kit"
         sectionId="social-media"
         onRefine={onRefine}
+        refineLabel="Refine All Assets"
         isRefining={isRefining}
       />
-      <SectionContent isRefining={isRefining && !refiningItemId}>
+      <SectionContent isRefining={isRefining && !targetItemId}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {displayAssets.map((asset, i) => {
             const isProfile = asset.type === "Profile";
             // Place the very first banner next to the profile to fill the row perfectly
             const isFirstBanner = !isProfile && i === 1;
             const isPlaceholder = asset.url.includes("placehold.co");
+            const assetTargetId = getSocialAssetTargetId(asset);
+            const isAssetTargeted = targetSectionId === "social-media" && targetItemId === assetTargetId;
 
             const colSpan = isProfile
               ? "col-span-1"
@@ -101,28 +99,35 @@ export function SocialMediaSection({
                 : "col-span-1 sm:col-span-3";
 
             return (
-              <div
+              <AssetCard
                 key={i}
-                className={cn(
-                  "group border-border/50 hover:border-primary/40 bg-card flex flex-col overflow-hidden border transition-colors",
-                  colSpan,
-                )}
+                className={colSpan}
+                title={isProfile ? "Profile Picture" : `${asset.platform} ${asset.type}`}
+                subtitle={getRatioLabel(asset)}
+                icon={<PlatformIcon platform={asset.platform} />}
+                isTargeted={isAssetTargeted}
+                isPlaceholder={isPlaceholder}
+                onToggleRefine={() => isAssetTargeted ? cancelRefine?.() : onRefine?.("social-media", assetTargetId)}
               >
-                <div className="bg-muted/10 relative flex w-full flex-1 items-center justify-center overflow-hidden">
+                <div className={cn(
+                    "bg-muted/10 relative flex w-full flex-1 items-center justify-center overflow-hidden transition-all",
+                    isProfile && "p-4 sm:p-6" // Give profile some breathing room so outline doesn't hug the edges
+                  )}>
                   <div
                     className={cn(
-                      "relative w-full overflow-hidden",
+                      "relative w-full overflow-hidden transition-all",
                       isProfile
-                        ? "aspect-square"
+                        ? "aspect-square max-w-[200px] mx-auto rounded-full"
                         : isFirstBanner
                           ? "aspect-[21/9] sm:absolute sm:inset-0 sm:aspect-auto"
                           : "aspect-[21/9] sm:aspect-[4/1]",
+                      isAssetTargeted && "ring-4 ring-primary z-10"
                     )}
                   >
                     <SectionContent
                       isRefining={
                         isRefining &&
-                        refiningItemId === getSocialAssetTargetId(asset)
+                        targetItemId === assetTargetId
                       }
                       className="pointer-events-none absolute inset-0 z-30"
                     />
@@ -134,11 +139,11 @@ export function SocialMediaSection({
                           : `${asset.platform} ${asset.type}`
                       }
                       className={cn(
-                        "absolute inset-0 z-10 h-full w-full cursor-pointer object-cover object-center transition-transform duration-300 group-hover:scale-[1.01]",
+                        "absolute inset-0 z-10 h-full w-full cursor-pointer object-cover object-center transition-transform duration-300",
                         isPlaceholder && "opacity-40 grayscale filter",
                       )}
                     />
-                    {isPlaceholder ? (
+                    {isPlaceholder && (
                       <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
                         <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
                         <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
@@ -148,65 +153,10 @@ export function SocialMediaSection({
                           AI asset generation is queued or encountered an issue.
                         </p>
                       </div>
-                    ) : (
-                      <div className="pointer-events-none absolute top-2 right-2 z-40 flex items-center gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRefine?.(
-                              "social-media",
-                              getSocialAssetTargetId(asset),
-                            );
-                          }}
-                          title={`Refine ${asset.platform} ${asset.type}`}
-                        >
-                          <SparkleIcon className="text-primary size-4" />
-                          <span className="sr-only">Refine</span>
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="bg-background/80 hover:bg-background pointer-events-auto h-8 w-8 rounded-none p-0 shadow-sm backdrop-blur-md transition-all hover:scale-105"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadImage(
-                              asset.url,
-                              `${asset.platform.toLowerCase()}-${asset.type.toLowerCase()}.png`,
-                            );
-                          }}
-                          title={`Download ${asset.platform} ${asset.type}`}
-                        >
-                          <DownloadSimpleIcon className="size-4" />
-                          <span className="sr-only">Download</span>
-                        </Button>
-                      </div>
                     )}
                   </div>
                 </div>
-                <div className="bg-muted/5 flex w-full shrink-0 items-center justify-between border-t px-4 py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <PlatformIcon platform={asset.platform} />
-                    <div>
-                      <p className="font-mono text-[10px] leading-none font-bold uppercase">
-                        {isProfile
-                          ? "Profile Picture"
-                          : `${asset.platform} ${asset.type}`}
-                      </p>
-                      <p className="text-muted-foreground mt-1 font-mono text-[9px] leading-none tracking-wider uppercase">
-                        {getRatioLabel(asset)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground/40 mr-1 font-mono text-[8px]">
-                      {asset.dimensions}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              </AssetCard>
             );
           })}
         </div>

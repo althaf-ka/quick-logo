@@ -2,6 +2,7 @@ import { SectionHeader, SectionContent } from "./section-header";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { ZoomableImage } from "@/components/global/zoomable-image";
+import { useBrandKitSection } from "./section-context";
 
 export interface FaviconSize {
   size: number;
@@ -13,8 +14,6 @@ export interface FaviconSize {
 interface FaviconSectionProps {
   icons: FaviconSize[];
   brandName?: string;
-  onRefine?: (sectionId: string) => void;
-  isRefining?: boolean;
 }
 
 function CombinedBrowserTabMockup({
@@ -167,9 +166,10 @@ function CombinedAppMockup({ icons }: { icons: FaviconSize[] }) {
 export function FaviconSection({
   icons,
   brandName,
-  onRefine,
-  isRefining,
 }: FaviconSectionProps) {
+  const { onRefine, refiningSectionId } = useBrandKitSection();
+  const isRefining = refiningSectionId === "favicon";
+
   return (
     <div>
       <SectionHeader
