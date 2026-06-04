@@ -29,9 +29,14 @@ export function useBrandKitRefinement({
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
   const [targetSection, setTargetSection] = useState<string | null>(null);
-  const [refiningSectionId, setRefiningSectionId] = useState<string | null>(null);
+  const [refiningSectionId, setRefiningSectionId] = useState<string | null>(
+    null,
+  );
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
-  const [activeRevTracker, setActiveRevTracker] = useState<{ id?: string, count: number } | null>(null);
+  const [activeRevTracker, setActiveRevTracker] = useState<{
+    id?: string;
+    count: number;
+  } | null>(null);
 
   // Conversational session memory
   const [conversationHistory, setConversationHistory] = useState<
@@ -88,10 +93,17 @@ export function useBrandKitRefinement({
       }
       return res.json();
     },
-    onMutate: ({ sectionId, refinementPrompt, targetItemId: mutationTargetItemId }) => {
-      const cached = queryClient.getQueryData<NormalizedBrandKit | null>(["brand-kit", brandKitId]);
-      const activeRev = cached?.revisions.find(r => r.isActive);
-      
+    onMutate: ({
+      sectionId,
+      refinementPrompt,
+      targetItemId: mutationTargetItemId,
+    }) => {
+      const cached = queryClient.getQueryData<NormalizedBrandKit | null>([
+        "brand-kit",
+        brandKitId,
+      ]);
+      const activeRev = cached?.revisions.find((r) => r.isActive);
+
       if (!refinementPrompt.startsWith("__FONT_OVERRIDE__")) {
         setRefiningSectionId(sectionId);
         setTargetItemId(mutationTargetItemId || null);
@@ -123,7 +135,7 @@ export function useBrandKitRefinement({
       ]);
       setPrompt("");
       setTargetSection(null);
-      
+
       const prevRevId = context?.previousActiveRevisionId;
       if (prevRevId) {
         toast.success("Refinement started. Changes will appear shortly.", {
@@ -162,11 +174,14 @@ export function useBrandKitRefinement({
     const interval = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
 
-      const cached = queryClient.getQueryData<NormalizedBrandKit | null>(["brand-kit", brandKitId]);
+      const cached = queryClient.getQueryData<NormalizedBrandKit | null>([
+        "brand-kit",
+        brandKitId,
+      ]);
       if (cached) {
         const currentActiveId = cached.revisions.find((r) => r.isActive)?.id;
         const currentCount = cached.revisions.length;
-        
+
         if (
           (currentActiveId && currentActiveId !== activeRevTracker.id) ||
           currentCount > activeRevTracker.count
@@ -212,30 +227,32 @@ export function useBrandKitRefinement({
     },
   });
 
-  const { mutate: mutateRestoreFull, isPending: isRestoringFull } = useMutation({
-    mutationFn: async ({
-      sourceRevisionId,
-    }: {
-      sourceRevisionId: string;
-    }) => {
-      if (!brandKitId) throw new Error("No active brand kit session");
-      const res = await api.brandKits[":id"]["restore-full"].$post({
-        param: { id: brandKitId },
-        json: {
-          sourceRevisionId,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to restore revision");
-      return res.json();
+  const { mutate: mutateRestoreFull, isPending: isRestoringFull } = useMutation(
+    {
+      mutationFn: async ({
+        sourceRevisionId,
+      }: {
+        sourceRevisionId: string;
+      }) => {
+        if (!brandKitId) throw new Error("No active brand kit session");
+        const res = await api.brandKits[":id"]["restore-full"].$post({
+          param: { id: brandKitId },
+          json: {
+            sourceRevisionId,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to restore revision");
+        return res.json();
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
+        toast.success("Brand Kit restored to previous version!");
+      },
+      onError: () => {
+        toast.error("Failed to restore Brand Kit");
+      },
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
-      toast.success("Brand Kit restored to previous version!");
-    },
-    onError: () => {
-      toast.error("Failed to restore Brand Kit");
-    },
-  });
+  );
 
   return {
     prompt,

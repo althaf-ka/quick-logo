@@ -5,7 +5,6 @@ import { FontPicker } from "../font-picker";
 import { useGoogleFontLoader } from "@/hooks/use-google-font-loader";
 import { SectionContent } from "./section-header";
 import { cn } from "@quicklogo/ui/lib/utils";
-import { useBrandKitSection } from "./section-context";
 
 export interface TypographyPairing {
   heading: {
@@ -33,8 +32,6 @@ export function TypographySection({
   brandName,
   onFontChange,
 }: TypographySectionProps) {
-  const { refiningSectionId } = useBrandKitSection();
-  const isRefining = refiningSectionId === "typography";
   const [isEditing, setIsEditing] = useState(false);
   const headingSample =
     pairing.heading.sampleText || brandName || "Your Brand Name";
@@ -65,19 +62,22 @@ export function TypographySection({
           >
             {isEditing ? (
               <>
-                <CheckIcon weight="bold" className="size-3 text-primary" />
+                <CheckIcon weight="bold" className="text-primary size-3" />
                 Done
               </>
             ) : (
               <>
-                <PencilSimpleIcon weight="bold" className="size-3 text-primary" />
+                <PencilSimpleIcon
+                  weight="bold"
+                  className="text-primary size-3"
+                />
                 Edit Fonts
               </>
             )}
           </Button>
         ) : null}
       </div>
-      <SectionContent isRefining={isRefining}>
+      <SectionContent sectionId="typography">
         {isEditing && onFontChange ? (
           <div className="bg-muted/20 mb-4 space-y-3 border border-dashed p-4">
             <p className="text-muted-foreground/50 font-mono text-[9px] leading-relaxed tracking-wide">

@@ -1,5 +1,9 @@
 import { extractUsername, buildBrandContextSummary } from "@quicklogo/shared";
-import { ValidatedBrandContext, NormalizedSocials, NormalizedContact } from "./types";
+import {
+  ValidatedBrandContext,
+  NormalizedSocials,
+  NormalizedContact,
+} from "./types";
 
 export function formatHandleSocial(value: string): string | undefined {
   const cleaned = extractUsername(value);
@@ -11,10 +15,12 @@ export function formatLinkedIn(value: string): string | undefined {
   let cleaned = value.trim();
   if (!cleaned) return undefined;
   try {
-    const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
+    const url = new URL(
+      cleaned.startsWith("http") ? cleaned : `https://${cleaned}`,
+    );
     let host = url.hostname.replace(/^www\./i, "");
     let path = url.pathname;
-    if (path === '/') path = '';
+    if (path === "/") path = "";
     return `${host}${path}`;
   } catch {
     return cleaned.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
@@ -24,12 +30,14 @@ export function formatLinkedIn(value: string): string | undefined {
 export function formatYouTube(value: string): string | undefined {
   let cleaned = value.trim();
   if (!cleaned) return undefined;
-  if (cleaned.includes('youtube.com/')) {
+  if (cleaned.includes("youtube.com/")) {
     try {
-      const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
+      const url = new URL(
+        cleaned.startsWith("http") ? cleaned : `https://${cleaned}`,
+      );
       let host = url.hostname.replace(/^www\./i, "");
       let path = url.pathname;
-      if (path === '/') path = '';
+      if (path === "/") path = "";
       return `${host}${path}`;
     } catch {
       return cleaned.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
@@ -39,7 +47,10 @@ export function formatYouTube(value: string): string | undefined {
   return username ? `@${username}` : undefined;
 }
 
-export function formatSocialValue(platform: keyof NormalizedSocials, value: string): string | undefined {
+export function formatSocialValue(
+  platform: keyof NormalizedSocials,
+  value: string,
+): string | undefined {
   if (platform === "linkedin") return formatLinkedIn(value);
   if (platform === "youtube") return formatYouTube(value);
   return formatHandleSocial(value);
@@ -80,14 +91,20 @@ export function normalizeBrandContext(
     additionalContext?: string;
     socials?: Record<string, string>;
     contact?: Record<string, string>;
-  }
+  },
 ): ValidatedBrandContext {
   const socials: NormalizedSocials = {};
   if (rawContext.socials) {
     for (const [key, value] of Object.entries(rawContext.socials)) {
       const lowerKey = key.toLowerCase();
       const mappedKey = SOCIAL_KEY_ALIASES[lowerKey] || lowerKey;
-      if (mappedKey === "instagram" || mappedKey === "twitter" || mappedKey === "linkedin" || mappedKey === "youtube" || mappedKey === "tiktok") {
+      if (
+        mappedKey === "instagram" ||
+        mappedKey === "twitter" ||
+        mappedKey === "linkedin" ||
+        mappedKey === "youtube" ||
+        mappedKey === "tiktok"
+      ) {
         const formatted = formatSocialValue(mappedKey, value);
         if (formatted) socials[mappedKey] = formatted;
       }
@@ -98,27 +115,33 @@ export function normalizeBrandContext(
   if (rawContext.contact) {
     const email = cleanOptionalText(rawContext.contact.email);
     if (email) contact.email = email;
-    
+
     const phone = cleanOptionalText(rawContext.contact.phone);
     if (phone) contact.phone = phone;
-    
+
     const websiteRaw = cleanOptionalText(rawContext.contact.website);
     if (websiteRaw) {
       try {
-        const url = new URL(websiteRaw.startsWith('http') ? websiteRaw : `https://${websiteRaw}`);
+        const url = new URL(
+          websiteRaw.startsWith("http") ? websiteRaw : `https://${websiteRaw}`,
+        );
         contact.website = url.hostname.replace(/^www\./i, "");
       } catch {
-        contact.website = websiteRaw.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+        contact.website = websiteRaw
+          .replace(/^https?:\/\//i, "")
+          .replace(/^www\./i, "");
       }
     }
-    
+
     const name = cleanOptionalText(rawContext.contact.name);
     if (name) contact.name = name;
-    
+
     const title = cleanOptionalText(rawContext.contact.title);
     if (title) contact.title = title;
-    
-    const address = cleanOptionalText(rawContext.contact.address || rawContext.contact.location);
+
+    const address = cleanOptionalText(
+      rawContext.contact.address || rawContext.contact.location,
+    );
     if (address) contact.address = address;
   }
 
@@ -142,7 +165,9 @@ export function normalizeBrandContext(
   };
 }
 
-export function buildBrandDesignContext(context: ValidatedBrandContext): string {
+export function buildBrandDesignContext(
+  context: ValidatedBrandContext,
+): string {
   const summary = buildBrandContextSummary({
     industry: context.industry,
     tagline: context.tagline,

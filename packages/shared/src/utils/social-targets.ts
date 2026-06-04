@@ -1,4 +1,7 @@
-export function getSocialAssetTargetId(asset: { platform: string; type: string }): string {
+export function getSocialAssetTargetId(asset: {
+  platform: string;
+  type: string;
+}): string {
   const raw = `${asset.platform}-${asset.type}`;
   return raw
     .toLowerCase()

@@ -27,7 +27,7 @@ export function AssetCard({
     <div
       className={cn(
         "group border-border/50 bg-card flex flex-col overflow-hidden border transition-colors",
-        className
+        className,
       )}
     >
       {/* The main content area where children (images, overlays) will be rendered */}
@@ -38,7 +38,7 @@ export function AssetCard({
         <div className="flex items-center gap-2.5">
           {icon}
           <div>
-            <div className="font-mono text-[9px] font-bold uppercase leading-none sm:text-[10px]">
+            <div className="font-mono text-[9px] leading-none font-bold uppercase sm:text-[10px]">
               {title}
             </div>
             {subtitle && (

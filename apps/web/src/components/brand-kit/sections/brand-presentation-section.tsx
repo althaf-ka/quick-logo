@@ -1,6 +1,5 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import type { BrandKitResultsData } from "../results/brand-kit-results";
-import { useBrandKitSection } from "./section-context";
 
 interface BrandPresentationSectionProps {
   data: BrandKitResultsData;
@@ -11,8 +10,6 @@ export function BrandPresentationSection({
   data,
   typographyStyle,
 }: BrandPresentationSectionProps) {
-  const { onRefine, refiningSectionId } = useBrandKitSection();
-  const isRefining = refiningSectionId === "brand-presentation";
   const presentationUrl = data.brandPresentation?.presentationUrl;
   const isPlaceholder =
     !presentationUrl || presentationUrl.includes("placehold.co");
@@ -31,10 +28,8 @@ export function BrandPresentationSection({
       <SectionHeader
         title="Brand Presentation"
         sectionId="brand-presentation"
-        onRefine={onRefine}
-        isRefining={isRefining}
       />
-      <SectionContent isRefining={isRefining}>
+      <SectionContent sectionId="brand-presentation">
         {/* 16:9 Widescreen Image Wrapper - Blends seamlessly into UI */}
         <div
           className={`bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center ${imageFrameClass}`}

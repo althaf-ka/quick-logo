@@ -154,7 +154,7 @@ export function ResultsSidebar({
                   "group relative flex items-center gap-2.5 border px-2.5 py-2 transition-all duration-300",
                   isCurrent
                     ? "border-primary/30 bg-primary/[0.03] cursor-default shadow-[inset_2px_0_0_rgba(var(--primary),0.5)]"
-                    : "border-white/[0.06] bg-white/[0.01] cursor-pointer hover:border-white/[0.12] hover:bg-white/[0.03]",
+                    : "cursor-pointer border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
                 )}
               >
                 <div className="flex items-center gap-1.5">
@@ -162,39 +162,49 @@ export function ResultsSidebar({
                     weight="fill"
                     className={cn(
                       "size-1.5 transition-colors",
-                      isCurrent ? "text-primary shadow-[0_0_8px_rgba(var(--primary),0.5)] rounded-full" : getRevisionColor(rev.triggerType),
+                      isCurrent
+                        ? "text-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                        : getRevisionColor(rev.triggerType),
                     )}
                   />
-                  <ClockCounterClockwiseIcon 
+                  <ClockCounterClockwiseIcon
                     className={cn(
                       "size-3 transition-colors",
-                      isCurrent ? "text-primary/50" : "text-muted-foreground/30 group-hover:text-muted-foreground"
-                    )} 
+                      isCurrent
+                        ? "text-primary/50"
+                        : "text-muted-foreground/30 group-hover:text-muted-foreground",
+                    )}
                   />
                 </div>
                 <div className="flex min-w-0 flex-col gap-px">
                   <div className="flex items-center gap-1.5">
-                    <span className={cn(
-                      "font-mono text-[9px] font-bold tracking-wider uppercase transition-colors",
-                      isCurrent ? "text-primary" : "text-foreground/90"
-                    )}>
+                    <span
+                      className={cn(
+                        "font-mono text-[9px] font-bold tracking-wider uppercase transition-colors",
+                        isCurrent ? "text-primary" : "text-foreground/90",
+                      )}
+                    >
                       V{reversedRevisions.length - idx}
                     </span>
                     {isCurrent ? (
-                      <span className="rounded-[2px] bg-primary/15 px-1 py-[1px] font-mono text-[7px] font-black tracking-widest text-primary uppercase">
+                      <span className="bg-primary/15 text-primary rounded-[2px] px-1 py-[1px] font-mono text-[7px] font-black tracking-widest uppercase">
                         Current
                       </span>
                     ) : null}
                   </div>
-                  <span className={cn(
-                    "truncate font-mono text-[8px] transition-colors",
-                    isCurrent ? "text-primary/60" : "text-muted-foreground/50"
-                  )}>
+                  <span
+                    className={cn(
+                      "truncate font-mono text-[8px] transition-colors",
+                      isCurrent
+                        ? "text-primary/60"
+                        : "text-muted-foreground/50",
+                    )}
+                  >
                     {new Date(rev.createdAt).toLocaleString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit'
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
                     })}
                   </span>
                 </div>

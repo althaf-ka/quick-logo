@@ -8,22 +8,19 @@ import { useBrandKitSection } from "./section-context";
 interface SectionHeaderProps {
   title: string;
   sectionId: string;
-  onRefine?: (sectionId: string) => void;
   refineLabel?: string;
-  isRefining?: boolean;
   className?: string;
 }
 
 export function SectionHeader({
   title,
   sectionId,
-  onRefine,
   refineLabel = "Refine Section",
-  isRefining,
   className,
 }: SectionHeaderProps) {
-  const { targetSectionId } = useBrandKitSection();
+  const { targetSectionId, onRefine, refiningSectionId } = useBrandKitSection();
   const isTargeted = targetSectionId === sectionId;
+  const isRefining = refiningSectionId === sectionId;
 
   return (
     <div className={cn("flex items-center justify-between pb-3", className)}>
@@ -44,11 +41,7 @@ export function SectionHeader({
           onClick={() => onRefine(isTargeted ? "" : sectionId)}
         >
           <SparkleIcon className="text-primary size-3" />
-          {isRefining
-            ? "Processing..."
-            : isTargeted
-              ? "Cancel"
-              : refineLabel}
+          {isRefining ? "Processing..." : isTargeted ? "Cancel" : refineLabel}
         </Button>
       ) : null}
     </div>
@@ -60,14 +53,21 @@ export function SectionHeader({
  * with a pulsing animation covering the entire content area.
  */
 export function SectionContent({
-  isRefining,
+  sectionId,
+  targetItemId,
   children,
   className,
 }: {
-  isRefining?: boolean;
+  sectionId: string;
+  targetItemId?: string;
   children?: React.ReactNode;
   className?: string;
 }) {
+  const { refiningSectionId, targetItemId: ctxTargetItemId } =
+    useBrandKitSection();
+  const isRefining =
+    refiningSectionId === sectionId &&
+    (!targetItemId || ctxTargetItemId === targetItemId);
   return (
     <div className={cn("relative", className)}>
       {children}

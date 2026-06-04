@@ -31,7 +31,15 @@ export interface ValidatedBrandContext {
 }
 
 export interface ContactDetail {
-  type: "social" | "website" | "email" | "phone" | "address" | "name" | "title" | "other";
+  type:
+    | "social"
+    | "website"
+    | "email"
+    | "phone"
+    | "address"
+    | "name"
+    | "title"
+    | "other";
   label: string;
   value: string;
 }
@@ -43,7 +51,10 @@ export interface BusinessCardContentStrategy {
 }
 
 export type LogoVariationKind = "dark-mode" | "icon-only";
-export type SocialMediaVariationKind = "social-profile" | "master-banner" | "facebook-banner";
+export type SocialMediaVariationKind =
+  | "social-profile"
+  | "master-banner"
+  | "facebook-banner";
 export type BusinessCardVariationKind = "front" | "back";
 export type BackdropVariationKind = "feed-backdrop" | "story-backdrop";
 export type BrandKitSectionKey = "colorPalette" | "brandPresentation";

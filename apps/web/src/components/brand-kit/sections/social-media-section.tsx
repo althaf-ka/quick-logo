@@ -58,11 +58,9 @@ function getRatioLabel(asset: SocialMediaAsset): string {
   return "Banner Ratio";
 }
 
-export function SocialMediaSection({
-  assets,
-}: SocialMediaSectionProps) {
-  const { targetSectionId, targetItemId, cancelRefine, onRefine, refiningSectionId } = useBrandKitSection();
-  const isRefining = refiningSectionId === "social-media";
+export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
+  const { targetSectionId, targetItemId, cancelRefine, onRefine } =
+    useBrandKitSection();
 
   // Sort assets so Profile is first, followed by Facebook banner to sit next to it
   const displayAssets = [...assets].sort((a, b) => {
@@ -78,11 +76,9 @@ export function SocialMediaSection({
       <SectionHeader
         title="Social Media Kit"
         sectionId="social-media"
-        onRefine={onRefine}
         refineLabel="Refine All Assets"
-        isRefining={isRefining}
       />
-      <SectionContent isRefining={isRefining && !targetItemId}>
+      <SectionContent sectionId="social-media">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {displayAssets.map((asset, i) => {
             const isProfile = asset.type === "Profile";
@@ -90,7 +86,9 @@ export function SocialMediaSection({
             const isFirstBanner = !isProfile && i === 1;
             const isPlaceholder = asset.url.includes("placehold.co");
             const assetTargetId = getSocialAssetTargetId(asset);
-            const isAssetTargeted = targetSectionId === "social-media" && targetItemId === assetTargetId;
+            const isAssetTargeted =
+              targetSectionId === "social-media" &&
+              targetItemId === assetTargetId;
 
             const colSpan = isProfile
               ? "col-span-1"
@@ -102,33 +100,41 @@ export function SocialMediaSection({
               <AssetCard
                 key={i}
                 className={colSpan}
-                title={isProfile ? "Profile Picture" : `${asset.platform} ${asset.type}`}
+                title={
+                  isProfile
+                    ? "Profile Picture"
+                    : `${asset.platform} ${asset.type}`
+                }
                 subtitle={getRatioLabel(asset)}
                 icon={<PlatformIcon platform={asset.platform} />}
                 isTargeted={isAssetTargeted}
                 isPlaceholder={isPlaceholder}
-                onToggleRefine={() => isAssetTargeted ? cancelRefine?.() : onRefine?.("social-media", assetTargetId)}
+                onToggleRefine={() =>
+                  isAssetTargeted
+                    ? cancelRefine?.()
+                    : onRefine?.("social-media", assetTargetId)
+                }
               >
-                <div className={cn(
+                <div
+                  className={cn(
                     "bg-muted/10 relative flex w-full flex-1 items-center justify-center overflow-hidden transition-all",
-                    isProfile && "p-4 sm:p-6" // Give profile some breathing room so outline doesn't hug the edges
-                  )}>
+                    isProfile && "p-4 sm:p-6", // Give profile some breathing room so outline doesn't hug the edges
+                  )}
+                >
                   <div
                     className={cn(
                       "relative w-full overflow-hidden transition-all",
                       isProfile
-                        ? "aspect-square max-w-[200px] mx-auto rounded-full"
+                        ? "mx-auto aspect-square max-w-[200px] rounded-full"
                         : isFirstBanner
                           ? "aspect-[21/9] sm:absolute sm:inset-0 sm:aspect-auto"
                           : "aspect-[21/9] sm:aspect-[4/1]",
-                      isAssetTargeted && "ring-4 ring-primary z-10"
+                      isAssetTargeted && "ring-primary z-10 ring-4",
                     )}
                   >
                     <SectionContent
-                      isRefining={
-                        isRefining &&
-                        targetItemId === assetTargetId
-                      }
+                      sectionId="social-media"
+                      targetItemId={assetTargetId}
                       className="pointer-events-none absolute inset-0 z-30"
                     />
                     <ZoomableImage

@@ -123,7 +123,7 @@ export function BrandKitResults({
 }: BrandKitResultsProps) {
   useGoogleFontLoader(data.typography?.heading?.family);
   useGoogleFontLoader(data.typography?.body?.family);
-  
+
   const isMobile = useIsMobile();
   const anyRefining = !!refiningSectionId;
 
@@ -134,7 +134,8 @@ export function BrandKitResults({
         targetItemId,
         refiningSectionId,
         cancelRefine: () => onRefine(null),
-        onRefine: (sectionId: string, targetItemId?: string) => onRefine(sectionId, targetItemId),
+        onRefine: (sectionId: string, targetItemId?: string) =>
+          onRefine(sectionId, targetItemId),
       }}
     >
       <div className="mx-auto w-full max-w-6xl px-6 pt-12 pb-4 sm:px-8 md:px-12 lg:px-16">

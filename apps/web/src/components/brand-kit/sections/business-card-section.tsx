@@ -13,34 +13,42 @@ interface BusinessCardSectionProps {
   card: BusinessCardData;
 }
 
-export function BusinessCardSection({
-  card,
-}: BusinessCardSectionProps) {
-  const { targetSectionId, targetItemId, cancelRefine, onRefine, refiningSectionId } = useBrandKitSection();
-  const isRefining = refiningSectionId === "business-card";
-  const isFrontTargeted = targetSectionId === "business-card" && targetItemId === "front";
-  const isBackTargeted = targetSectionId === "business-card" && targetItemId === "back";
+export function BusinessCardSection({ card }: BusinessCardSectionProps) {
+  const { targetSectionId, targetItemId, cancelRefine, onRefine } =
+    useBrandKitSection();
+  const isFrontTargeted =
+    targetSectionId === "business-card" && targetItemId === "front";
+  const isBackTargeted =
+    targetSectionId === "business-card" && targetItemId === "back";
 
   return (
     <div>
       <SectionHeader
         title="Business Card"
         sectionId="business-card"
-        onRefine={onRefine}
         refineLabel="Refine All Cards"
-        isRefining={isRefining}
       />
-      <SectionContent isRefining={isRefining && !targetItemId}>
+      <SectionContent sectionId="business-card">
         <div className="grid gap-4 md:grid-cols-2">
           <AssetCard
             title="Front"
             isTargeted={isFrontTargeted}
             isPlaceholder={card.frontUrl.includes("placehold.co")}
-            onToggleRefine={() => isFrontTargeted ? cancelRefine?.() : onRefine?.("business-card", "front")}
+            onToggleRefine={() =>
+              isFrontTargeted
+                ? cancelRefine?.()
+                : onRefine?.("business-card", "front")
+            }
           >
-            <div className={cn("bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden transition-all", isFrontTargeted && "ring-4 ring-primary z-10")}>
+            <div
+              className={cn(
+                "bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden transition-all",
+                isFrontTargeted && "ring-primary z-10 ring-4",
+              )}
+            >
               <SectionContent
-                isRefining={isRefining && targetItemId === "front"}
+                sectionId="business-card"
+                targetItemId="front"
                 className="pointer-events-none absolute inset-0 z-30"
               />
               <ZoomableImage
@@ -56,11 +64,21 @@ export function BusinessCardSection({
               title="Back"
               isTargeted={isBackTargeted}
               isPlaceholder={card.backUrl?.includes("placehold.co")}
-              onToggleRefine={() => isBackTargeted ? cancelRefine?.() : onRefine?.("business-card", "back")}
+              onToggleRefine={() =>
+                isBackTargeted
+                  ? cancelRefine?.()
+                  : onRefine?.("business-card", "back")
+              }
             >
-              <div className={cn("bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden transition-all", isBackTargeted && "ring-4 ring-primary z-10")}>
+              <div
+                className={cn(
+                  "bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden transition-all",
+                  isBackTargeted && "ring-primary z-10 ring-4",
+                )}
+              >
                 <SectionContent
-                  isRefining={isRefining && targetItemId === "back"}
+                  sectionId="business-card"
+                  targetItemId="back"
                   className="pointer-events-none absolute inset-0 z-30"
                 />
                 <ZoomableImage

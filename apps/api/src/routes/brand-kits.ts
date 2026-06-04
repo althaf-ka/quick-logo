@@ -190,20 +190,48 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
         if (data.sectionId === "business-card") {
           const bc = results.businessCard as Record<string, string> | undefined;
-          if (!bc) throw new BadRequestError("Business card does not exist in active revision");
-          if (data.targetItemId === "front" && !bc.frontUrl) throw new BadRequestError("Business card front does not exist in active revision");
-          if (data.targetItemId === "back" && !bc.backUrl) throw new BadRequestError("Business card back does not exist in active revision");
+          if (!bc)
+            throw new BadRequestError(
+              "Business card does not exist in active revision",
+            );
+          if (data.targetItemId === "front" && !bc.frontUrl)
+            throw new BadRequestError(
+              "Business card front does not exist in active revision",
+            );
+          if (data.targetItemId === "back" && !bc.backUrl)
+            throw new BadRequestError(
+              "Business card back does not exist in active revision",
+            );
         } else if (data.sectionId === "branded-backdrops") {
-          const bb = results.brandedBackdrops as Record<string, string> | undefined;
-          if (!bb) throw new BadRequestError("Branded backdrops do not exist in active revision");
-          if (data.targetItemId === "feed" && !bb.feedUrl) throw new BadRequestError("Branded backdrop feed does not exist in active revision");
-          if (data.targetItemId === "story" && !bb.storyUrl) throw new BadRequestError("Branded backdrop story does not exist in active revision");
+          const bb = results.brandedBackdrops as
+            | Record<string, string>
+            | undefined;
+          if (!bb)
+            throw new BadRequestError(
+              "Branded backdrops do not exist in active revision",
+            );
+          if (data.targetItemId === "feed" && !bb.feedUrl)
+            throw new BadRequestError(
+              "Branded backdrop feed does not exist in active revision",
+            );
+          if (data.targetItemId === "story" && !bb.storyUrl)
+            throw new BadRequestError(
+              "Branded backdrop story does not exist in active revision",
+            );
         } else if (data.sectionId === "social-media") {
           const socialAssets = results.socialMedia;
-          if (!Array.isArray(socialAssets)) throw new BadRequestError("Social media assets do not exist in active revision");
-          
-          const found = socialAssets.some((asset: any) => getSocialAssetTargetId(asset) === data.targetItemId);
-          if (!found) throw new BadRequestError(`Social asset '${data.targetItemId}' does not exist in active revision`);
+          if (!Array.isArray(socialAssets))
+            throw new BadRequestError(
+              "Social media assets do not exist in active revision",
+            );
+
+          const found = socialAssets.some(
+            (asset: any) => getSocialAssetTargetId(asset) === data.targetItemId,
+          );
+          if (!found)
+            throw new BadRequestError(
+              `Social asset '${data.targetItemId}' does not exist in active revision`,
+            );
         }
       }
 
@@ -372,7 +400,9 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       }
 
       if (activeRevision.id === sourceRevision.id) {
-        throw new BadRequestError("Cannot restore to the currently active revision");
+        throw new BadRequestError(
+          "Cannot restore to the currently active revision",
+        );
       }
 
       const sourceResults = sourceRevision.results as Record<string, unknown>;
@@ -399,7 +429,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       ]);
 
       return c.json({ status: "success" });
-    }
+    },
   );
 
 export type BrandKitsType = typeof brandKitsRoute;

@@ -1,4 +1,7 @@
-export function getSectionLabel(sectionId: string, targetItemId?: string | null): string {
+export function getSectionLabel(
+  sectionId: string,
+  targetItemId?: string | null,
+): string {
   let label = sectionId;
   switch (sectionId) {
     case "logoVariations":
@@ -28,9 +31,12 @@ export function getSectionLabel(sectionId: string, targetItemId?: string | null)
       label = "Typography System";
       break;
   }
-  
+
   if (targetItemId) {
-    const formattedTarget = targetItemId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const formattedTarget = targetItemId
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
     return `${label} · ${formattedTarget}`;
   }
   return label;

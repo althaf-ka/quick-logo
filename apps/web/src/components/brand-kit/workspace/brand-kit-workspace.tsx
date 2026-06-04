@@ -42,7 +42,9 @@ export function BrandKitWorkspace({
       <div className="relative flex flex-1 flex-col overflow-hidden px-4">
         <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 pb-24 md:p-6">
           <AnimatePresence mode="wait">
-            {bk.isQueryLoading || bk.isImageLoading || (!!imageId && !bk.logoUrl) ? (
+            {bk.isQueryLoading ||
+            bk.isImageLoading ||
+            (!!imageId && !bk.logoUrl) ? (
               <motion.div
                 key="query-loading"
                 variants={pageTransition}
@@ -51,8 +53,12 @@ export function BrandKitWorkspace({
                 exit="exit"
                 className="flex h-full min-h-[60vh] w-full items-center justify-center"
               >
-                <QueryLoadingState 
-                  text={imageId ? "Importing Source Logo..." : "Loading Brand Kit..."} 
+                <QueryLoadingState
+                  text={
+                    imageId
+                      ? "Importing Source Logo..."
+                      : "Loading Brand Kit..."
+                  }
                 />
               </motion.div>
             ) : bk.isGenerating && !bk.results ? (
@@ -425,7 +431,11 @@ function EmptyState({
   );
 }
 
-function QueryLoadingState({ text = "Loading Brand Kit..." }: { text?: string }) {
+function QueryLoadingState({
+  text = "Loading Brand Kit...",
+}: {
+  text?: string;
+}) {
   return (
     <div className="flex flex-col items-center justify-center">
       <CircleDashedIcon className="text-muted-foreground/30 size-12 animate-spin" />

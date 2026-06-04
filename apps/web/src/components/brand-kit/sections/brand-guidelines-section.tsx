@@ -1,7 +1,6 @@
 import { SectionHeader, SectionContent } from "./section-header";
 import type { PaletteColor } from "./color-palette-section";
 import type { TypographyPairing } from "./typography-section";
-import { useBrandKitSection } from "./section-context";
 
 export interface BrandGuidelinesData {
   logoUrl: string;
@@ -15,22 +14,13 @@ interface BrandGuidelinesSectionProps {
   data: BrandGuidelinesData;
 }
 
-export function BrandGuidelinesSection({
-  data,
-}: BrandGuidelinesSectionProps) {
-  const { onRefine, refiningSectionId } = useBrandKitSection();
-  const isRefining = refiningSectionId === "brand-guidelines";
+export function BrandGuidelinesSection({ data }: BrandGuidelinesSectionProps) {
   const hasProducts = data.productImages && data.productImages.length > 0;
 
   return (
     <div>
-      <SectionHeader
-        title="Brand Guidelines"
-        sectionId="brand-guidelines"
-        onRefine={onRefine}
-        isRefining={isRefining}
-      />
-      <SectionContent isRefining={isRefining}>
+      <SectionHeader title="Brand Guidelines" sectionId="brand-guidelines" />
+      <SectionContent sectionId="brand-guidelines">
         <div className="border">
           <div className="bg-card p-4 sm:p-6">
             <div className="grid grid-cols-6 gap-2 sm:gap-3">

@@ -37,7 +37,8 @@ export class ErrorBoundary extends React.Component<
             Failed to Load Section
           </h3>
           <p className="text-muted-foreground max-w-[300px] text-xs">
-            {this.state.error?.message || "An unexpected error occurred while rendering this component."}
+            {this.state.error?.message ||
+              "An unexpected error occurred while rendering this component."}
           </p>
           <Button
             variant="outline"

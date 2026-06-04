@@ -9,7 +9,11 @@ import { uploadFileToImageKit } from "@/lib/imagekit";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
-import type { StructuredBrandContext, RefinementSectionId, RestoreSectionId } from "@quicklogo/shared";
+import type {
+  StructuredBrandContext,
+  RefinementSectionId,
+  RestoreSectionId,
+} from "@quicklogo/shared";
 
 interface UseBrandKitOptions {
   imageId?: string;
@@ -405,16 +409,42 @@ export function useBrandKit({
     handleMockupUpload,
     handleFontChange,
     handleGenerate,
-    handleRefine: (sectionId: string, refinementPrompt: string, targetItemId?: string) => {
-      if (isRefiningKit || refinement.isRestoringKit || refinement.isRestoringFull) return;
-      mutateRefine({ sectionId: sectionId as RefinementSectionId, refinementPrompt, targetItemId });
+    handleRefine: (
+      sectionId: string,
+      refinementPrompt: string,
+      targetItemId?: string,
+    ) => {
+      if (
+        isRefiningKit ||
+        refinement.isRestoringKit ||
+        refinement.isRestoringFull
+      )
+        return;
+      mutateRefine({
+        sectionId: sectionId as RefinementSectionId,
+        refinementPrompt,
+        targetItemId,
+      });
     },
     handleRestore: (sectionId: string, sourceRevisionId: string) => {
-      if (isRefiningKit || refinement.isRestoringKit || refinement.isRestoringFull) return;
-      mutateRestore({ sectionId: sectionId as RestoreSectionId, sourceRevisionId });
+      if (
+        isRefiningKit ||
+        refinement.isRestoringKit ||
+        refinement.isRestoringFull
+      )
+        return;
+      mutateRestore({
+        sectionId: sectionId as RestoreSectionId,
+        sourceRevisionId,
+      });
     },
     handleRestoreFull: (sourceRevisionId: string) => {
-      if (isRefiningKit || refinement.isRestoringKit || refinement.isRestoringFull) return;
+      if (
+        isRefiningKit ||
+        refinement.isRestoringKit ||
+        refinement.isRestoringFull
+      )
+        return;
       mutateRestoreFull({ sourceRevisionId });
     },
     getSectionHistory: (sectionPrefix: string) => {
@@ -430,5 +460,3 @@ export function useBrandKit({
     },
   };
 }
-
-

@@ -5,22 +5,28 @@ import type {
 } from "../../../types/brand-kit";
 import { mapDeliverables } from "./map-deliverables";
 
-export function normalizeBrandKit(rawResponse: {
-  brandKit: any;
-  revisions: any[];
-}): NormalizedBrandKit {
+import type { InferResponseType } from "@quicklogo/api-client";
+import { api } from "@/lib/api";
+
+type BrandKitApiResponse = InferResponseType<
+  (typeof api.brandKits)[":id"]["$get"]
+>;
+
+export function normalizeBrandKit(
+  rawResponse: BrandKitApiResponse,
+): NormalizedBrandKit {
   const { brandKit, revisions } = rawResponse;
 
   // Find active revision or use fallback
   const activeRevision =
     revisions.find((r) => r.isActive) || revisions[revisions.length - 1];
-
-  const results = activeRevision?.results || {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const results = (activeRevision?.results || {}) as Record<string, any>;
 
   // Extract typography preferences
   const typographyPreference: TypographyPreference = {
     mood: brandKit.typographyStyle || "modern-sans",
-    locked: brandKit.typographyLocked || false,
+    locked: false,
     fontPairing: results.typography
       ? {
           heading: results.typography.heading?.family || "",
@@ -37,27 +43,31 @@ export function normalizeBrandKit(rawResponse: {
     brandName: brandKit.brandName || "",
     logoUrl: brandKit.customLogoUrl || results.logoUrl || undefined,
     extractedColors:
-      brandKit.extractedColors ||
-      results.colorPalette?.map((c: any) => c.hex) ||
-      [],
+      (brandKit.extractedColors as string[]) ||
+      (results.colorPalette
+        ? (results.colorPalette as Record<string, string>[]).map((c) => c.hex)
+        : []),
     typographyPreference,
     deliverables,
     status: brandKit.status || "pending",
     industry: brandKit.industry || undefined,
     tagline: brandKit.tagline || undefined,
     targetAudience: brandKit.targetAudience || undefined,
-    selectedVibes: brandKit.selectedVibes || undefined,
+    selectedVibes: (brandKit.selectedVibes as string[]) || undefined,
     brandPersonality: brandKit.brandPersonality || undefined,
     additionalContext: brandKit.additionalContext || undefined,
-    socials: brandKit.socials || undefined,
-    contact: brandKit.contact || undefined,
-    guidelines: brandKit.guidelines || undefined,
+    socials: (brandKit.socials as Record<string, string>) || undefined,
+    contact: (brandKit.contact as Record<string, string>) || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    guidelines: (brandKit.guidelines as Record<string, any>) || undefined,
     revisions: revisions.map((r) => ({
       id: r.id,
       isActive: r.isActive,
       results: r.results as Record<string, unknown>,
-      triggerType: r.triggerType,
-      createdAt: r.createdAt,
+      triggerType: r.triggerType || "unknown",
+      createdAt: r.createdAt
+        ? new Date(r.createdAt).toISOString()
+        : new Date().toISOString(),
     })),
   };
 }

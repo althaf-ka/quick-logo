@@ -33,29 +33,34 @@ export function ZoomableImage({
           {...props}
         />
       </DialogPrimitive.Trigger>
-      
+
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop className="fixed inset-0 z-[100] bg-black/80 data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 duration-200" />
-        
-        <DialogPrimitive.Popup className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 sm:p-12 outline-none data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 duration-200">
+        <DialogPrimitive.Backdrop className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-[100] bg-black/80 duration-200" />
+
+        <DialogPrimitive.Popup className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 duration-200 outline-none sm:p-12">
           <div className="absolute top-4 right-4 z-50 flex gap-2">
             <Button
               variant="outline"
               size="icon"
-              className="rounded-none shadow-lg h-10 w-10 bg-black/50 hover:bg-black/70 text-white border-white/20 backdrop-blur-md"
-              onClick={() => downloadImage(src, `${alt?.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'image'}.png`)}
+              className="h-10 w-10 rounded-none border-white/20 bg-black/50 text-white shadow-lg backdrop-blur-md hover:bg-black/70"
+              onClick={() =>
+                downloadImage(
+                  src,
+                  `${alt?.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "image"}.png`,
+                )
+              }
               title="Download Image"
             >
               <DownloadSimpleIcon className="size-5" />
               <span className="sr-only">Download</span>
             </Button>
-            
+
             <DialogPrimitive.Close
               render={
                 <Button
                   variant="outline"
                   size="icon"
-                  className="rounded-none shadow-lg h-10 w-10 bg-black/50 hover:bg-black/70 text-white border-white/20 backdrop-blur-md"
+                  className="h-10 w-10 rounded-none border-white/20 bg-black/50 text-white shadow-lg backdrop-blur-md hover:bg-black/70"
                 />
               }
             >
@@ -63,7 +68,7 @@ export function ZoomableImage({
               <span className="sr-only">Close</span>
             </DialogPrimitive.Close>
           </div>
-          
+
           <div className="relative flex h-full w-full items-center justify-center">
             <img
               src={src}

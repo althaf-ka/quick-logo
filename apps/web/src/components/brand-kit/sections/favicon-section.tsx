@@ -2,7 +2,6 @@ import { SectionHeader, SectionContent } from "./section-header";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { ZoomableImage } from "@/components/global/zoomable-image";
-import { useBrandKitSection } from "./section-context";
 
 export interface FaviconSize {
   size: number;
@@ -163,22 +162,11 @@ function CombinedAppMockup({ icons }: { icons: FaviconSize[] }) {
   );
 }
 
-export function FaviconSection({
-  icons,
-  brandName,
-}: FaviconSectionProps) {
-  const { onRefine, refiningSectionId } = useBrandKitSection();
-  const isRefining = refiningSectionId === "favicon";
-
+export function FaviconSection({ icons, brandName }: FaviconSectionProps) {
   return (
     <div>
-      <SectionHeader
-        title="Favicon & App Icons"
-        sectionId="favicon"
-        onRefine={onRefine}
-        isRefining={isRefining}
-      />
-      <SectionContent isRefining={isRefining}>
+      <SectionHeader title="Favicon & App Icons" sectionId="favicon" />
+      <SectionContent sectionId="favicon">
         <div className="grid grid-cols-1 gap-6">
           {(() => {
             const webIcons = icons.filter(

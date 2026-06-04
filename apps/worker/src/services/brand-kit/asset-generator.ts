@@ -128,9 +128,15 @@ export async function generateSocialMediaAssets({
 
   const promises = [];
 
-  const shouldGenerateProfile = !targetItemId || targetItemId.endsWith("-profile");
-  const shouldGenerateFacebook = !targetItemId || targetItemId === "facebook-header";
-  const shouldGenerateMaster = !targetItemId || ["twitter-header", "linkedin-header", "youtube-channel-art"].includes(targetItemId);
+  const shouldGenerateProfile =
+    !targetItemId || targetItemId.endsWith("-profile");
+  const shouldGenerateFacebook =
+    !targetItemId || targetItemId === "facebook-header";
+  const shouldGenerateMaster =
+    !targetItemId ||
+    ["twitter-header", "linkedin-header", "youtube-channel-art"].includes(
+      targetItemId,
+    );
 
   if (shouldGenerateProfile) {
     promises.push(
@@ -148,7 +154,9 @@ export async function generateSocialMediaAssets({
             }),
           );
           if (!result.success || !result.imageData) {
-            throw new Error(result.error ?? `Variation generation failed for social-profile`);
+            throw new Error(
+              result.error ?? `Variation generation failed for social-profile`,
+            );
           }
           const uploaded = await storage.upload(
             `quick-logo/brand-kits/${brandKitId}/social-profile-${Date.now()}.${result.format ?? "png"}`,
@@ -159,7 +167,9 @@ export async function generateSocialMediaAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { socialProfileUrl = url; })
+      ).then((url) => {
+        socialProfileUrl = url;
+      }),
     );
   }
 
@@ -179,7 +189,9 @@ export async function generateSocialMediaAssets({
             }),
           );
           if (!result.success || !result.imageData) {
-            throw new Error(result.error ?? `Variation generation failed for master-banner`);
+            throw new Error(
+              result.error ?? `Variation generation failed for master-banner`,
+            );
           }
           const uploaded = await storage.upload(
             `quick-logo/brand-kits/${brandKitId}/social-master-banner-${Date.now()}.${result.format ?? "png"}`,
@@ -190,7 +202,9 @@ export async function generateSocialMediaAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { masterBannerUrl = url; })
+      ).then((url) => {
+        masterBannerUrl = url;
+      }),
     );
   }
 
@@ -210,7 +224,9 @@ export async function generateSocialMediaAssets({
             }),
           );
           if (!result.success || !result.imageData) {
-            throw new Error(result.error ?? `Variation generation failed for facebook-banner`);
+            throw new Error(
+              result.error ?? `Variation generation failed for facebook-banner`,
+            );
           }
           const uploaded = await storage.upload(
             `quick-logo/brand-kits/${brandKitId}/social-facebook-banner-${Date.now()}.${result.format ?? "png"}`,
@@ -221,7 +237,9 @@ export async function generateSocialMediaAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { facebookBannerUrl = url; })
+      ).then((url) => {
+        facebookBannerUrl = url;
+      }),
     );
   }
 
@@ -287,7 +305,9 @@ export async function generateBrandedBackdrops({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { feedUrl = url; })
+      ).then((url) => {
+        feedUrl = url;
+      }),
     );
   }
 
@@ -320,7 +340,9 @@ export async function generateBrandedBackdrops({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { storyUrl = url; })
+      ).then((url) => {
+        storyUrl = url;
+      }),
     );
   }
 
@@ -393,7 +415,9 @@ export async function generateBusinessCardAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { frontUrl = url; })
+      ).then((url) => {
+        frontUrl = url;
+      }),
     );
   }
 
@@ -433,7 +457,9 @@ export async function generateBusinessCardAssets({
         sourceLogoUrl,
         LOGO_VARIATION_TIMEOUT_MS,
         "asset-generator",
-      ).then(url => { backUrl = url; })
+      ).then((url) => {
+        backUrl = url;
+      }),
     );
   }
 
