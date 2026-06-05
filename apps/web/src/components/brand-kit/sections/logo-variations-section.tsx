@@ -57,7 +57,7 @@ export function LogoVariationsSection({
       />
 
       <SectionContent sectionId="logo-variations">
-        <div className="relative grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-4">
           {variations.map((v) => (
             <div key={v.id} className="group flex flex-col">
               <LogoVariationImage v={v} />

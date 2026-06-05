@@ -96,7 +96,7 @@ export function BrandGuidelinesSection({ data }: BrandGuidelinesSectionProps) {
               <div className="col-span-3 overflow-hidden border">
                 {hasProducts ? (
                   <div className="grid grid-cols-3 gap-0">
-                    {data.productImages!.slice(0, 3).map((url, i) => (
+                    {data.productImages?.slice(0, 3).map((url, i) => (
                       <div key={i} className="bg-muted/20 overflow-hidden">
                         <img
                           src={url}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { PromptInput } from "@/components/global/prompt-input";
 import { SidebarShell } from "@/components/brand-kit/workspace/sidebar/sidebar-shell";
@@ -34,13 +33,25 @@ export function BrandKitWorkspace({
   imageId,
   brandKitId,
 }: BrandKitWorkspaceProps) {
-  const isMobile = useIsMobile();
+  const [isCompact, setIsCompact] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 1024px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => setIsCompact(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   const bk = useBrandKit({ imageId, brandKitId });
 
   return (
     <div className="flex h-full overflow-hidden bg-zinc-950">
-      <div className="relative flex flex-1 flex-col overflow-hidden px-4">
-        <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 pb-24 md:p-6">
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        <div className="scrollbar-subtle flex-1 overflow-y-auto p-4 pb-24 md:p-6 lg:px-8">
           <AnimatePresence mode="wait">
             {bk.isQueryLoading ||
             bk.isImageLoading ||
@@ -79,11 +90,24 @@ export function BrandKitWorkspace({
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="w-full"
+                className="relative w-full"
               >
                 <BrandKitResults
                   data={bk.results}
                   typographyStyle={bk.typography}
+                  headerAction={
+                    isCompact ? (
+                      <button
+                        onClick={(e) => {
+                          e.currentTarget.blur();
+                          bk.setSidebarOpen(true);
+                        }}
+                        className="text-muted-foreground flex items-center gap-2 border border-white/[0.06] bg-zinc-900 px-3 py-1.5 font-mono text-xs font-bold tracking-wider uppercase shadow-sm transition-colors hover:border-white/[0.1] hover:bg-zinc-800"
+                      >
+                        <SlidersHorizontalIcon className="size-4" /> Settings
+                      </button>
+                    ) : null
+                  }
                   onRefine={(sectionId, targetItemId) => {
                     bk.setTargetSection(sectionId);
                     if (targetItemId) bk.setTargetItemId(targetItemId);
@@ -104,10 +128,13 @@ export function BrandKitWorkspace({
                 exit="exit"
                 className="relative flex w-full flex-1 flex-col"
               >
-                {isMobile ? (
+                {isCompact ? (
                   <div className="absolute top-0 right-0 z-10 flex w-full justify-end p-4">
                     <button
-                      onClick={() => bk.setSidebarOpen(true)}
+                      onClick={(e) => {
+                        e.currentTarget.blur();
+                        bk.setSidebarOpen(true);
+                      }}
                       className="text-muted-foreground flex items-center gap-2 border border-white/[0.06] bg-zinc-900 px-3 py-1.5 font-mono text-xs font-bold tracking-wider uppercase shadow-sm transition-colors hover:border-white/[0.1] hover:bg-zinc-800"
                     >
                       <SlidersHorizontalIcon className="size-4" /> Settings
@@ -141,8 +168,13 @@ export function BrandKitWorkspace({
                 className="flex h-full min-h-[60vh] w-full flex-1 items-center justify-center"
               >
                 <EmptyState
-                  isMobile={isMobile}
-                  onOpenSidebar={() => bk.setSidebarOpen(true)}
+                  isMobile={isCompact}
+                  onOpenSidebar={() => {
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                    bk.setSidebarOpen(true);
+                  }}
                 />
               </motion.div>
             )}
@@ -176,8 +208,13 @@ export function BrandKitWorkspace({
                     brandName: bk.brandName,
                     onBrandNameChange: bk.setBrandName,
                   })}
-                  showConfigTrigger={isMobile}
-                  onConfigTrigger={() => bk.setSidebarOpen(true)}
+                  showConfigTrigger={isCompact}
+                  onConfigTrigger={() => {
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                    bk.setSidebarOpen(true);
+                  }}
                   configIcon={
                     <SlidersHorizontalIcon weight="bold" className="size-4" />
                   }
@@ -188,7 +225,7 @@ export function BrandKitWorkspace({
         </AnimatePresence>
       </div>
 
-      {!isMobile ? (
+      {!isCompact ? (
         <SidebarShell
           workspaceState={bk.workspaceState}
           logoUrl={bk.logoUrl}
@@ -209,15 +246,19 @@ export function BrandKitWorkspace({
         />
       ) : null}
 
-      {isMobile ? (
+      {isCompact ? (
         <Drawer open={bk.sidebarOpen} onOpenChange={bk.setSidebarOpen}>
-          <DrawerContent className="max-h-[85vh] rounded-none px-0 pb-0">
+          <DrawerContent
+            className="max-h-[85vh] rounded-none px-0 pb-0"
+            aria-describedby={undefined}
+          >
             <DrawerHeader className="border-b border-white/[0.06] px-4 pb-2 text-left">
               <DrawerTitle className="font-mono text-sm font-black tracking-widest uppercase">
                 Brand Settings
               </DrawerTitle>
+              {/* Radix requires a description or aria-describedby={undefined} */}
             </DrawerHeader>
-            <div className="overflow-y-auto p-0">
+            <div className="scrollbar-subtle overflow-y-auto p-0">
               <SidebarShell
                 workspaceState={bk.workspaceState}
                 logoUrl={bk.logoUrl}

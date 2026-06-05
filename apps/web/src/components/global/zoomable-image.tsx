@@ -25,14 +25,17 @@ export function ZoomableImage({
 
   return (
     <DialogPrimitive.Root>
-      <DialogPrimitive.Trigger asChild>
-        <img
-          src={src}
-          alt={alt}
-          className={cn("cursor-pointer", className)}
-          {...props}
-        />
-      </DialogPrimitive.Trigger>
+      <DialogPrimitive.Trigger
+        nativeButton={false}
+        render={
+          <img
+            src={src}
+            alt={alt}
+            className={cn("cursor-pointer", className)}
+            {...props}
+          />
+        }
+      />
 
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-[100] bg-black/80 duration-200" />

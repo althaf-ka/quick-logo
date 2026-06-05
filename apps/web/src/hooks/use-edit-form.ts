@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { EditApiRequest } from "@quicklogo/shared";
+import type { InferResponseType } from "@quicklogo/api-client";
 import { AUTH_KEYS } from "@/hooks/use-auth";
 import { parseApiError, ApiError, ERROR_CODES } from "@/lib/api-error";
 
@@ -17,6 +18,11 @@ type EditStatus = "idle" | "generating" | "polling" | "done" | "error";
 
 const DEFAULT_MODEL = "quick-seedream";
 const REFERENCE_STRENGTH = 35;
+
+type ImageHistoryResponse = InferResponseType<
+  (typeof api.images)[":id"]["$get"],
+  200
+>;
 
 export function useEditForm({
   imageId,
@@ -130,25 +136,22 @@ export function useEditForm({
         createdAt: new Date(),
       };
 
-      queryClient.setQueryData(["image-history", imageId], (old: unknown) => {
-        if (!old || typeof old !== "object") return old;
-        const oldData = old as { history?: unknown[] };
-        if (!Array.isArray(oldData.history)) return oldData;
-        return {
-          ...oldData,
-          history: [
-            {
-              id: entry.id,
-              imageUrl: entry.url,
-              prompt: entry.prompt,
-              createdAt: entry.createdAt.toISOString(),
-            },
-            ...oldData.history.filter(
-              (h: unknown) => (h as { id: string })?.id !== entry.id,
-            ),
-          ],
-        };
-      });
+      queryClient.setQueryData(
+        ["image-history", imageId],
+        (old: ImageHistoryResponse | undefined) => {
+          if (!old || !old.history) return old;
+          return {
+            ...old,
+            history: [
+              {
+                ...polledImage,
+                createdAt: polledImage.createdAt || new Date().toISOString(),
+              },
+              ...old.history.filter((h) => h.id !== entry.id),
+            ],
+          };
+        },
+      );
 
       setTimeout(() => {
         setSelectedEntryId(entry.id);

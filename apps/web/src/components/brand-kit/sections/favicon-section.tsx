@@ -2,7 +2,9 @@ import { SectionHeader, SectionContent } from "./section-header";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { ZoomableImage } from "@/components/global/zoomable-image";
-
+import { Button } from "@quicklogo/ui/components/button";
+import { DownloadSimpleIcon } from "@phosphor-icons/react";
+import { downloadImage } from "@/lib/download";
 export interface FaviconSize {
   size: number;
   label: string;
@@ -96,10 +98,6 @@ function CombinedBrowserTabMockup({
     </div>
   );
 }
-
-import { Button } from "@quicklogo/ui/components/button";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { downloadImage } from "@/lib/download";
 
 function CombinedAppMockup({ icons }: { icons: FaviconSize[] }) {
   if (!icons.length) return null;

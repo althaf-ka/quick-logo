@@ -56,6 +56,7 @@ interface BrandKitResultsProps {
   refiningSectionId?: string | null;
   targetSectionId?: string | null;
   targetItemId?: string | null;
+  headerAction?: React.ReactNode;
 }
 
 interface FocusWrapperProps {
@@ -120,6 +121,7 @@ export function BrandKitResults({
   refiningSectionId,
   targetSectionId,
   targetItemId,
+  headerAction,
 }: BrandKitResultsProps) {
   useGoogleFontLoader(data.typography?.heading?.family);
   useGoogleFontLoader(data.typography?.body?.family);
@@ -140,7 +142,7 @@ export function BrandKitResults({
     >
       <div className="mx-auto w-full max-w-6xl px-6 pt-12 pb-4 sm:px-8 md:px-12 lg:px-16">
         {/* Header */}
-        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="mb-6 flex flex-row items-end justify-between gap-4">
           <div>
             <h2 className="font-mono text-xl font-black tracking-widest uppercase md:text-3xl">
               {data.brandName || "Brand Kit"}
@@ -149,6 +151,7 @@ export function BrandKitResults({
               Editorial Guidelines
             </p>
           </div>
+          {headerAction}
         </div>
 
         <div className="mb-12 h-px w-full bg-white/10" />

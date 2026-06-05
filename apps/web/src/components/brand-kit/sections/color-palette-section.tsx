@@ -18,9 +18,15 @@ interface ColorPaletteSectionProps {
 }
 
 export function ColorPaletteSection({ colors }: ColorPaletteSectionProps) {
-  const handleCopy = (value: string) => {
-    navigator.clipboard.writeText(value);
-    toast.success(`Copied ${value}`);
+  const handleCopy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`Copied ${value}`);
+    } catch {
+      toast.error("Failed to copy to clipboard", {
+        description: "Clipboard access may be denied.",
+      });
+    }
   };
 
   return (
