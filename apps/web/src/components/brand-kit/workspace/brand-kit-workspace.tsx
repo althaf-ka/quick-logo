@@ -97,15 +97,17 @@ export function BrandKitWorkspace({
                   typographyStyle={bk.typography}
                   headerAction={
                     isCompact ? (
-                      <button
-                        onClick={(e) => {
-                          e.currentTarget.blur();
-                          bk.setSidebarOpen(true);
-                        }}
-                        className="text-muted-foreground flex items-center gap-2 border border-white/[0.06] bg-zinc-900 px-3 py-1.5 font-mono text-xs font-bold tracking-wider uppercase shadow-sm transition-colors hover:border-white/[0.1] hover:bg-zinc-800"
-                      >
-                        <SlidersHorizontalIcon className="size-4" /> Settings
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.currentTarget.blur();
+                            bk.setSidebarOpen(true);
+                          }}
+                          className="text-muted-foreground flex items-center gap-2 border border-white/[0.06] bg-zinc-900 px-3 py-1.5 font-mono text-xs font-bold tracking-wider uppercase shadow-sm transition-colors hover:border-white/[0.1] hover:bg-zinc-800"
+                        >
+                          <SlidersHorizontalIcon className="size-4" /> Options & Exports
+                        </button>
+                      </div>
                     ) : null
                   }
                   onRefine={(sectionId, targetItemId) => {
