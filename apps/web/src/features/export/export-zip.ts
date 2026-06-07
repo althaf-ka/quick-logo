@@ -28,10 +28,14 @@ function generateColorSwatchSvg(hex: string): string {
 /**
  * Generate a valid .ico file from a PNG buffer
  */
-function createIcoFromPng(pngBuffer: Uint8Array, width: number, height: number): Uint8Array {
+function createIcoFromPng(
+  pngBuffer: Uint8Array,
+  width: number,
+  height: number,
+): Uint8Array {
   const icoBuffer = new Uint8Array(22 + pngBuffer.length);
   const view = new DataView(icoBuffer.buffer);
-  
+
   view.setUint16(0, 0, true);
   view.setUint16(2, 1, true);
   view.setUint16(4, 1, true);
@@ -46,7 +50,7 @@ function createIcoFromPng(pngBuffer: Uint8Array, width: number, height: number):
   view.setUint32(18, 22, true);
 
   icoBuffer.set(pngBuffer, 22);
-  
+
   return icoBuffer;
 }
 
@@ -55,7 +59,7 @@ function createIcoFromPng(pngBuffer: Uint8Array, width: number, height: number):
  */
 export async function exportBrandKitToZip(data: BrandKitResultsData) {
   const zipData: Record<string, Uint8Array> = {};
-  
+
   // 1. Fetch Logos
   if (data.logoVariations && data.logoVariations.length > 0) {
     for (const [index, variation] of data.logoVariations.entries()) {
@@ -89,11 +93,11 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
     const hex = color.hex;
     const name = color.role || `Color ${index + 1}`;
     const safeName = name.toLowerCase().replace(/\s+/g, "-");
-    
+
     // Add SVG swatch
     const svgStr = generateColorSwatchSvg(hex);
     zipData[`colors/${safeName}.svg`] = strToU8(svgStr);
-    
+
     colorsMd += `- **${name}**: ${hex}\n`;
   }
 
@@ -117,8 +121,12 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
       if (asset.url && !asset.url.includes("placehold.co")) {
         const buffer = await fetchImageBuffer(asset.url);
         if (buffer) {
-          const typeName = asset.type ? asset.type.toLowerCase().replace(/\s+/g, "-") : "header";
-          zipData[`social-media/${asset.platform.toLowerCase()}-${typeName}.png`] = buffer;
+          const typeName = asset.type
+            ? asset.type.toLowerCase().replace(/\s+/g, "-")
+            : "header";
+          zipData[
+            `social-media/${asset.platform.toLowerCase()}-${typeName}.png`
+          ] = buffer;
         }
       }
     }
@@ -149,11 +157,17 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
   }
 
   if (data.brandedBackdrops) {
-    if (data.brandedBackdrops.feedUrl && !data.brandedBackdrops.feedUrl.includes("placehold.co")) {
+    if (
+      data.brandedBackdrops.feedUrl &&
+      !data.brandedBackdrops.feedUrl.includes("placehold.co")
+    ) {
       const buffer = await fetchImageBuffer(data.brandedBackdrops.feedUrl);
       if (buffer) zipData["backdrops/instagram-feed.png"] = buffer;
     }
-    if (data.brandedBackdrops.storyUrl && !data.brandedBackdrops.storyUrl.includes("placehold.co")) {
+    if (
+      data.brandedBackdrops.storyUrl &&
+      !data.brandedBackdrops.storyUrl.includes("placehold.co")
+    ) {
       const buffer = await fetchImageBuffer(data.brandedBackdrops.storyUrl);
       if (buffer) zipData["backdrops/instagram-story.png"] = buffer;
     }
@@ -170,7 +184,7 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
 
   // Bundle Zip synchronously (fast enough for small assets)
   const zipped = zipSync(zipData);
-  
+
   // Trigger download
   const blob = new Blob([zipped], { type: "application/zip" });
   const url = URL.createObjectURL(blob);

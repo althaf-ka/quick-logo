@@ -3,12 +3,12 @@ import { Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { parseApiError } from "@/lib/api-error";
-import { EditorLoadingState } from "@/features/image-editor/components/editor-loading-state";
+import { EditorLoadingState } from "@/features/canvas/components/editor-loading-state";
 
-const QuickLogoEditor = lazy(() =>
-  import("@/features/image-editor/components/quick-logo-editor").then(
-    (mod) => ({ default: mod.QuickLogoEditor }),
-  ),
+const CanvasEditor = lazy(() =>
+  import("@/features/canvas/components/canvas-editor").then((mod) => ({
+    default: mod.CanvasEditor,
+  })),
 );
 
 export const Route = createLazyFileRoute("/_authenticated/canvas/$imageId")({
@@ -71,9 +71,9 @@ function CanvasRoute() {
   }
 
   return (
-    <div className="h-full min-h-0 w-full overflow-hidden">
+    <div className="h-full min-h-0 w-full overflow-hidden bg-zinc-950">
       <Suspense fallback={<EditorLoadingState />}>
-        <QuickLogoEditor
+        <CanvasEditor
           imageId={imageId}
           initialImageUrl={imageUrl}
           onClose={handleClose}

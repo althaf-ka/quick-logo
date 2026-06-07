@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emotion/is-prop-valid": "^1.4.0",
     "@phosphor-icons/react": "^2.1.10",
     "@quicklogo/ai-providers": "workspace:*",
     "@quicklogo/api-client": "workspace:*",
@@ -26,15 +25,15 @@
     "date-fns": "^4.1.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-fade": "^8.6.0",
+    "fabric": "^6.9.1",
     "fflate": "^0.8.3",
     "motion": "^12.40.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-filerobot-image-editor": "5.0.0-beta.153",
     "react-intersection-observer": "^10.0.3",
-    "styled-components": "^6.3.11",
     "tailwindcss": "^4.1.16",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

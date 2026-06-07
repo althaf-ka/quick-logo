@@ -1,8 +1,14 @@
 "use client";
 
 import * as React from "react";
-// @ts-ignore
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogPortal,
+  DialogOverlay,
+  DialogContent,
+  DialogClose,
+} from "@quicklogo/ui/components/dialog";
 import { XIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 import { Button } from "@quicklogo/ui/components/button";
 import { cn } from "@quicklogo/ui/lib/utils";
@@ -24,9 +30,8 @@ export function ZoomableImage({
   }
 
   return (
-    <DialogPrimitive.Root>
-      <DialogPrimitive.Trigger
-        nativeButton={false}
+    <Dialog>
+      <DialogTrigger
         render={
           <img
             src={src}
@@ -37,10 +42,13 @@ export function ZoomableImage({
         }
       />
 
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-[100] bg-black/80 duration-200" />
+      <DialogPortal>
+        <DialogOverlay className="z-[100] bg-black/80" />
 
-        <DialogPrimitive.Popup className="data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 duration-200 outline-none sm:p-12">
+        <DialogContent
+          showCloseButton={false}
+          className="z-[100] flex flex-col items-center justify-center border-none bg-transparent p-4 shadow-none outline-none sm:p-12"
+        >
           <div className="absolute top-4 right-4 z-50 flex gap-2">
             <Button
               variant="outline"
@@ -58,7 +66,7 @@ export function ZoomableImage({
               <span className="sr-only">Download</span>
             </Button>
 
-            <DialogPrimitive.Close
+            <DialogClose
               render={
                 <Button
                   variant="outline"
@@ -69,7 +77,7 @@ export function ZoomableImage({
             >
               <XIcon className="size-5" />
               <span className="sr-only">Close</span>
-            </DialogPrimitive.Close>
+            </DialogClose>
           </div>
 
           <div className="relative flex h-full w-full items-center justify-center">
@@ -79,8 +87,8 @@ export function ZoomableImage({
               className="max-h-full max-w-full object-contain"
             />
           </div>
-        </DialogPrimitive.Popup>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
   );
 }

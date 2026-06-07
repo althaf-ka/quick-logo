@@ -54,21 +54,26 @@ export function ResultsSidebar({
             className={cn(
               "group relative flex w-full items-center gap-3 overflow-hidden border px-4 py-3 transition-all duration-300",
               isExporting || !results
-                ? "border-white/[0.06] bg-white/[0.01] opacity-50 cursor-not-allowed"
-                : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]"
+                ? "cursor-not-allowed border-white/[0.06] bg-white/[0.01] opacity-50"
+                : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
             )}
           >
             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
             <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-full">
               {isExporting && exportType === "zip" ? (
-                <CircleDashedIcon weight="bold" className="size-4 animate-spin" />
+                <CircleDashedIcon
+                  weight="bold"
+                  className="size-4 animate-spin"
+                />
               ) : (
                 <FileZipIcon weight="bold" className="size-4" />
               )}
             </div>
             <div className="flex flex-col items-start text-left">
               <span className="text-foreground font-mono text-[11px] font-bold tracking-widest uppercase">
-                {isExporting && exportType === "zip" ? "Generating ZIP..." : "Download ZIP"}
+                {isExporting && exportType === "zip"
+                  ? "Generating ZIP..."
+                  : "Download ZIP"}
               </span>
               <span className="text-muted-foreground/50 font-mono text-[9px] tracking-wider uppercase">
                 All high-res assets
@@ -82,21 +87,26 @@ export function ResultsSidebar({
             className={cn(
               "group relative flex w-full items-center gap-3 overflow-hidden border px-4 py-3 transition-all duration-300",
               isExporting || !results
-                ? "border-white/[0.06] bg-white/[0.01] opacity-50 cursor-not-allowed"
-                : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]"
+                ? "cursor-not-allowed border-white/[0.06] bg-white/[0.01] opacity-50"
+                : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
             )}
           >
             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-            <div className="bg-blue-500/10 text-blue-400 flex size-8 shrink-0 items-center justify-center rounded-full">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-400">
               {isExporting && exportType === "pdf" ? (
-                <CircleDashedIcon weight="bold" className="size-4 animate-spin" />
+                <CircleDashedIcon
+                  weight="bold"
+                  className="size-4 animate-spin"
+                />
               ) : (
                 <FilePdfIcon weight="bold" className="size-4" />
               )}
             </div>
             <div className="flex flex-col items-start text-left">
               <span className="text-foreground font-mono text-[11px] font-bold tracking-widest uppercase">
-                {isExporting && exportType === "pdf" ? "Generating PDF..." : "Brand Guidelines"}
+                {isExporting && exportType === "pdf"
+                  ? "Generating PDF..."
+                  : "Brand Guidelines"}
               </span>
               <span className="text-muted-foreground/50 font-mono text-[9px] tracking-wider uppercase">
                 PDF documentation

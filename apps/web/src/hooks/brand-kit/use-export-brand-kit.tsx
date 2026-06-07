@@ -10,7 +10,9 @@ export function useExportBrandKit() {
     try {
       setIsExporting(true);
       setExportType("zip");
-      const { exportBrandKitToZip } = await import("../../features/export/export-zip");
+      const { exportBrandKitToZip } = await import(
+        "../../features/export/export-zip"
+      );
       await exportBrandKitToZip(data);
     } catch (error) {
       console.error("Failed to export ZIP:", error);
@@ -25,19 +27,23 @@ export function useExportBrandKit() {
     try {
       setIsExporting(true);
       setExportType("pdf");
-      
+
       // Dynamically load react-pdf to avoid initial bundle bloat
       const { pdf } = await import("@react-pdf/renderer");
-      const { BrandGuidelinesPDF } = await import("../../components/brand-kit/export/brand-guidelines-pdf");
-      
+      const { BrandGuidelinesPDF } = await import(
+        "../../components/brand-kit/export/brand-guidelines-pdf"
+      );
+
       const asPdf = pdf();
       asPdf.updateContainer(<BrandGuidelinesPDF data={data} />);
       const blob = await asPdf.toBlob();
-      
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const safeBrandName = (data.brandName || "Brand Kit").toLowerCase().replace(/\s+/g, "-");
+      const safeBrandName = (data.brandName || "Brand Kit")
+        .toLowerCase()
+        .replace(/\s+/g, "-");
       a.download = `${safeBrandName}-guidelines.pdf`;
       document.body.appendChild(a);
       a.click();
