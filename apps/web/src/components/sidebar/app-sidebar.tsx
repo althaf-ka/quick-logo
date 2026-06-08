@@ -5,7 +5,6 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  SidebarSeparator,
 } from "@quicklogo/ui/components/sidebar";
 import { NavHeader } from "./nav-header";
 import { NavMain } from "./nav-main";
@@ -15,11 +14,9 @@ import { NavUser } from "./nav-user";
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props} className="border-r">
-      <SidebarHeader className="pb-0">
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-2 py-0">
         <NavHeader />
       </SidebarHeader>
-
-      <SidebarSeparator className="mx-0" />
 
       <SidebarContent className="scrollbar-subtle">
         <NavMain />
