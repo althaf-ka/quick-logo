@@ -10,6 +10,9 @@ export interface GenerationParams {
   height?: number;
   guidance?: number;
   providerOptions?: Record<string, any>;
+  maskImage?: string;
+  canvasImage?: string;
+  canvasMode?: 'edit' | 'img2img' | 'inpaint' | 'text2img' | 'sketch2img';
 }
 
 export interface GenerationResult {

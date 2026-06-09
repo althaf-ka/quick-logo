@@ -24,6 +24,7 @@ export interface ModelOption {
   friendlyDescription: string;
   recommended?: boolean;
   bestForEdits?: boolean;
+  supportsInpaint?: boolean;
 }
 
 export const MODELS: ModelOption[] = [
@@ -93,6 +94,7 @@ export const MODELS: ModelOption[] = [
     icon: "lightning",
     features: ["Custom Style", "Fast render", "Contrast-tuned"],
     supportsReferenceImage: true,
+    supportsInpaint: true,
   },
   {
     id: "quick-seedream",
@@ -119,6 +121,7 @@ export const MODELS: ModelOption[] = [
     icon: "lightning",
     features: ["Ultra-fast", "Playful", "Minimalist"],
     supportsReferenceImage: true,
+    supportsInpaint: true,
   },
 ];
 
@@ -136,3 +139,14 @@ export function getModelsForContext(context: ModelContext): ModelOption[] {
   }
   return [...MODELS];
 }
+
+export function getModelsForCanvasMode(mode: string): ModelOption[] {
+  if (mode === "inpaint") {
+    return MODELS.filter((m) => m.supportsInpaint);
+  }
+  if (mode === "img2img" || mode === "sketch2img") {
+    return MODELS.filter((m) => m.supportsReferenceImage);
+  }
+  return [...MODELS];
+}
+

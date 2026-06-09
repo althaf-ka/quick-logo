@@ -10,6 +10,7 @@ export interface ModelMapping {
   capabilities: {
     nativePromptEnhancement: boolean;
     imageToImage: boolean;
+    inpaint?: boolean;
     apiSchema?: "v1" | "v2";
   };
   defaultParams: {
@@ -69,6 +70,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
+      inpaint: true,
       apiSchema: "v2",
     },
     defaultParams: {
@@ -124,6 +126,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
+      inpaint: true,
       apiSchema: "v2",
     },
     defaultParams: {

@@ -32,6 +32,9 @@ export async function routePromptAndBuildParams(
     negativePrompt: negativePrompt || "",
     backendModel: mapping.backendModel,
     ...mapping.defaultParams,
+    maskImage: message.config.maskImageUrl,
+    canvasImage: message.config.canvasImageUrl,
+    canvasMode: message.config.canvasMode,
   };
 
   if (mapping.capabilities.imageToImage && message.config.referenceImageUrl) {

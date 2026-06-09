@@ -31,13 +31,6 @@ function CanvasRoute() {
 
   const imageUrl = data?.image?.imageUrl;
 
-  const handleClose = () => {
-    navigate({
-      to: "/edit/$imageId",
-      params: { imageId },
-    });
-  };
-
   const handleSaveComplete = (newImageId: string) => {
     navigate({
       to: "/edit/$imageId",
@@ -76,7 +69,6 @@ function CanvasRoute() {
         <CanvasEditor
           imageId={imageId}
           initialImageUrl={imageUrl}
-          onClose={handleClose}
           onSaveComplete={handleSaveComplete}
         />
       </Suspense>

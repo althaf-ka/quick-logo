@@ -248,6 +248,7 @@ export function useEditForm({
             referenceImageUrl: targetImageUrl,
             referenceStrength: REFERENCE_STRENGTH,
             magicPrompt: false,
+            canvasMode: "edit",
           },
         };
 

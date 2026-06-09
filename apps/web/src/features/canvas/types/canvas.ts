@@ -62,3 +62,16 @@ export interface SelectedObjectProps {
   textAlign?: string;
   text?: string;
 }
+
+export type CanvasMode = 'edit' | 'img2img' | 'inpaint' | 'text2img' | 'sketch2img';
+
+export interface CanvasAIState {
+  mode: CanvasMode;
+  prompt: string;
+  isGenerating: boolean;
+  model: string;
+  strength: number;        // 0-100, reference/input strength for img2img
+  maskData: string | null;  // Data URL of the mask PNG
+  regionBounds: { left: number; top: number; width: number; height: number } | null;
+  generatedResultUrl: string | null;
+}

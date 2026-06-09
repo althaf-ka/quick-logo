@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import type { CanvasObjectInfo, SelectedObjectProps } from "../types/canvas";
+import { toast } from "@quicklogo/ui/components/sonner";
 
 // We assign a unique id to objects if they don't have one
 let idCounter = 0;
@@ -13,9 +14,31 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     setActiveTool,
     activeShape,
     brushSettings,
+    setBrushSettings,
     setSelectedObject,
     setLayers,
+    canvasMode,
   } = useCanvasStore();
+
+  // Mode-aware tool switching
+  useEffect(() => {
+    if (canvasMode === "sketch2img") {
+      setActiveTool("pencil");
+      setBrushSettings({ width: 3, color: "#000000", opacity: 1 });
+      toast("Draw your sketch, then describe what it should become", {
+        icon: "🎨",
+      });
+    } else if (
+      canvasMode === "inpaint" ||
+      canvasMode === "img2img" ||
+      canvasMode === "text2img"
+    ) {
+      if (canvas) {
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+      }
+    }
+  }, [canvasMode, setActiveTool, setBrushSettings, canvas]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -26,6 +49,42 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
         (canvas && (canvas.getActiveObject() as any)?.isEditing)
       ) {
         return;
+      }
+
+      if (canvas) {
+        const activeObj = canvas.getActiveObject();
+        if (activeObj && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          const step = e.shiftKey ? 10 : 1;
+          let moved = false;
+          switch (e.key) {
+            case "ArrowLeft":
+              e.preventDefault();
+              activeObj.set("left", (activeObj.left || 0) - step);
+              moved = true;
+              break;
+            case "ArrowRight":
+              e.preventDefault();
+              activeObj.set("left", (activeObj.left || 0) + step);
+              moved = true;
+              break;
+            case "ArrowUp":
+              e.preventDefault();
+              activeObj.set("top", (activeObj.top || 0) - step);
+              moved = true;
+              break;
+            case "ArrowDown":
+              e.preventDefault();
+              activeObj.set("top", (activeObj.top || 0) + step);
+              moved = true;
+              break;
+          }
+          if (moved) {
+            activeObj.setCoords();
+            canvas.requestRenderAll();
+            canvas.fire("object:modified", { target: activeObj });
+            return;
+          }
+        }
       }
 
       const key = e.key.toLowerCase();
@@ -215,6 +274,47 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
       }
     };
 
+    const handleFlattenImage = (e: Event) => {
+      const { id } = (e as CustomEvent).detail;
+      const obj = canvas.getObjects().find((o) => (o as any).id === id);
+      if (obj && (obj.type === "image" || obj.type === "Image")) {
+         const objects = canvas.getObjects();
+         const index = objects.indexOf(obj);
+         if (index > 0) {
+            const belowObj = objects[index - 1];
+            if ((belowObj as any).id === "__artboard__" || !belowObj) {
+              return; // Can't flatten with artboard
+            }
+
+            // Group them temporarily to get the bounding box and data URL
+            const group = new fabric.Group([belowObj, obj], { canvas });
+            const dataUrl = group.toDataURL({ format: "png" });
+            
+            // Re-import as a single image
+            const FabricImageClass = (fabric as any).FabricImage || fabric.Image;
+            FabricImageClass.fromURL(dataUrl).then((img: fabric.Image) => {
+               (img as any).id = generateId();
+               img.set({
+                 left: group.left,
+                 top: group.top,
+                 scaleX: 1,
+                 scaleY: 1,
+                 name: "Flattened Image",
+               });
+               
+               canvas.remove(belowObj);
+               canvas.remove(obj);
+               
+               // insertAt is not always available in v6, use insertAt or add/moveTo
+               canvas.insertAt(index - 1, img);
+               
+               canvas.setActiveObject(img);
+               canvas.requestRenderAll();
+            });
+         }
+      }
+    };
+
     const handleDuplicateObject = () => {
       const active = canvas.getActiveObject();
       if (active) {
@@ -284,6 +384,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
             locked: isLocked,
             selectable: !isLocked,
             evented: !isLocked,
+            hoverCursor: isLocked ? "default" : "move",
           });
           if (isLocked) canvas.discardActiveObject();
         }
@@ -304,6 +405,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     window.addEventListener("canvas:add-image", handleAddImage);
     window.addEventListener("canvas:update-object", handleUpdateObject);
     window.addEventListener("canvas:delete-object", handleDeleteObject);
+    window.addEventListener("canvas:flatten-image", handleFlattenImage);
     window.addEventListener("canvas:duplicate-object", handleDuplicateObject);
     window.addEventListener("canvas:reorder-object", handleReorderObject);
     window.addEventListener("canvas:toggle-layer", handleToggleLayer);
@@ -313,6 +415,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
       window.removeEventListener("canvas:add-image", handleAddImage);
       window.removeEventListener("canvas:update-object", handleUpdateObject);
       window.removeEventListener("canvas:delete-object", handleDeleteObject);
+      window.removeEventListener("canvas:flatten-image", handleFlattenImage);
       window.removeEventListener(
         "canvas:duplicate-object",
         handleDuplicateObject,
@@ -331,12 +434,21 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     canvas.selection = false;
     canvas.defaultCursor = "default";
 
+    const isAiModeWithoutSelection =
+      canvasMode === "inpaint" ||
+      canvasMode === "img2img" ||
+      canvasMode === "text2img";
+
     canvas.forEachObject((obj) => {
       if (activeTool === "hand") {
         obj.set({ selectable: false, evented: false });
       } else {
         if (!obj.get("locked") && (obj as any).id !== "__artboard__") {
-          obj.set({ selectable: true, evented: true });
+          // In certain AI modes, we disable selection of underlying objects
+          obj.set({
+            selectable: !isAiModeWithoutSelection,
+            evented: !isAiModeWithoutSelection,
+          });
         }
       }
     });
@@ -358,12 +470,8 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
         canvas.defaultCursor = "crosshair";
         break;
       case "eraser":
-        canvas.isDrawingMode = true;
-        if ((fabric as any).EraserBrush) {
-          canvas.freeDrawingBrush = new (fabric as any).EraserBrush(canvas);
-          if (canvas.freeDrawingBrush)
-            canvas.freeDrawingBrush.width = brushSettings.width;
-        }
+        canvas.isDrawingMode = false;
+        canvas.defaultCursor = "cell";
         break;
       case "hand":
         canvas.defaultCursor = "grab";
@@ -371,7 +479,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     }
 
     canvas.requestRenderAll();
-  }, [activeTool, canvas, brushSettings]);
+  }, [activeTool, canvas, brushSettings, canvasMode]);
 
   // Handle pointer interactions based on active tool
   useEffect(() => {
@@ -412,6 +520,18 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
         text.selectAll();
         setActiveTool("select");
         canvas.requestRenderAll();
+      } else if (activeTool === "eraser") {
+        isDragging = true;
+        const target = (opt as any).target;
+        if (
+          target &&
+          target.id !== "__artboard__" &&
+          target.id !== "obj_initial_image" &&
+          target.id !== "__ai_region__"
+        ) {
+          canvas.remove(target);
+          canvas.requestRenderAll();
+        }
       } else if (activeTool === "shapes") {
         isDragging = true;
         originX = pointer.x;
@@ -461,6 +581,17 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
           canvas.requestRenderAll();
           lastPosX = e.clientX;
           lastPosY = e.clientY;
+        }
+      } else if (activeTool === "eraser" && isDragging) {
+        const target = (opt as any).target;
+        if (
+          target &&
+          target.id !== "__artboard__" &&
+          target.id !== "obj_initial_image" &&
+          target.id !== "__ai_region__"
+        ) {
+          canvas.remove(target);
+          canvas.requestRenderAll();
         }
       } else if (activeTool === "shapes" && shapeRef) {
         const pointer = canvas.getPointer(opt.e);

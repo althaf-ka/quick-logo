@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { CanvasToolbar } from "./toolbar/canvas-toolbar";
 import { CanvasViewport } from "./canvas-viewport";
+import { CanvasModeSelector } from "./canvas-mode-selector";
+import { useCanvasStore } from "../store/canvas-store";
+import { MaskOverlay } from "./mask-overlay";
+import { AiPanel } from "./panels/ai-panel";
 import { PropertiesPanel } from "./panels/properties-panel";
 import { LayersPanel } from "./panels/layers-panel";
 import {
@@ -10,6 +14,8 @@ import {
   TabsContent,
 } from "@quicklogo/ui/components/tabs";
 import { useCanvasExport } from "../hooks/use-canvas-export";
+import { useRegionSelector } from "../hooks/use-region-selector";
+import { useCanvasAI } from "../hooks/use-canvas-ai";
 import { uploadFileToImageKit } from "@/lib/imagekit";
 import { api } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,14 +23,15 @@ import { toast } from "@quicklogo/ui/components/sonner";
 import { parseApiError } from "@/lib/api-error";
 import {
   Download,
-  FloppyDisk,
   MagnifyingGlassPlus,
   MagnifyingGlassMinus,
   CornersOut,
-  ArrowLeft,
   List,
 } from "@phosphor-icons/react";
 import * as fabric from "fabric";
+import { PromptInput } from "@/components/global/prompt-input";
+import { AnimatePresence, motion } from "motion/react";
+
 import {
   Drawer,
   DrawerContent,
@@ -35,27 +42,44 @@ import {
 export interface CanvasEditorProps {
   initialImageUrl: string;
   imageId: string;
-  onClose: () => void;
   onSaveComplete: (newImageId: string) => void;
 }
 
 export function CanvasEditor({
   initialImageUrl,
   imageId,
-  onClose,
   onSaveComplete,
 }: CanvasEditorProps) {
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const { exportToPng, exportToJpeg, exportToSvg, exportToWebp } =
     useCanvasExport(canvas);
+  const { canvasMode, aiPrompt, setAiPrompt, setRegionBounds } = useCanvasStore();
+  const {
+    handleGenerate,
+    isGenerating,
+    generationStatus,
+    credits,
+  } = useCanvasAI(canvas, imageId);
+  useRegionSelector(canvas);
   const queryClient = useQueryClient();
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("properties");
+
   const [isCompact, setIsCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 1024px)").matches;
   });
+
+  useEffect(() => {
+    if (canvasMode !== "edit") {
+      setActiveTab("ai");
+      if (isCompact) setSidebarOpen(true);
+    } else {
+      setActiveTab("properties");
+    }
+  }, [canvasMode, isCompact]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -106,7 +130,7 @@ export function CanvasEditor({
     setIsDownloading(true);
     try {
       let data: Blob | string;
-      let ext = format;
+      const ext = format;
       if (format === "svg") {
         data = exportToSvg();
         data = new Blob([data as string], { type: "image/svg+xml" });
@@ -124,7 +148,7 @@ export function CanvasEditor({
       a.download = `quicklogo-export-${Date.now()}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
+    } catch {
       toast.error("Failed to download image");
     } finally {
       setIsDownloading(false);
@@ -178,12 +202,29 @@ export function CanvasEditor({
 
   const currentZoom = Math.round((canvas?.getZoom() || 1) * 100);
 
+  const handleClearRegion = () => {
+    if (!canvas) return;
+    const region = canvas.getObjects().find((o) => (o as any).id === "__ai_region__");
+    if (region) {
+      canvas.remove(region);
+      canvas.requestRenderAll();
+    }
+    setRegionBounds(null);
+  };
+
   const rightPanelContent = (
     <Tabs
-      defaultValue="properties"
+      value={activeTab}
+      onValueChange={setActiveTab}
       className="flex h-full w-full flex-col bg-zinc-950"
     >
-      <TabsList className="h-12 w-full justify-start rounded-none border-b border-white/[0.06] bg-transparent p-0 px-2">
+      <TabsList className="h-10 w-full justify-start rounded-none border-b border-white/[0.06] bg-transparent p-0 px-2">
+        <TabsTrigger
+          value="ai"
+          className="h-full rounded-none px-4 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white"
+        >
+          AI
+        </TabsTrigger>
         <TabsTrigger
           value="properties"
           className="h-full rounded-none px-4 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white"
@@ -197,11 +238,18 @@ export function CanvasEditor({
           Layers
         </TabsTrigger>
       </TabsList>
-      <div className="flex-1 overflow-y-auto">
-        <TabsContent value="properties" className="m-0 h-full">
+      <div className="flex-1 overflow-hidden">
+        <TabsContent value="ai" className="m-0 h-full">
+          <AiPanel
+            isGenerating={isGenerating}
+            generationStatus={generationStatus}
+            handleClearRegion={handleClearRegion}
+          />
+        </TabsContent>
+        <TabsContent value="properties" className="m-0 h-full overflow-y-auto scrollbar-subtle">
           <PropertiesPanel />
         </TabsContent>
-        <TabsContent value="layers" className="m-0 h-full">
+        <TabsContent value="layers" className="m-0 h-full overflow-y-auto scrollbar-subtle">
           <LayersPanel />
         </TabsContent>
       </div>
@@ -209,68 +257,55 @@ export function CanvasEditor({
   );
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-zinc-900 text-white">
-      {/* Top Bar */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-950 px-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 text-zinc-400 transition-colors hover:text-white"
-          >
-            <ArrowLeft size={16} />
-            <span className="hidden text-xs font-medium tracking-wider uppercase sm:inline">
-              Back
-            </span>
-          </button>
-          <div className="h-4 w-px bg-white/10" />
-          <span className="font-mono text-[10px] font-bold tracking-wider uppercase">
-            Canvas Editor
-          </span>
-        </div>
-
-        <div className="flex hidden items-center gap-2 md:flex">
+    <div className="flex h-full w-full flex-col overflow-hidden">
+      {/* Compact control strip — NOT a second header */}
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-950/50 px-3">
+        {/* Left: Zoom controls */}
+        <div className="hidden md:flex items-center gap-1.5">
           <button
             onClick={() => handleZoom("out")}
-            className="rounded-none bg-white/5 p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+            className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
             <MagnifyingGlassMinus size={14} />
           </button>
-          <span className="w-10 text-center font-mono text-[10px]">
+          <span className="w-10 text-center font-mono text-[9px] text-muted-foreground/60 tabular-nums">
             {currentZoom}%
           </span>
           <button
             onClick={() => handleZoom("in")}
-            className="rounded-none bg-white/5 p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+            className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
             <MagnifyingGlassPlus size={14} />
           </button>
           <button
             onClick={() => handleZoom("fit")}
-            className="ml-1 rounded-none bg-white/5 p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+            className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
             <CornersOut size={14} />
           </button>
         </div>
 
+        {/* Center: Mode selector */}
+        <div className="flex flex-1 justify-start md:justify-center">
+          <CanvasModeSelector />
+        </div>
+
+        {/* Right: Export + Save */}
         <div className="flex items-center gap-2">
           {isCompact && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="flex items-center gap-2 border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
+              className="flex items-center gap-1 px-2 py-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
             >
-              <List size={16} />{" "}
-              <span className="hidden sm:inline">Panels</span>
+              <List size={14} />
             </button>
           )}
-          <div className="hidden h-4 w-px bg-white/10 sm:block" />
           <select
-            className="hidden border border-white/10 bg-zinc-900 px-2 py-1.5 text-xs outline-none sm:block"
+            className="hidden sm:block border border-white/[0.06] bg-transparent px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase text-muted-foreground/50 outline-none hover:text-muted-foreground cursor-pointer appearance-none"
             onChange={(e) => handleDownload(e.target.value as any)}
             value=""
           >
-            <option value="" disabled>
-              Export as...
-            </option>
+            <option value="" disabled>Export</option>
             <option value="png">PNG</option>
             <option value="jpeg">JPEG</option>
             <option value="webp">WEBP</option>
@@ -279,16 +314,15 @@ export function CanvasEditor({
           <button
             onClick={() => handleDownload("png")}
             disabled={!canvas || isDownloading}
-            className="flex items-center gap-2 border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10 disabled:opacity-50 sm:hidden"
+            className="flex items-center gap-1 px-2 py-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors disabled:opacity-50 sm:hidden"
           >
-            <Download size={16} />
+            <Download size={14} />
           </button>
           <button
             onClick={handleSave}
             disabled={!canvas || saveMutation.isPending}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 font-mono text-[9px] font-bold tracking-wider uppercase disabled:opacity-50 transition-colors"
           >
-            <FloppyDisk size={16} />{" "}
             {saveMutation.isPending ? "Saving..." : "Save"}
           </button>
         </div>
@@ -296,13 +330,44 @@ export function CanvasEditor({
 
       <div className="relative flex flex-1 overflow-hidden">
         <CanvasToolbar />
-        <div className="relative flex-1">
+        {/* Main Canvas Area */}
+        <main className="relative flex-1 min-w-0 bg-zinc-950">
           <CanvasViewport
             canvas={canvas}
             setCanvas={setCanvas}
             initialImageUrl={initialImageUrl}
           />
-        </div>
+          <MaskOverlay mainCanvas={canvas} />
+
+          <AnimatePresence>
+            {canvasMode !== "edit" && !isGenerating && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 20, opacity: 0 }}
+                transition={{ type: "spring", bounce: 0.1, duration: 0.4 }}
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4"
+              >
+                <PromptInput
+                  value={aiPrompt}
+                  onChange={setAiPrompt}
+                  onSubmit={handleGenerate}
+                  isLoading={isGenerating}
+                  placeholder={
+                    canvasMode === "inpaint" ? "Describe what should fill the masked area..." :
+                    canvasMode === "img2img" ? "Describe how to transform the selected region..." :
+                    canvasMode === "text2img" ? "Describe what to generate in the selected region..." :
+                    canvasMode === "sketch2img" ? "Describe what your sketch represents..." :
+                    "Describe what to generate..."
+                  }
+                  credits={credits}
+                  size="compact"
+                  className="shadow-2xl !p-0 [&>div>div]:rounded-none [&>div>div]:!border-white/10"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
         {!isCompact && (
           <div className="flex w-72 shrink-0 flex-col border-l border-white/[0.06] bg-zinc-950">
             {rightPanelContent}

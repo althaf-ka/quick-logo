@@ -211,6 +211,7 @@ export function useGenerateForm() {
           prompt: activePrompt,
           config: {
             ...cleanConfig,
+            canvasMode: "edit",
             ...(finalReferenceUrl && { referenceImageUrl: finalReferenceUrl }),
           },
         };

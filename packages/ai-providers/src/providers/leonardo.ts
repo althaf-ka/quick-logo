@@ -68,6 +68,7 @@ interface LeonardoV1Payload {
   styleUUID?: string;
   init_image_id?: string;
   init_strength?: number;
+  mask_image_id?: string;
 }
 
 interface LeonardoJobStatus {
@@ -154,14 +155,20 @@ export class LeonardoProvider implements AIProvider {
       const opts = (params.providerOptions || {}) as LeonardoOptions;
       const isV2 = opts.apiSchema === "v2";
       let initImageId: string | undefined = undefined;
+      let maskImageId: string | undefined = undefined;
 
-      if (params.referenceImage) {
-        initImageId = await this.uploadReferenceImage(params.referenceImage);
+      if (params.maskImage && params.canvasMode === "inpaint") {
+        maskImageId = await this.uploadReferenceImage(params.maskImage);
       }
 
-      const generationId = isV2
+      const referenceUrl = params.referenceImage || params.canvasImage;
+      if (referenceUrl) {
+        initImageId = await this.uploadReferenceImage(referenceUrl);
+      }
+
+      const generationId = isV2 && params.canvasMode !== "inpaint"
         ? await this.generateV2(params, initImageId, opts)
-        : await this.generateV1(params, initImageId, opts);
+        : await this.generateV1(params, initImageId, opts, maskImageId);
       const result = await this.pollGeneration(generationId);
       const imageResponse = await this.fetchWithTimeout(result.url, {}, 120000);
       if (!imageResponse.ok) {
@@ -336,6 +343,7 @@ export class LeonardoProvider implements AIProvider {
     params: GenerationParams,
     initImageId: string | undefined,
     opts: LeonardoOptions,
+    maskImageId?: string,
   ): Promise<string> {
     const v1Payload: LeonardoV1Payload = {
       alchemy: opts.alchemy ?? true,
@@ -357,6 +365,10 @@ export class LeonardoProvider implements AIProvider {
     if (initImageId) {
       v1Payload.init_image_id = initImageId;
       v1Payload.init_strength = (params.referenceStrength ?? 50) / 100;
+    }
+
+    if (maskImageId) {
+      v1Payload.mask_image_id = maskImageId;
     }
 
     const genRes = await this.post("/v1/generations", v1Payload);

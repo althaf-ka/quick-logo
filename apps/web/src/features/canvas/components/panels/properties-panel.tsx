@@ -2,12 +2,10 @@ import { useCanvasStore } from "../../store/canvas-store";
 import { Input } from "@quicklogo/ui/components/input";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { FontPicker } from "../../../../components/brand-kit/font-picker";
-import { CANVAS_PRESETS } from "../../utils/canvas-presets";
-import { Copy, Trash, ArrowUp, ArrowDown } from "@phosphor-icons/react";
+import { Copy, Trash, ArrowUp, ArrowDown, Cursor } from "@phosphor-icons/react";
 
 export function PropertiesPanel() {
-  const { selectedObject, canvasWidth, canvasHeight, setCanvasDimensions } =
-    useCanvasStore();
+  const { selectedObject } = useCanvasStore();
 
   const handleUpdate = (changes: any) => {
     window.dispatchEvent(
@@ -21,68 +19,14 @@ export function PropertiesPanel() {
 
   if (!selectedObject) {
     return (
-      <div className="space-y-6 p-4">
-        <div>
-          <h4 className="text-muted-foreground/50 mb-3 font-mono text-[10px] font-bold tracking-wider uppercase">
-            Canvas Settings
-          </h4>
-          <div className="space-y-4">
-            <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
-                Dimensions
-              </label>
-              <select
-                className="w-full rounded-none border border-white/10 bg-zinc-900 p-2 text-xs text-white outline-none"
-                value={`${canvasWidth}x${canvasHeight}`}
-                onChange={(e) => {
-                  const [w, h] = e.target.value.split("x").map(Number);
-                  if (w && h) setCanvasDimensions(w, h);
-                }}
-              >
-                <option value={`${canvasWidth}x${canvasHeight}`}>
-                  Custom ({canvasWidth}x{canvasHeight})
-                </option>
-                {CANVAS_PRESETS.map((p) => (
-                  <option key={p.label} value={`${p.width}x${p.height}`}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
-                Background Color
-              </label>
-              <input
-                type="color"
-                className="h-8 w-full cursor-pointer rounded-none border border-white/10 bg-transparent"
-                onChange={(e) =>
-                  dispatchAction("update-canvas", {
-                    backgroundColor: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <label className="text-muted-foreground mb-2 block text-xs">
-                Export As
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {["PNG", "JPEG", "SVG", "WEBP"].map((fmt) => (
-                  <button
-                    key={fmt}
-                    onClick={() =>
-                      dispatchAction("export", { format: fmt.toLowerCase() })
-                    }
-                    className="border border-white/10 bg-white/5 py-1.5 text-xs transition-colors hover:bg-white/10"
-                  >
-                    {fmt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <Cursor weight="duotone" className="size-10 text-muted-foreground/15" />
+        <p className="text-muted-foreground/40 font-mono text-[10px] font-bold tracking-wider uppercase">
+          Select an object to edit
+        </p>
+        <p className="text-muted-foreground/30 text-xs">
+          Click on any element on the canvas, or use tools to add new ones
+        </p>
       </div>
     );
   }
@@ -94,102 +38,18 @@ export function PropertiesPanel() {
     <div className="space-y-6 p-4">
       <div>
         <h4 className="text-muted-foreground/50 mb-3 font-mono text-[10px] font-bold tracking-wider uppercase">
-          Transform
+          Opacity
         </h4>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-muted-foreground mb-1 block text-[10px]">
-                X
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.left}
-                onChange={(e) => handleUpdate({ left: Number(e.target.value) })}
-                className="h-7 rounded-none border-white/10 bg-zinc-900 text-xs"
-              />
-            </div>
-            <div>
-              <label className="text-muted-foreground mb-1 block text-[10px]">
-                Y
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.top}
-                onChange={(e) => handleUpdate({ top: Number(e.target.value) })}
-                className="h-7 rounded-none border-white/10 bg-zinc-900 text-xs"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-muted-foreground mb-1 block text-[10px]">
-                W
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.width}
-                onChange={(e) =>
-                  handleUpdate({
-                    scaleX:
-                      Number(e.target.value) / (selectedObject.width || 1),
-                  })
-                }
-                className="h-7 rounded-none border-white/10 bg-zinc-900 text-xs"
-              />
-            </div>
-            <div>
-              <label className="text-muted-foreground mb-1 block text-[10px]">
-                H
-              </label>
-              <Input
-                type="number"
-                value={selectedObject.height}
-                onChange={(e) =>
-                  handleUpdate({
-                    scaleY:
-                      Number(e.target.value) / (selectedObject.height || 1),
-                  })
-                }
-                className="h-7 rounded-none border-white/10 bg-zinc-900 text-xs"
-              />
-            </div>
-          </div>
-          <div>
-            <div className="flex justify-between">
-              <label className="text-muted-foreground mb-2 block text-[10px]">
-                Rotation ({selectedObject.angle}°)
-              </label>
-            </div>
-            <Slider
-              value={[selectedObject.angle]}
-              min={0}
-              max={360}
-              step={1}
-              onValueChange={(val) =>
-                handleUpdate({ angle: Array.isArray(val) ? val[0] : val })
-              }
-            />
-          </div>
-          <div>
-            <div className="flex justify-between">
-              <label className="text-muted-foreground mb-2 block text-[10px]">
-                Opacity ({selectedObject.opacity}%)
-              </label>
-            </div>
-            <Slider
-              value={[selectedObject.opacity]}
-              min={0}
-              max={100}
-              step={1}
-              onValueChange={(val) =>
-                handleUpdate({
-                  opacity:
-                    (Array.isArray(val) ? val[0] : (val as number)) / 100,
-                })
-              }
-            />
-          </div>
+        <div className="flex items-center gap-3">
+          <Slider
+            value={[Math.round((selectedObject.opacity ?? 1) * 100)]}
+            min={0} max={100} step={1}
+            onValueChange={(val) => handleUpdate({ opacity: (Array.isArray(val) ? val[0] : val) / 100 })}
+            className="flex-1"
+          />
+          <span className="font-mono text-xs text-zinc-300 tabular-nums w-8 text-right">
+            {Math.round((selectedObject.opacity ?? 1) * 100)}%
+          </span>
         </div>
       </div>
 
@@ -343,6 +203,16 @@ export function PropertiesPanel() {
           >
             <ArrowDown size={14} /> To Back
           </button>
+          {selectedObject.type === "image" && (
+            <button
+              onClick={() =>
+                dispatchAction("flatten-image", { id: selectedObject.id })
+              }
+              className="col-span-2 mt-2 flex items-center justify-center gap-2 border border-primary/20 bg-primary/10 py-2 text-xs text-primary transition-colors hover:bg-primary/20 font-bold"
+            >
+              Flatten Image (Merge Down)
+            </button>
+          )}
         </div>
       </div>
     </div>

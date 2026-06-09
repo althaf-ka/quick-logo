@@ -32,17 +32,45 @@ export function CanvasViewport({
 
     setCanvas(fabricCanvas);
 
-    const handleResize = () => {
-      if (containerRef.current) {
-        fabricCanvas.setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
-        fabricCanvas.requestRenderAll();
-      }
-    };
+    // Debounce resize to avoid flash during sidebar collapse/expand animation (200ms CSS transition)
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width <= 0 || height <= 0) return;
 
-    window.addEventListener("resize", handleResize);
+        // Immediately update canvas size so it doesn't show a gap
+        fabricCanvas.setDimensions({ width, height });
+
+        // Debounce the viewport transform recalculation to after the CSS transition ends
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          const artboard = fabricCanvas.getObjects().find(o => (o as any).id === "__artboard__");
+          if (artboard) {
+            const artWidth = artboard.width || 1024;
+            const artHeight = artboard.height || 1024;
+            const padding = 60;
+            const currentW = fabricCanvas.width!;
+            const currentH = fabricCanvas.height!;
+            const scaleX = (currentW - padding * 2) / artWidth;
+            const scaleY = (currentH - padding * 2) / artHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+
+            fabricCanvas.setViewportTransform([
+              scale,
+              0,
+              0,
+              scale,
+              currentW / 2 - (artWidth * scale) / 2,
+              currentH / 2 - (artHeight * scale) / 2,
+            ]);
+          }
+          fabricCanvas.requestRenderAll();
+        }, 250);
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
 
     const loadInitialImage = async () => {
       if (!initialImageUrl) return;
@@ -54,10 +82,10 @@ export function CanvasViewport({
         const width = img.width || 1024;
         const height = img.height || 1024;
 
-        // Define an artboard rectangle
+        // Define an artboard rectangle at 0,0. Viewport transform will center it.
         const artboard = new fabric.Rect({
-          left: (fabricCanvas.width! - width) / 2,
-          top: (fabricCanvas.height! - height) / 2,
+          left: 0,
+          top: 0,
           width,
           height,
           fill: "#ffffff",
@@ -68,11 +96,23 @@ export function CanvasViewport({
         (artboard as any).id = "__artboard__";
         (artboard as any).name = "Artboard";
 
+        // Scale image to fit within the artboard bounds
+        const imgWidth = img.width || 1;
+        const imgHeight = img.height || 1;
+        const imgScaleX = width / imgWidth;
+        const imgScaleY = height / imgHeight;
+        const imgScale = Math.min(imgScaleX, imgScaleY, 1);
+
         // Center the image on the artboard
         img.set({
-          left: artboard.left,
-          top: artboard.top,
-          selectable: true,
+          left: artboard.left! + (width - imgWidth * imgScale) / 2,
+          top: artboard.top! + (height - imgHeight * imgScale) / 2,
+          scaleX: imgScale,
+          scaleY: imgScale,
+          selectable: false,
+          evented: false,
+          locked: true,
+          hoverCursor: "default",
         });
         (img as any).id = "obj_initial_image";
         (img as any).name = "Source Image";
@@ -83,7 +123,7 @@ export function CanvasViewport({
         setCanvasDimensions(width, height);
 
         // Setup initial zoom to fit artboard with padding
-        const padding = 40;
+        const padding = 60;
         const scaleX = (fabricCanvas.width! - padding * 2) / width;
         const scaleY = (fabricCanvas.height! - padding * 2) / height;
         const scale = Math.min(scaleX, scaleY, 1);
@@ -104,7 +144,8 @@ export function CanvasViewport({
     loadInitialImage();
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeObserver.disconnect();
       fabricCanvas.dispose();
       setCanvas(null);
     };
@@ -117,7 +158,7 @@ export function CanvasViewport({
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full overflow-hidden bg-zinc-900"
+      className="relative h-full w-full overflow-hidden bg-zinc-950"
     >
       <canvas ref={canvasRef} />
     </div>
