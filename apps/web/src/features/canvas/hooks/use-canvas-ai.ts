@@ -42,7 +42,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       return;
     }
 
-    if ((store.canvasMode === "img2img" || store.canvasMode === "text2img") && !store.regionBounds) {
+    if ((store.canvasMode === "img2img") && !store.regionBounds) {
       toast.error("Please select a region first");
       return;
     }
@@ -57,7 +57,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
 
       // Export Region if needed
       let regionImageDataUrl: string | undefined;
-      if ((store.canvasMode === "img2img" || store.canvasMode === "text2img") && store.regionBounds) {
+      if ((store.canvasMode === "img2img") && store.regionBounds) {
         regionImageDataUrl = canvas.toDataURL({
           format: "png",
           left: store.regionBounds.left,
@@ -164,17 +164,19 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           }
         : { left: 0, top: 0, width: canvas.width!, height: canvas.height! };
 
+      const generationGroupId = `gen_${Date.now()}`;
+
       await compositeAIResult(canvas, finalImageUrl, store.canvasMode, {
         regionBounds: store.regionBounds ?? undefined,
         artboardBounds,
+        generationGroupId,
+        generatedFromObjectId: store.activeAIObjectId,
       });
 
       store.setGeneratedResultUrl(finalImageUrl);
 
-      // Clear AI modes
-      store.setCanvasMode("edit");
-      store.setRegionBounds(null);
-      store.setMaskData(null);
+      // Clear AI workflow
+      store.resetAIWorkflow();
 
       // Invalidate credits
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
@@ -189,6 +191,8 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       } else {
         toast.error(err.message || "Generation failed");
       }
+      // Set error explicitly
+      store.resetAIWorkflow();
       setGenerationStatus("error");
     } finally {
       store.setIsAiGenerating(false);

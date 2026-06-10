@@ -34,14 +34,29 @@ export function LayersPanel() {
 
   if (layers.length === 0) {
     return (
-      <div className="text-muted-foreground p-4 text-center text-xs">
-        No layers yet.
+      <div className="flex h-full flex-col">
+        <div className="p-4 border-b border-white/[0.06]">
+          <h3 className="font-mono text-[10px] font-bold tracking-wider uppercase text-muted-foreground/50">Layers</h3>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <SquareIcon weight="duotone" className="size-10 text-muted-foreground/15" />
+          <p className="text-muted-foreground/40 font-mono text-[10px] font-bold tracking-wider uppercase">
+            No layers available
+          </p>
+          <p className="text-muted-foreground/30 text-xs max-w-[200px]">
+            Add an image, text, or shape to begin.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex w-full flex-col pb-4">
+    <div className="flex h-full flex-col">
+      <div className="p-4 border-b border-white/[0.06]">
+        <h3 className="font-mono text-[10px] font-bold tracking-wider uppercase text-muted-foreground/50">Layers</h3>
+      </div>
+      <div className="flex w-full flex-col pb-4 overflow-y-auto scrollbar-subtle flex-1">
       {layers.map((layer) => {
         const isSelected = selectedObject?.id === layer.id;
 
@@ -95,6 +110,7 @@ export function LayersPanel() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

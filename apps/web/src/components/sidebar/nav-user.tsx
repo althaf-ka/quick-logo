@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import {
   SidebarMenu,
   SidebarMenuItem,
-  useSidebar,
 } from "@quicklogo/ui/components/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -12,7 +11,6 @@ import {
 } from "@quicklogo/ui/components/avatar";
 
 export function NavUser() {
-  const { state } = useSidebar();
   const { user } = useAuth();
 
   const name = user?.name || "User";

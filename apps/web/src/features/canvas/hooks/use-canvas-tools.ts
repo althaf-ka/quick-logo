@@ -16,6 +16,8 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     brushSettings,
     setBrushSettings,
     setSelectedObject,
+    setSelectedObjects,
+    setSelectionType,
     setLayers,
     canvasMode,
   } = useCanvasStore();
@@ -30,8 +32,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
       });
     } else if (
       canvasMode === "inpaint" ||
-      canvasMode === "img2img" ||
-      canvasMode === "text2img"
+      canvasMode === "img2img"
     ) {
       if (canvas) {
         canvas.discardActiveObject();
@@ -127,11 +128,37 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     if (!canvas) return;
 
     const syncSelection = () => {
-      const active = canvas.getActiveObject();
-      if (!active || (active as any).id === "__artboard__") {
+      const activeObjects = canvas.getActiveObjects();
+      
+      if (!activeObjects || activeObjects.length === 0 || activeObjects.every(o => (o as any).id === "__artboard__")) {
         setSelectedObject(null);
+        setSelectedObjects([]);
+        setSelectionType("none");
         return;
       }
+
+      if (activeObjects.length > 1) {
+        setSelectedObject(null);
+        setSelectedObjects(
+          activeObjects.map((obj) => ({
+            id: (obj as any).id,
+            type: obj.type,
+            left: Math.round(obj.left || 0),
+            top: Math.round(obj.top || 0),
+            width: Math.round((obj.width || 0) * (obj.scaleX || 1)),
+            height: Math.round((obj.height || 0) * (obj.scaleY || 1)),
+            angle: Math.round(obj.angle || 0),
+            opacity: Math.round((obj.opacity || 1) * 100),
+            fill: obj.fill?.toString() || "#000000",
+            stroke: obj.stroke?.toString() || "#000000",
+            strokeWidth: obj.strokeWidth || 0,
+          }))
+        );
+        setSelectionType("multi");
+        return;
+      }
+
+      const active = activeObjects[0];
 
       const props: SelectedObjectProps = {
         id: (active as any).id,
@@ -157,6 +184,8 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
         props.text = textObj.text;
       }
       setSelectedObject(props);
+      setSelectedObjects([props]);
+      setSelectionType("single");
     };
 
     const syncLayers = () => {
@@ -189,12 +218,24 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
       syncLayers();
     };
 
+    const handlePathCreated = (e: any) => {
+      if (e.path) {
+        e.path.set({
+          perPixelTargetFind: true,
+          id: generateId(),
+          name: "Drawing",
+        });
+        handleEvent();
+      }
+    };
+
     canvas.on("selection:created", syncSelection);
     canvas.on("selection:updated", syncSelection);
     canvas.on("selection:cleared", syncSelection);
     canvas.on("object:modified", handleEvent);
     canvas.on("object:added", handleEvent);
     canvas.on("object:removed", handleEvent);
+    canvas.on("path:created", handlePathCreated);
 
     // Initial sync
     syncLayers();
@@ -206,6 +247,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
       canvas.off("object:modified", handleEvent);
       canvas.off("object:added", handleEvent);
       canvas.off("object:removed", handleEvent);
+      canvas.off("path:created", handlePathCreated);
     };
   }, [canvas, setSelectedObject, setLayers]);
 
@@ -436,14 +478,16 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
 
     const isAiModeWithoutSelection =
       canvasMode === "inpaint" ||
-      canvasMode === "img2img" ||
-      canvasMode === "text2img";
+      canvasMode === "img2img";
 
     canvas.forEachObject((obj) => {
-      if (activeTool === "hand") {
-        obj.set({ selectable: false, evented: false });
-      } else {
-        if (!obj.get("locked") && (obj as any).id !== "__artboard__") {
+      if (!obj.get("locked") && (obj as any).id !== "__artboard__") {
+        if (activeTool === "hand" || activeTool === "shapes" || activeTool === "eraser") {
+          obj.set({ selectable: false, evented: false });
+        } else if (activeTool === "text") {
+          const isText = obj.type === "textbox" || obj.type === "text" || obj.type === "i-text";
+          obj.set({ selectable: isText, evented: isText });
+        } else {
           // In certain AI modes, we disable selection of underlying objects
           obj.set({
             selectable: !isAiModeWithoutSelection,
@@ -502,7 +546,10 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
         lastPosY = e.clientY;
         canvas.setCursor("grabbing");
       } else if (activeTool === "text") {
-        if ((opt as any).target) return;
+        const target = (opt as any).target;
+        if (target && (target.type === "textbox" || target.type === "text" || target.type === "i-text")) {
+          return; // Let fabric handle existing text editing
+        }
 
         const text = new fabric.Textbox("Type here", {
           left: pointer.x,
@@ -527,7 +574,10 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
           target &&
           target.id !== "__artboard__" &&
           target.id !== "obj_initial_image" &&
-          target.id !== "__ai_region__"
+          target.id !== "__ai_region__" &&
+          target.type !== "image" &&
+          target.type !== "Image" &&
+          target.type !== "image:FabricImage"
         ) {
           canvas.remove(target);
           canvas.requestRenderAll();
@@ -588,7 +638,10 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
           target &&
           target.id !== "__artboard__" &&
           target.id !== "obj_initial_image" &&
-          target.id !== "__ai_region__"
+          target.id !== "__ai_region__" &&
+          target.type !== "image" &&
+          target.type !== "Image" &&
+          target.type !== "image:FabricImage"
         ) {
           canvas.remove(target);
           canvas.requestRenderAll();

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { CanvasToolbar } from "./toolbar/canvas-toolbar";
 import { CanvasViewport } from "./canvas-viewport";
-import { CanvasModeSelector } from "./canvas-mode-selector";
+
 import { useCanvasStore } from "../store/canvas-store";
 import { MaskOverlay } from "./mask-overlay";
 import { AiPanel } from "./panels/ai-panel";
@@ -27,6 +27,8 @@ import {
   MagnifyingGlassMinus,
   CornersOut,
   List,
+  ArrowCounterClockwise,
+  ArrowClockwise,
 } from "@phosphor-icons/react";
 import * as fabric from "fabric";
 import { PromptInput } from "@/components/global/prompt-input";
@@ -53,7 +55,7 @@ export function CanvasEditor({
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const { exportToPng, exportToJpeg, exportToSvg, exportToWebp } =
     useCanvasExport(canvas);
-  const { canvasMode, aiPrompt, setAiPrompt, setRegionBounds } = useCanvasStore();
+  const { canvasMode, aiPrompt, setAiPrompt, setRegionBounds, maskData, regionBounds, canUndo, canRedo } = useCanvasStore();
   const {
     handleGenerate,
     isGenerating,
@@ -260,8 +262,23 @@ export function CanvasEditor({
     <div className="flex h-full w-full flex-col overflow-hidden">
       {/* Compact control strip — NOT a second header */}
       <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-950/50 px-3">
-        {/* Left: Zoom controls */}
+        {/* Left: Zoom controls & History */}
         <div className="hidden md:flex items-center gap-1.5">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("canvas:undo"))}
+            disabled={!canUndo}
+            className="p-1 text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-50 transition-colors"
+          >
+            <ArrowCounterClockwise size={14} />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("canvas:redo"))}
+            disabled={!canRedo}
+            className="p-1 text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-50 transition-colors"
+          >
+            <ArrowClockwise size={14} />
+          </button>
+          <div className="mx-2 h-3 w-px bg-white/10" />
           <button
             onClick={() => handleZoom("out")}
             className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
@@ -285,9 +302,8 @@ export function CanvasEditor({
           </button>
         </div>
 
-        {/* Center: Mode selector */}
-        <div className="flex flex-1 justify-start md:justify-center">
-          <CanvasModeSelector />
+        {/* Center: Empty for now (or filename) */}
+        <div className="flex flex-1 justify-start md:justify-center overflow-hidden">
         </div>
 
         {/* Right: Export + Save */}
@@ -342,28 +358,50 @@ export function CanvasEditor({
           <AnimatePresence>
             {canvasMode !== "edit" && !isGenerating && (
               <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
-                transition={{ type: "spring", bounce: 0.1, duration: 0.4 }}
+                initial={{ y: 20, opacity: 0, scale: 0.95 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 20, opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 className="absolute bottom-3 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4"
               >
-                <PromptInput
-                  value={aiPrompt}
-                  onChange={setAiPrompt}
-                  onSubmit={handleGenerate}
-                  isLoading={isGenerating}
-                  placeholder={
-                    canvasMode === "inpaint" ? "Describe what should fill the masked area..." :
-                    canvasMode === "img2img" ? "Describe how to transform the selected region..." :
-                    canvasMode === "text2img" ? "Describe what to generate in the selected region..." :
-                    canvasMode === "sketch2img" ? "Describe what your sketch represents..." :
-                    "Describe what to generate..."
+                {(() => {
+                  let validationError = "";
+                  if (canvasMode === "inpaint" && !maskData) {
+                    validationError = "Please draw a mask first";
+                  } else if (canvasMode === "img2img" && !regionBounds) {
+                    validationError = "Please select a region first";
+                  } else if (canvasMode === "sketch2img") {
+                    const hasPaths = canvas?.getObjects().some(o => o.type === "path");
+                    if (!hasPaths) validationError = "Please draw a sketch first";
                   }
-                  credits={credits}
-                  size="compact"
-                  className="shadow-2xl !p-0 [&>div>div]:rounded-none [&>div>div]:!border-white/10"
-                />
+
+                  return (
+                    <PromptInput
+                      value={aiPrompt}
+                      onChange={setAiPrompt}
+                      onSubmit={handleGenerate}
+                      targetContext={
+                        canvasMode === "inpaint" ? "Inpaint Mask" :
+                        canvasMode === "img2img" ? "Selected Region" :
+                        canvasMode === "sketch2img" ? "Sketch Drawing" :
+                        undefined
+                      }
+                      onClearTarget={() => useCanvasStore.getState().resetAIWorkflow()}
+                      isLoading={isGenerating}
+                      submitDisabled={!!validationError}
+                      validationError={validationError}
+                      placeholder={
+                        canvasMode === "inpaint" ? "Describe what should fill the masked area..." :
+                        canvasMode === "img2img" ? "Describe how to transform the selected region..." :
+                        canvasMode === "sketch2img" ? "Describe what your sketch represents..." :
+                        "Describe what to generate..."
+                      }
+                      credits={credits}
+                      size="compact"
+                      className="shadow-2xl !p-0 [&>div>div]:rounded-none [&>div>div]:!border-white/10"
+                    />
+                  );
+                })()}
               </motion.div>
             )}
           </AnimatePresence>

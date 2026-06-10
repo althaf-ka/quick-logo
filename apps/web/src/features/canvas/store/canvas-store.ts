@@ -5,6 +5,8 @@ import type {
   BrushSettings,
   SelectedObjectProps,
   CanvasMode,
+  SelectionType,
+  AISessionState,
 } from "../types/canvas";
 import {
   DEFAULT_CANVAS_SIZE,
@@ -38,8 +40,12 @@ export interface CanvasState {
   setLayers: (layers: CanvasObjectInfo[]) => void;
 
   // Selected object properties (from Fabric.js selection events)
+  selectionType: SelectionType;
+  setSelectionType: (type: SelectionType) => void;
   selectedObject: SelectedObjectProps | null;
   setSelectedObject: (obj: SelectedObjectProps | null) => void;
+  selectedObjects: SelectedObjectProps[];
+  setSelectedObjects: (objects: SelectedObjectProps[]) => void;
 
   // History state
   canUndo: boolean;
@@ -53,6 +59,11 @@ export interface CanvasState {
   // AI Mode state
   canvasMode: CanvasMode;
   setCanvasMode: (mode: CanvasMode) => void;
+  aiSessionState: AISessionState;
+  setAiSessionState: (state: AISessionState) => void;
+  activeAIObjectId: string | null;
+  setActiveAIObjectId: (id: string | null) => void;
+  resetAIWorkflow: () => void;
   aiPrompt: string;
   setAiPrompt: (prompt: string) => void;
   aiModel: string;
@@ -94,8 +105,12 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   layers: [],
   setLayers: (layers) => set({ layers }),
 
+  selectionType: "none",
+  setSelectionType: (type) => set({ selectionType: type }),
   selectedObject: null,
   setSelectedObject: (obj) => set({ selectedObject: obj }),
+  selectedObjects: [],
+  setSelectedObjects: (objects) => set({ selectedObjects: objects }),
 
   canUndo: false,
   canRedo: false,
@@ -104,20 +119,31 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   isSaving: false,
   setIsSaving: (saving) => set({ isSaving: saving }),
 
-  canvasMode: 'edit',
+  canvasMode: "edit",
   setCanvasMode: (mode) => {
     set((state) => {
       const updates: Partial<CanvasState> = { canvasMode: mode };
-      if (state.canvasMode === 'inpaint' && mode !== 'inpaint') {
+      if (state.canvasMode === "inpaint" && mode !== "inpaint") {
         updates.maskData = null;
       }
-      if ((state.canvasMode === 'text2img' || state.canvasMode === 'img2img') && 
-          (mode !== 'text2img' && mode !== 'img2img')) {
+      if (state.canvasMode === "img2img" && mode !== "img2img") {
         updates.regionBounds = null;
       }
       return updates;
     });
   },
+  aiSessionState: "idle",
+  setAiSessionState: (state) => set({ aiSessionState: state }),
+  activeAIObjectId: null,
+  setActiveAIObjectId: (id) => set({ activeAIObjectId: id }),
+  resetAIWorkflow: () => set({
+    canvasMode: "edit",
+    aiSessionState: "idle",
+    activeAIObjectId: null,
+    regionBounds: null,
+    maskData: null,
+    aiPrompt: ""
+  }),
   aiPrompt: '',
   setAiPrompt: (prompt) => set({ aiPrompt: prompt }),
   aiModel: 'quick-seedream',

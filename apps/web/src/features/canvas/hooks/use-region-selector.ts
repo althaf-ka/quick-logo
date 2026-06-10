@@ -12,7 +12,7 @@ export function useRegionSelector(canvas: fabric.Canvas | null) {
   useEffect(() => {
     if (!canvas) return;
 
-    const isRegionMode = canvasMode === "img2img" || canvasMode === "text2img";
+    const isRegionMode = canvasMode === "img2img";
 
     const animateBorder = () => {
       if (!isRegionMode) return;
@@ -64,7 +64,7 @@ export function useRegionSelector(canvas: fabric.Canvas | null) {
   // Drawing behavior
   useEffect(() => {
     if (!canvas) return;
-    const isRegionMode = canvasMode === "img2img" || canvasMode === "text2img";
+    const isRegionMode = canvasMode === "img2img";
     
     // Do not intercept if user is explicitly panning
     if (!isRegionMode || activeTool === "hand") return;
@@ -110,9 +110,13 @@ export function useRegionSelector(canvas: fabric.Canvas | null) {
         width: 0,
         height: 0,
         fill: "rgba(139, 92, 246, 0.08)",
-        stroke: "rgba(139, 92, 246, 0.6)",
+        stroke: "rgba(139, 92, 246, 0.8)",
         strokeDashArray: [8, 4],
         strokeWidth: 2,
+        shadow: new fabric.Shadow({
+          color: "rgba(139, 92, 246, 0.8)",
+          blur: 15,
+        }),
         selectable: true,
         hasControls: true,
         cornerColor: "rgba(139, 92, 246, 0.8)",

@@ -8,6 +8,8 @@ export async function compositeAIResult(
   options: {
     regionBounds?: { left: number; top: number; width: number; height: number };
     artboardBounds?: { left: number; top: number; width: number; height: number };
+    generationGroupId?: string;
+    generatedFromObjectId?: string | null;
   },
 ): Promise<fabric.Image> {
   return new Promise((resolve, reject) => {
@@ -21,10 +23,9 @@ export async function compositeAIResult(
         const regionSelector = canvas.getObjects().find((o) => (o as any).id === "__ai_region__");
 
         switch (mode) {
-          case "img2img":
-          case "text2img": {
+          case "img2img": {
             if (!options.regionBounds) {
-              return reject(new Error("Region bounds required for img2img/text2img"));
+              return reject(new Error("Region bounds required for img2img"));
             }
 
             // Scale to fit the region
@@ -36,9 +37,11 @@ export async function compositeAIResult(
               top: options.regionBounds.top,
               scaleX,
               scaleY,
-              name: mode === "img2img" ? "AI Result — Img2Img" : "AI Result — Generated",
+              name: "AI Result — Img2Img",
               selectable: true,
-            });
+              generationGroupId: options.generationGroupId,
+              generatedFromObjectId: options.generatedFromObjectId,
+            } as any);
 
             if (regionSelector) {
                canvas.remove(regionSelector);
@@ -61,7 +64,9 @@ export async function compositeAIResult(
               scaleY,
               name: "AI Result — Inpaint",
               selectable: true,
-            });
+              generationGroupId: options.generationGroupId,
+              generatedFromObjectId: options.generatedFromObjectId,
+            } as any);
             break;
           }
 
@@ -80,7 +85,9 @@ export async function compositeAIResult(
               scaleY,
               name: "AI Result — Sketch",
               selectable: true,
-            });
+              generationGroupId: options.generationGroupId,
+              generatedFromObjectId: options.generatedFromObjectId,
+            } as any);
             break;
           }
         }

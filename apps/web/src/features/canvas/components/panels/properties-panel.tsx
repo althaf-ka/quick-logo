@@ -2,7 +2,8 @@ import { useCanvasStore } from "../../store/canvas-store";
 import { Input } from "@quicklogo/ui/components/input";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { FontPicker } from "../../../../components/brand-kit/font-picker";
-import { Copy, Trash, ArrowUp, ArrowDown, Cursor } from "@phosphor-icons/react";
+import { Copy, Trash, ArrowUp, ArrowDown, Cursor, AlignLeft, AlignCenterHorizontal, AlignRight, AlignTop, AlignCenterVertical, AlignBottom } from "@phosphor-icons/react";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@quicklogo/ui/components/tooltip";
 
 export function PropertiesPanel() {
   const { selectedObject } = useCanvasStore();
@@ -17,16 +18,27 @@ export function PropertiesPanel() {
     window.dispatchEvent(new CustomEvent(`canvas:${action}`, { detail }));
   };
 
+  const handleAlign = (alignment: string) => {
+    window.dispatchEvent(
+      new CustomEvent("canvas:align", { detail: { alignment } })
+    );
+  };
+
   if (!selectedObject) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <Cursor weight="duotone" className="size-10 text-muted-foreground/15" />
-        <p className="text-muted-foreground/40 font-mono text-[10px] font-bold tracking-wider uppercase">
-          Select an object to edit
-        </p>
-        <p className="text-muted-foreground/30 text-xs">
-          Click on any element on the canvas, or use tools to add new ones
-        </p>
+      <div className="flex h-full flex-col">
+        <div className="p-4 border-b border-white/[0.06]">
+          <h3 className="font-mono text-[10px] font-bold tracking-wider uppercase text-muted-foreground/50">Properties</h3>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <Cursor weight="duotone" className="size-10 text-muted-foreground/15" />
+          <p className="text-muted-foreground/40 font-mono text-[10px] font-bold tracking-wider uppercase">
+            No object selected
+          </p>
+          <p className="text-muted-foreground/30 text-xs max-w-[200px]">
+            Select an image, text, or shape to edit its properties.
+          </p>
+        </div>
       </div>
     );
   }
@@ -35,7 +47,89 @@ export function PropertiesPanel() {
     selectedObject.type === "textbox" || selectedObject.type === "text";
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="flex h-full flex-col">
+      <div className="p-4 border-b border-white/[0.06]">
+        <h3 className="font-mono text-[10px] font-bold tracking-wider uppercase text-muted-foreground/50">Properties</h3>
+      </div>
+      <div className="space-y-6 p-4 overflow-y-auto scrollbar-subtle flex-1">
+        <TooltipProvider>
+          <div>
+            <h4 className="text-muted-foreground/50 mb-3 font-mono text-[10px] font-bold tracking-wider uppercase">
+              Alignment
+            </h4>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    onClick={() => handleAlign("left")}
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors rounded"
+                  >
+                    <AlignLeft size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Align Left</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    onClick={() => handleAlign("centerH")}
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors rounded"
+                  >
+                    <AlignCenterHorizontal size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Align Center Horizontal</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    onClick={() => handleAlign("right")}
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors rounded"
+                  >
+                    <AlignRight size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Align Right</TooltipContent>
+              </Tooltip>
+              <div className="mx-1 h-4 w-px bg-white/10" />
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    onClick={() => handleAlign("top")}
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors rounded"
+                  >
+                    <AlignTop size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Align Top</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    onClick={() => handleAlign("centerV")}
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors rounded"
+                  >
+                    <AlignCenterVertical size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Align Center Vertical</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    onClick={() => handleAlign("bottom")}
+                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors rounded"
+                  >
+                    <AlignBottom size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">Align Bottom</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </TooltipProvider>
+
+        <div className="h-px w-full bg-white/10" />
       <div>
         <h4 className="text-muted-foreground/50 mb-3 font-mono text-[10px] font-bold tracking-wider uppercase">
           Opacity
@@ -214,6 +308,7 @@ export function PropertiesPanel() {
             </button>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

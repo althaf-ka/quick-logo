@@ -8,24 +8,14 @@ import {
   Image as ImageIcon,
   Eraser,
   Hand,
-  ArrowCounterClockwise,
-  ArrowClockwise,
 } from "@phosphor-icons/react";
 import { ToolButton } from "./tool-button";
 import { useCanvasStore } from "../../store/canvas-store";
 
 export function CanvasToolbar() {
-  const { activeTool, setActiveTool, canUndo, canRedo } = useCanvasStore();
+  const { activeTool, setActiveTool } = useCanvasStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleUndo = () => {
-    window.dispatchEvent(new CustomEvent("canvas:undo"));
-  };
-
-  const handleRedo = () => {
-    window.dispatchEvent(new CustomEvent("canvas:redo"));
-  };
 
   const onToolClick = (tool: any) => {
     if (tool === "image") {
@@ -118,22 +108,6 @@ export function CanvasToolbar() {
 
         <div className="flex-1" />
 
-        <ToolButton
-          icon={ArrowCounterClockwise}
-          label="Undo"
-          shortcut="Ctrl+Z"
-          isActive={false}
-          disabled={!canUndo}
-          onClick={handleUndo}
-        />
-        <ToolButton
-          icon={ArrowClockwise}
-          label="Redo"
-          shortcut="Ctrl+Shift+Z"
-          isActive={false}
-          disabled={!canRedo}
-          onClick={handleRedo}
-        />
       </div>
     </TooltipProvider>
   );

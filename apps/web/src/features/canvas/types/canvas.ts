@@ -5,6 +5,7 @@ export type CanvasTool =
   | "shapes"
   | "image"
   | "eraser"
+  | "brush"
   | "hand";
 
 export type ShapeType = "rectangle" | "circle" | "line" | "arrow" | "triangle";
@@ -63,7 +64,20 @@ export interface SelectedObjectProps {
   text?: string;
 }
 
-export type CanvasMode = 'edit' | 'img2img' | 'inpaint' | 'text2img' | 'sketch2img';
+export type CanvasMode =
+  | "edit"
+  | "img2img"
+  | "inpaint"
+  | "sketch2img";
+
+export type SelectionType = "none" | "single" | "multi";
+
+export type AISessionState =
+  | "idle"
+  | "selecting-region"
+  | "masking"
+  | "prompting"
+  | "generating";
 
 export interface CanvasAIState {
   mode: CanvasMode;
