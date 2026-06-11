@@ -142,7 +142,8 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     activeAIObjectId: null,
     regionBounds: null,
     maskData: null,
-    aiPrompt: ""
+    aiPrompt: "",
+    generatedResultUrl: null
   }),
   aiPrompt: '',
   setAiPrompt: (prompt) => set({ aiPrompt: prompt }),

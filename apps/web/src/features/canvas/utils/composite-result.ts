@@ -43,6 +43,14 @@ export async function compositeAIResult(
               generatedFromObjectId: options.generatedFromObjectId,
             } as any);
 
+            // Remove the original targeted image since it's being upgraded/replaced
+            if (options.generatedFromObjectId) {
+              const originalObj = canvas.getObjects().find(o => (o as any).id === options.generatedFromObjectId);
+              if (originalObj) {
+                canvas.remove(originalObj);
+              }
+            }
+
             if (regionSelector) {
                canvas.remove(regionSelector);
             }
@@ -88,6 +96,13 @@ export async function compositeAIResult(
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
             } as any);
+
+            // Remove the sketches (pencil paths) since they are now baked into the generated image
+            canvas.getObjects().forEach((o) => {
+              if (o.type === "path") {
+                canvas.remove(o);
+              }
+            });
             break;
           }
         }

@@ -14,7 +14,20 @@ import {
   TabsContent,
 } from "@quicklogo/ui/components/tabs";
 import { useCanvasExport } from "../hooks/use-canvas-export";
-import { useRegionSelector } from "../hooks/use-region-selector";
+import { useImproveHover } from "../hooks/use-improve-hover";
+
+// Set global professional selection styles
+Object.assign(fabric.Object.prototype, {
+  transparentCorners: false,
+  cornerColor: "#FFFFFF",
+  cornerStrokeColor: "#6D28D9",
+  borderColor: "#6D28D9",
+  cornerSize: 10,
+  padding: 0,
+  cornerStyle: "circle",
+  borderScaleFactor: 2,
+});
+
 import { useCanvasAI } from "../hooks/use-canvas-ai";
 import { uploadFileToImageKit } from "@/lib/imagekit";
 import { api } from "@/lib/api";
@@ -22,13 +35,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { parseApiError } from "@/lib/api-error";
 import {
-  Download,
-  MagnifyingGlassPlus,
-  MagnifyingGlassMinus,
-  CornersOut,
-  List,
-  ArrowCounterClockwise,
-  ArrowClockwise,
+  ArrowCounterClockwiseIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
+  DownloadIcon,
+  ListIcon,
+  CornersOutIcon,
 } from "@phosphor-icons/react";
 import * as fabric from "fabric";
 import { PromptInput } from "@/components/global/prompt-input";
@@ -55,14 +68,19 @@ export function CanvasEditor({
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const { exportToPng, exportToJpeg, exportToSvg, exportToWebp } =
     useCanvasExport(canvas);
-  const { canvasMode, aiPrompt, setAiPrompt, setRegionBounds, maskData, regionBounds, canUndo, canRedo } = useCanvasStore();
   const {
-    handleGenerate,
-    isGenerating,
-    generationStatus,
-    credits,
-  } = useCanvasAI(canvas, imageId);
-  useRegionSelector(canvas);
+    canvasMode,
+    aiPrompt,
+    setAiPrompt,
+    setRegionBounds,
+    maskData,
+    canUndo,
+    canRedo,
+    selectedObject,
+  } = useCanvasStore();
+  const { handleGenerate, isGenerating, generationStatus, credits } =
+    useCanvasAI(canvas, imageId);
+  useImproveHover(canvas);
   const queryClient = useQueryClient();
 
   const [isDownloading, setIsDownloading] = useState(false);
@@ -78,8 +96,6 @@ export function CanvasEditor({
     if (canvasMode !== "edit") {
       setActiveTab("ai");
       if (isCompact) setSidebarOpen(true);
-    } else {
-      setActiveTab("properties");
     }
   }, [canvasMode, isCompact]);
 
@@ -204,13 +220,22 @@ export function CanvasEditor({
 
   const currentZoom = Math.round((canvas?.getZoom() || 1) * 100);
 
-  const handleClearRegion = () => {
+  const handleClearAIInputs = () => {
     if (!canvas) return;
-    const region = canvas.getObjects().find((o) => (o as any).id === "__ai_region__");
-    if (region) {
-      canvas.remove(region);
-      canvas.requestRenderAll();
+
+    const objects = canvas.getObjects();
+    const toRemove = objects.filter(
+      (o) => (o as any).id === "__ai_region__" || (o as any).isAiSketch,
+    );
+
+    if (toRemove.length > 0) {
+      toRemove.forEach((obj) => canvas.remove(obj));
     }
+
+    // Deselect active object when AI inputs are cleared (like clicking cancel)
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+
     setRegionBounds(null);
   };
 
@@ -245,13 +270,19 @@ export function CanvasEditor({
           <AiPanel
             isGenerating={isGenerating}
             generationStatus={generationStatus}
-            handleClearRegion={handleClearRegion}
+            handleClearRegion={handleClearAIInputs}
           />
         </TabsContent>
-        <TabsContent value="properties" className="m-0 h-full overflow-y-auto scrollbar-subtle">
+        <TabsContent
+          value="properties"
+          className="scrollbar-subtle m-0 h-full overflow-y-auto"
+        >
           <PropertiesPanel />
         </TabsContent>
-        <TabsContent value="layers" className="m-0 h-full overflow-y-auto scrollbar-subtle">
+        <TabsContent
+          value="layers"
+          className="scrollbar-subtle m-0 h-full overflow-y-auto"
+        >
           <LayersPanel />
         </TabsContent>
       </div>
@@ -263,65 +294,66 @@ export function CanvasEditor({
       {/* Compact control strip — NOT a second header */}
       <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-950/50 px-3">
         {/* Left: Zoom controls & History */}
-        <div className="hidden md:flex items-center gap-1.5">
+        <div className="hidden items-center gap-1.5 md:flex">
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("canvas:undo"))}
             disabled={!canUndo}
-            className="p-1 text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-50 transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors disabled:opacity-50"
           >
-            <ArrowCounterClockwise size={14} />
+            <ArrowCounterClockwiseIcon size={14} />
           </button>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("canvas:redo"))}
             disabled={!canRedo}
-            className="p-1 text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-50 transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors disabled:opacity-50"
           >
-            <ArrowClockwise size={14} />
+            <ArrowClockwiseIcon size={14} />
           </button>
           <div className="mx-2 h-3 w-px bg-white/10" />
           <button
             onClick={() => handleZoom("out")}
-            className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors"
           >
-            <MagnifyingGlassMinus size={14} />
+            <MagnifyingGlassMinusIcon size={14} />
           </button>
-          <span className="w-10 text-center font-mono text-[9px] text-muted-foreground/60 tabular-nums">
+          <span className="text-muted-foreground/60 w-10 text-center font-mono text-[9px] tabular-nums">
             {currentZoom}%
           </span>
           <button
             onClick={() => handleZoom("in")}
-            className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors"
           >
-            <MagnifyingGlassPlus size={14} />
+            <MagnifyingGlassPlusIcon size={14} />
           </button>
           <button
             onClick={() => handleZoom("fit")}
-            className="p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors"
           >
-            <CornersOut size={14} />
+            <CornersOutIcon size={14} />
           </button>
         </div>
 
         {/* Center: Empty for now (or filename) */}
-        <div className="flex flex-1 justify-start md:justify-center overflow-hidden">
-        </div>
+        <div className="flex flex-1 justify-start overflow-hidden md:justify-center"></div>
 
         {/* Right: Export + Save */}
         <div className="flex items-center gap-2">
           {isCompact && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              className="text-muted-foreground/50 hover:text-muted-foreground flex items-center gap-1 px-2 py-1 transition-colors"
             >
-              <List size={14} />
+              <ListIcon size={14} />
             </button>
           )}
           <select
-            className="hidden sm:block border border-white/[0.06] bg-transparent px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase text-muted-foreground/50 outline-none hover:text-muted-foreground cursor-pointer appearance-none"
+            className="text-muted-foreground/50 hover:text-muted-foreground hidden cursor-pointer appearance-none border border-white/[0.06] bg-transparent px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase outline-none sm:block"
             onChange={(e) => handleDownload(e.target.value as any)}
             value=""
           >
-            <option value="" disabled>Export</option>
+            <option value="" disabled>
+              Export
+            </option>
             <option value="png">PNG</option>
             <option value="jpeg">JPEG</option>
             <option value="webp">WEBP</option>
@@ -330,14 +362,14 @@ export function CanvasEditor({
           <button
             onClick={() => handleDownload("png")}
             disabled={!canvas || isDownloading}
-            className="flex items-center gap-1 px-2 py-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors disabled:opacity-50 sm:hidden"
+            className="text-muted-foreground/50 hover:text-muted-foreground flex items-center gap-1 px-2 py-1 transition-colors disabled:opacity-50 sm:hidden"
           >
-            <Download size={14} />
+            <DownloadIcon size={14} />
           </button>
           <button
             onClick={handleSave}
             disabled={!canvas || saveMutation.isPending}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 font-mono text-[9px] font-bold tracking-wider uppercase disabled:opacity-50 transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? "Saving..." : "Save"}
           </button>
@@ -347,7 +379,7 @@ export function CanvasEditor({
       <div className="relative flex flex-1 overflow-hidden">
         <CanvasToolbar />
         {/* Main Canvas Area */}
-        <main className="relative flex-1 min-w-0 bg-zinc-950">
+        <main className="relative min-w-0 flex-1 bg-zinc-950">
           <CanvasViewport
             canvas={canvas}
             setCanvas={setCanvas}
@@ -362,17 +394,20 @@ export function CanvasEditor({
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 20, opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4"
+                className="absolute bottom-3 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 px-4"
               >
                 {(() => {
                   let validationError = "";
                   if (canvasMode === "inpaint" && !maskData) {
                     validationError = "Please draw a mask first";
-                  } else if (canvasMode === "img2img" && !regionBounds) {
-                    validationError = "Please select a region first";
+                  } else if (canvasMode === "img2img" && !selectedObject) {
+                    validationError = "Please select an image first";
                   } else if (canvasMode === "sketch2img") {
-                    const hasPaths = canvas?.getObjects().some(o => o.type === "path");
-                    if (!hasPaths) validationError = "Please draw a sketch first";
+                    const hasPaths = canvas
+                      ?.getObjects()
+                      .some((o) => o.type === "path");
+                    if (!hasPaths)
+                      validationError = "Please draw a sketch first";
                   }
 
                   return (
@@ -381,24 +416,32 @@ export function CanvasEditor({
                       onChange={setAiPrompt}
                       onSubmit={handleGenerate}
                       targetContext={
-                        canvasMode === "inpaint" ? "Inpaint Mask" :
-                        canvasMode === "img2img" ? "Selected Region" :
-                        canvasMode === "sketch2img" ? "Sketch Drawing" :
-                        undefined
+                        canvasMode === "inpaint"
+                          ? "Inpaint Mask"
+                          : canvasMode === "img2img"
+                            ? "Selected Image"
+                            : canvasMode === "sketch2img"
+                              ? "Sketch Drawing"
+                              : undefined
                       }
-                      onClearTarget={() => useCanvasStore.getState().resetAIWorkflow()}
+                      onClearTarget={() =>
+                        useCanvasStore.getState().resetAIWorkflow()
+                      }
                       isLoading={isGenerating}
                       submitDisabled={!!validationError}
                       validationError={validationError}
                       placeholder={
-                        canvasMode === "inpaint" ? "Describe what should fill the masked area..." :
-                        canvasMode === "img2img" ? "Describe how to transform the selected region..." :
-                        canvasMode === "sketch2img" ? "Describe what your sketch represents..." :
-                        "Describe what to generate..."
+                        canvasMode === "inpaint"
+                          ? "Describe what should fill the masked area..."
+                          : canvasMode === "img2img"
+                            ? "Describe how to improve the selected image..."
+                            : canvasMode === "sketch2img"
+                              ? "Describe what your sketch represents..."
+                              : "Describe what to generate..."
                       }
                       credits={credits}
                       size="compact"
-                      className="shadow-2xl !p-0 [&>div>div]:rounded-none [&>div>div]:!border-white/10"
+                      className="!p-0 shadow-2xl [&>div>div]:rounded-none [&>div>div]:!border-white/10"
                     />
                   );
                 })()}

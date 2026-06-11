@@ -13,7 +13,7 @@ import { ToolButton } from "./tool-button";
 import { useCanvasStore } from "../../store/canvas-store";
 
 export function CanvasToolbar() {
-  const { activeTool, setActiveTool } = useCanvasStore();
+  const { activeTool, setActiveTool, canvasMode, resetAIWorkflow } = useCanvasStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -21,6 +21,18 @@ export function CanvasToolbar() {
     if (tool === "image") {
       fileInputRef.current?.click();
     } else {
+      // Professional workflow management:
+      // If the user selects a tool that is fundamentally incompatible with the active AI workflow,
+      // it means they are trying to break out of the AI workflow to do manual editing.
+      // We seamlessly abort the AI workflow so the UI states don't desynchronize.
+      if (canvasMode === "img2img" && tool !== "select" && tool !== "hand") {
+        resetAIWorkflow();
+      } else if (canvasMode === "inpaint" && tool !== "eraser" && tool !== "hand") {
+        resetAIWorkflow();
+      } else if (canvasMode === "sketch2img" && tool !== "pencil" && tool !== "eraser" && tool !== "hand" && tool !== "select") {
+        resetAIWorkflow();
+      }
+
       setActiveTool(tool);
     }
   };

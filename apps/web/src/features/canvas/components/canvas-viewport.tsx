@@ -109,10 +109,10 @@ export function CanvasViewport({
           top: artboard.top! + (height - imgHeight * imgScale) / 2,
           scaleX: imgScale,
           scaleY: imgScale,
-          selectable: false,
-          evented: false,
-          locked: true,
-          hoverCursor: "default",
+          selectable: true,
+          evented: true,
+          locked: false,
+          hoverCursor: "pointer",
         });
         (img as any).id = "obj_initial_image";
         (img as any).name = "Source Image";

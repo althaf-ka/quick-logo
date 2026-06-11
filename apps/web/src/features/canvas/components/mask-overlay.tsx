@@ -14,7 +14,7 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [maskCanvas, setMaskCanvas] = useState<fabric.Canvas | null>(null);
-  const { canvasMode, activeTool, maskBrushSize, setMaskBrushSize, setMaskData } = useCanvasStore();
+  const { canvasMode, activeTool, maskBrushSize, setMaskBrushSize, setMaskData, maskData } = useCanvasStore();
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -28,23 +28,30 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
 
     setMaskCanvas(fabricCanvas);
 
-    const handleResize = () => {
-      if (containerRef.current) {
-        fabricCanvas.setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width <= 0 || height <= 0) return;
+        fabricCanvas.setDimensions({ width, height });
         fabricCanvas.requestRenderAll();
       }
-    };
-    window.addEventListener("resize", handleResize);
+    });
+
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       fabricCanvas.dispose();
       setMaskCanvas(null);
     };
   }, []);
+
+  // Clear mask canvas when maskData is cleared externally (e.g., when tool is cancelled)
+  useEffect(() => {
+    if (!maskData && maskCanvas) {
+      maskCanvas.clear();
+    }
+  }, [maskData, maskCanvas]);
 
   useMaskBrush(mainCanvas, maskCanvas);
 

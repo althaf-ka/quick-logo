@@ -2,11 +2,24 @@ import { useCanvasStore } from "../../store/canvas-store";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
 import { getModelsForContext } from "@quicklogo/ai-providers/models";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@quicklogo/ui/components/accordion";
-import { Sparkle, PaintBrush, Image as ImageIcon, Pencil, Stack, Info } from "@phosphor-icons/react";
+import { useState } from "react";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@quicklogo/ui/components/accordion";
+import {
+  Sparkle,
+  PaintBrush,
+  Image as ImageIcon,
+  Pencil,
+  Stack,
+} from "@phosphor-icons/react";
+import { useWorkflowReadiness } from "../../hooks/use-workflow-readiness";
+import type { WorkflowDefinition } from "../../hooks/use-workflow-readiness";
 import type { GenerationStatus } from "../../hooks/use-canvas-ai";
 import type { ModelOption } from "@quicklogo/ai-providers/models";
-import type { CanvasMode } from "../../types/canvas";
 import { cn } from "@quicklogo/ui/lib/utils";
 
 const EDIT_MODELS = getModelsForContext("edit");
@@ -38,182 +51,209 @@ export function AiPanel({
     setAiModel,
     aiStrength,
     setAiStrength,
-    selectionType,
-    selectedObject,
-    activeTool,
-    maskData,
     regionBounds,
+    resetAIWorkflow,
   } = useCanvasStore();
 
-  const handleCTA = (mode: string) => {
-    setCanvasMode(mode as CanvasMode);
+  const { workflows } = useWorkflowReadiness();
+
+  const [clickedToolId, setClickedToolId] = useState<string | null>(null);
+
+  const activeToolId = (() => {
+    if (canvasMode === "edit") return null;
+    const tool = workflows.find((w) => w.id === clickedToolId);
+    if (tool && tool.internalId === canvasMode) {
+      return clickedToolId;
+    }
+    const matchingTool = workflows.find((w) => w.internalId === canvasMode);
+    return matchingTool ? matchingTool.id : null;
+  })();
+
+  const getWorkflowTheme = (id: string) => {
+    switch (id) {
+      case "improve-image":
+        return {
+          text: "text-blue-400",
+          border: "border-blue-500",
+          bg: "bg-blue-500/10",
+          accent: "bg-blue-500",
+        };
+      case "replace-part":
+        return {
+          text: "text-pink-400",
+          border: "border-pink-500",
+          bg: "bg-pink-500/10",
+          accent: "bg-pink-500",
+        };
+      case "create-new":
+        return {
+          text: "text-purple-400",
+          border: "border-purple-500",
+          bg: "bg-[#1A102C]",
+          accent: "bg-purple-500",
+        };
+      case "sketch-to-image":
+        return {
+          text: "text-yellow-400",
+          border: "border-yellow-500",
+          bg: "bg-yellow-500/10",
+          accent: "bg-yellow-500",
+        };
+      default:
+        return {
+          text: "text-zinc-400",
+          border: "border-zinc-500",
+          bg: "bg-zinc-500/10",
+          accent: "bg-zinc-500",
+        };
+    }
   };
 
-  // Determine highlighted action based on priority
-  let highlightedAction = "draw-region";
-  let contextText = "No Selection";
-  let contextDesc = "Select an image to unlock image editing tools.";
-  const emptyStateTitle = "What would you like to do?";
-
-  if (canvasMode === "inpaint") {
-    highlightedAction = "inpaint";
-    contextText = "Inpaint Mode Active";
-    contextDesc = "Paint a mask to generate new content.";
-  } else if (canvasMode === "sketch2img") {
-    highlightedAction = "sketch";
-    contextText = "Sketch Mode Active";
-    contextDesc = "Transforming your sketch to an image.";
-  } else if (canvasMode === "img2img") {
-    if (selectedObject && selectionType === "single") {
-      highlightedAction = "refine";
-      contextText = "Refine Mode Active";
-      contextDesc = "Refining selected image with AI.";
-    } else {
-      highlightedAction = "draw-region";
-      contextText = "Region Mode Active";
-      contextDesc = "Draw a region to generate content.";
+  const getWorkflowIcon = (id: string, themeText: string, size: number = 24) => {
+    switch (id) {
+      case "improve-image":
+        return <ImageIcon size={size} weight="duotone" className={themeText} />;
+      case "replace-part":
+        return <PaintBrush size={size} weight="duotone" className={themeText} />;
+      case "create-new":
+        return <Sparkle size={size} weight="duotone" className={themeText} />;
+      case "sketch-to-image":
+        return <Pencil size={size} weight="duotone" className={themeText} />;
+      default:
+        return <Stack size={size} weight="duotone" className={themeText} />;
     }
-  } else if (selectionType === "multi") {
-    highlightedAction = "blend";
-    contextText = "Multiple Objects Selected";
-    contextDesc = "Blend Layers is currently unavailable.";
-  } else if (selectionType === "single" && selectedObject) {
-    if (selectedObject.type === "textbox" || selectedObject.type === "text") {
-      highlightedAction = "none";
-      contextText = "Text Selected";
-      contextDesc = "Text AI Tools are coming soon.";
-    } else {
-      highlightedAction = "refine";
-      contextText = "Selected Image";
-      contextDesc = "Refine the selected image with AI.";
-    }
-  } else if (activeTool === "brush") {
-    highlightedAction = "inpaint";
-    contextText = "Brush Tool Active";
-    contextDesc = "Use the brush tool to paint a mask, then generate.";
-  } else if (activeTool === "pencil") {
-    highlightedAction = "sketch";
-    contextText = "Pencil Tool Active";
-    contextDesc = "Polish your rough sketch into a high-quality image.";
-  }
+  };
 
-  const renderAction = (
-    id: string,
-    icon: React.ReactNode,
-    label: string,
-    mode: string | null,
-    disabled = false
-  ) => {
-    const isHighlighted = highlightedAction === id;
+  const renderToolButton = (workflow: WorkflowDefinition) => {
+    const isActive = activeToolId === workflow.id;
+    const theme = getWorkflowTheme(workflow.id);
+
+    // Simplify names for the grid
+    let shortName = workflow.name;
+    if (workflow.id === "improve-image") shortName = "Improve";
+    if (workflow.id === "replace-part") shortName = "Replace";
+    if (workflow.id === "create-new") shortName = "Create";
+    if (workflow.id === "sketch-to-image") shortName = "Sketch";
+
     return (
       <button
-        key={id}
-        disabled={disabled || isGenerating}
-        onClick={() => mode && handleCTA(mode)}
+        key={workflow.id}
+        onClick={() => {
+          if (isActive) {
+            setClickedToolId(null);
+            handleClearRegion(); // Clears canvas objects (region, sketch)
+            resetAIWorkflow(); // Fully wipes store states (mode, prompt, masks, results, etc)
+          } else {
+            setClickedToolId(workflow.id);
+            if (workflow.internalId) setCanvasMode(workflow.internalId);
+          }
+        }}
         className={cn(
-          "flex w-full items-center gap-3 px-3 py-2.5 text-left text-xs font-medium transition-colors border rounded-none",
-          isHighlighted
-            ? "bg-primary/20 text-primary border-primary/30"
-            : disabled
-            ? "bg-white/5 text-white/30 border-white/5 cursor-not-allowed"
-            : "bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white border-white/10"
+          "group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-none border p-4 transition-all duration-200",
+          isActive
+            ? `${theme.bg} ${theme.border}`
+            : "border-white/[0.05] bg-zinc-950/50 hover:border-white/10 hover:bg-zinc-900/50",
         )}
       >
-        {icon}
-        {label}
+        <div className="transition-transform duration-300 group-hover:-translate-y-0.5">
+          {getWorkflowIcon(workflow.id, theme.text)}
+        </div>
+        <span
+          className={cn(
+            "mt-1 text-center font-mono text-[10px] font-bold tracking-wider uppercase transition-colors",
+            isActive ? theme.text : "text-zinc-400 group-hover:text-zinc-200",
+          )}
+        >
+          {shortName}
+        </span>
       </button>
     );
   };
 
+  const activeWorkflow = workflows.find((w) => w.id === activeToolId);
+
   return (
     <div className="flex h-full flex-col">
-      <div className="p-4 border-b border-white/[0.06]">
-        <h3 className="font-mono text-[10px] font-bold tracking-wider uppercase text-muted-foreground/50">AI Workflow</h3>
+      <div className="border-b border-white/[0.06] p-4">
+        <h3 className="text-muted-foreground/50 font-mono text-[10px] font-bold tracking-wider uppercase">
+          AI Toolbox
+        </h3>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto scrollbar-subtle p-4 space-y-6">
         
-        {/* Section B: Context (placed at top to guide the user) */}
-        <div className="bg-white/[0.02] border border-white/10 p-3 rounded-none">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Info size={14} className="text-primary/70" weight="duotone" />
-            <span className="font-mono text-[10px] font-bold tracking-wider uppercase text-white/80">
-              {highlightedAction === "draw-region" ? emptyStateTitle : contextText}
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground/60 leading-relaxed pl-5">
-            {contextDesc}
-          </p>
-        </div>
+        {/* Unified Top Context Box */}
+        {(() => {
+          if (activeWorkflow) {
+            const activeTheme = getWorkflowTheme(activeWorkflow.id);
+            return (
+              <div className={cn("border border-white/5 p-4 relative overflow-hidden flex flex-col gap-3 transition-colors duration-300 rounded-none bg-zinc-950/30", activeTheme.bg)}>
+                <div className={cn("absolute top-0 left-0 right-0 h-[2px]", activeTheme.accent)} />
+                
+                <div className="flex items-center gap-2 mt-1">
+                  {getWorkflowIcon(activeWorkflow.id, activeTheme.text, 16)}
+                  <h4 className={cn("font-mono text-[11px] font-bold tracking-wider uppercase", activeTheme.text)}>
+                    {activeWorkflow.name}
+                  </h4>
+                </div>
 
-        {/* Section A: AI Actions */}
-        <div>
-          <h4 className="text-muted-foreground/50 mb-3 font-mono text-[10px] font-bold tracking-wider uppercase">
-            AI Actions
-          </h4>
-          <div className="flex flex-col gap-2">
-            {renderAction("refine", <ImageIcon size={16} />, "Refine Image", "img2img")}
-            {renderAction("inpaint", <PaintBrush size={16} />, "Inpaint Region", "inpaint")}
-            {renderAction("sketch", <Pencil size={16} />, "Sketch to Image", "sketch2img")}
-            {renderAction("draw-region", <Sparkle size={16} />, "Draw AI Region", "img2img")}
-            {renderAction("blend", <Stack size={16} />, "Blend Layers (Coming Soon)", null, true)}
-          </div>
-        </div>
+                <p className="text-[11px] leading-relaxed text-zinc-300 font-mono tracking-wide">
+                  {activeWorkflow.statusMessage}
+                </p>
 
-        {/* Status Indicators for selected modes */}
-        {(canvasMode === "inpaint" || canvasMode === "img2img" || canvasMode === "sketch2img") && (
-          <div className="pt-2">
-            <div className="flex items-center justify-between mb-2">
-               <h4 className="text-primary font-mono text-[10px] font-bold tracking-wider uppercase">
-                 Active Workflow: {canvasMode}
-               </h4>
-               <button
-                 onClick={() => handleCTA("edit")}
-                 className="text-xs text-red-400 hover:text-red-300 transition-colors underline underline-offset-2"
-               >
-                 Cancel
-               </button>
-            </div>
-
-            {canvasMode === "inpaint" && !maskData && (
-              <div className="border border-yellow-500/10 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-500/80 rounded-none mt-2">
-                Paint a mask on the canvas first
-              </div>
-            )}
-            
-            {canvasMode === "img2img" && (
-              <div className="mt-2">
-                {regionBounds ? (
-                  <div className="flex items-center justify-between border border-white/10 bg-zinc-900 px-3 py-2 text-xs rounded-none">
-                    <span className="font-mono text-zinc-300">
-                      Region: {Math.round(regionBounds.width)} &times; {Math.round(regionBounds.height)} px
-                    </span>
-                    <button
-                      onClick={handleClearRegion}
-                      className="text-zinc-400 hover:text-white transition-colors underline underline-offset-2"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                ) : (
-                  <div className="border border-yellow-500/10 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-500/80 rounded-none">
-                    Select a region on the canvas first
-                  </div>
+                {/* Render clear region button if region exists and mode matches */}
+                {canvasMode === "img2img" && regionBounds && (
+                   <div className="flex items-center justify-between border border-white/10 bg-zinc-900/50 px-3 py-2 text-[10px] font-mono rounded-none mt-2">
+                     <span className="text-zinc-400">
+                       Region: {Math.round(regionBounds.width)} &times; {Math.round(regionBounds.height)} px
+                     </span>
+                     <button
+                       onClick={handleClearRegion}
+                       className="text-zinc-400 hover:text-white transition-colors underline underline-offset-2 uppercase tracking-wider"
+                     >
+                       Clear
+                     </button>
+                   </div>
                 )}
               </div>
-            )}
-          </div>
-        )}
+            );
+          } else {
+            return (
+              <div className="border border-white/5 bg-zinc-950/30 p-4 relative overflow-hidden flex flex-col gap-3 transition-colors duration-300 rounded-none">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-zinc-800" />
+                
+                <div className="flex items-center gap-2 mt-1">
+                  <Stack size={16} weight="duotone" className="text-zinc-500" />
+                  <h4 className="font-mono text-[11px] font-bold tracking-wider uppercase text-zinc-500">
+                    Getting Started
+                  </h4>
+                </div>
 
-        {/* Section C: Advanced Settings */}
+                <p className="text-[11px] leading-relaxed text-zinc-400 font-mono tracking-wide">
+                  Select a tool from the grid below to start creating.
+                </p>
+              </div>
+            );
+          }
+        })()}
+
+        {/* Minimal 2x2 Grid */}
+        <div className="grid grid-cols-2 gap-2">
+          {workflows.map(renderToolButton)}
+        </div>
+
+        {/* Section: Generation Settings */}
         <Accordion className="w-full">
-          <AccordionItem value="advanced-settings" className="border-white/10 border rounded-none">
-            <AccordionTrigger className="px-3 hover:bg-white/5 py-3 hover:no-underline rounded-none data-[state=open]:border-b border-white/10">
-              <span className="font-mono text-[10px] font-bold tracking-wider uppercase text-muted-foreground">
-                Advanced Settings
+          <AccordionItem
+            value="advanced-settings"
+            className="rounded-none border border-white/10"
+          >
+            <AccordionTrigger className="rounded-none border-white/10 px-3 py-3 hover:bg-white/5 hover:no-underline data-[state=open]:border-b">
+              <span className="text-muted-foreground font-mono text-[10px] font-bold tracking-wider uppercase">
+                Generation Settings
               </span>
             </AccordionTrigger>
-            <AccordionContent className="p-4 space-y-5 bg-zinc-950/50">
+            <AccordionContent className="space-y-5 bg-zinc-950/50 p-4">
               {/* Model selector */}
               <div>
                 <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
@@ -230,7 +270,7 @@ export function AiPanel({
 
               {/* Strength slider */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <label className="text-muted-foreground/50 font-mono text-[10px] font-bold tracking-wider uppercase">
                     Input Strength
                   </label>
@@ -248,10 +288,10 @@ export function AiPanel({
                   step={1}
                 />
               </div>
-              
+
               {/* Steps (Placeholder) */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <label className="text-muted-foreground/50 font-mono text-[10px] font-bold tracking-wider uppercase">
                     Steps (Coming Soon)
                   </label>
@@ -259,25 +299,19 @@ export function AiPanel({
                     30
                   </span>
                 </div>
-                <Slider
-                  value={[30]}
-                  disabled
-                  min={10}
-                  max={50}
-                  step={1}
-                />
+                <Slider value={[30]} disabled min={10} max={50} step={1} />
               </div>
-              
+
               {/* Seed (Placeholder) */}
               <div>
                 <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
                   Seed (Coming Soon)
                 </label>
-                <input 
-                  type="text" 
-                  disabled 
-                  placeholder="Random" 
-                  className="w-full bg-zinc-900 border border-white/10 rounded-none px-3 py-2 text-xs text-zinc-500" 
+                <input
+                  type="text"
+                  disabled
+                  placeholder="Random"
+                  className="w-full rounded-none border border-white/10 bg-zinc-900 px-3 py-2 text-xs text-zinc-500"
                 />
               </div>
             </AccordionContent>
@@ -286,12 +320,12 @@ export function AiPanel({
 
         {/* Section D: Workflow Status */}
         {isGenerating && (
-          <div className="border border-primary/20 bg-primary/10 p-4 rounded-none">
+          <div className="border-primary/20 bg-primary/10 rounded-none border p-4">
             <h4 className="text-primary mb-3 font-mono text-[10px] font-bold tracking-wider uppercase">
               Workflow Status
             </h4>
             <div className="flex items-center gap-3">
-              <span className="border-primary/30 border-t-primary size-4 animate-spin border-2 rounded-full" />
+              <span className="border-primary/30 border-t-primary size-4 animate-spin rounded-full border-2" />
               <span className="text-primary/90 font-mono text-[10px] tracking-wider uppercase">
                 {getStatusText(generationStatus)}
               </span>

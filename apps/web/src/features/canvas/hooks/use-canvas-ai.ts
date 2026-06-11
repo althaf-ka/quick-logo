@@ -42,10 +42,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       return;
     }
 
-    if ((store.canvasMode === "img2img") && !store.regionBounds) {
-      toast.error("Please select a region first");
-      return;
-    }
+
 
     try {
       store.setIsAiGenerating(true);
@@ -55,15 +52,30 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       const canvasImageDataUrl = exportToDataUrl("png");
       if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
 
+      let targetBounds: { left: number; top: number; width: number; height: number } | undefined;
+      
+      if (store.canvasMode === "img2img") {
+        const activeObj = canvas.getActiveObject();
+        if (activeObj && (activeObj as any).id !== "__artboard__") {
+          const rect = activeObj.getBoundingRect();
+          targetBounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        } else {
+          toast.error("Please select an image first");
+          setGenerationStatus("idle");
+          store.setIsAiGenerating(false);
+          return;
+        }
+      }
+
       // Export Region if needed
       let regionImageDataUrl: string | undefined;
-      if ((store.canvasMode === "img2img") && store.regionBounds) {
+      if (store.canvasMode === "img2img" && targetBounds) {
         regionImageDataUrl = canvas.toDataURL({
           format: "png",
-          left: store.regionBounds.left,
-          top: store.regionBounds.top,
-          width: store.regionBounds.width,
-          height: store.regionBounds.height,
+          left: targetBounds.left,
+          top: targetBounds.top,
+          width: targetBounds.width,
+          height: targetBounds.height,
           multiplier: 1,
         });
       }
@@ -167,7 +179,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       const generationGroupId = `gen_${Date.now()}`;
 
       await compositeAIResult(canvas, finalImageUrl, store.canvasMode, {
-        regionBounds: store.regionBounds ?? undefined,
+        regionBounds: targetBounds,
         artboardBounds,
         generationGroupId,
         generatedFromObjectId: store.activeAIObjectId,

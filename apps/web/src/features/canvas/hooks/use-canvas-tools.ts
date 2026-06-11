@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import type { CanvasObjectInfo, SelectedObjectProps } from "../types/canvas";
-import { toast } from "@quicklogo/ui/components/sonner";
 
 // We assign a unique id to objects if they don't have one
 let idCounter = 0;
@@ -26,14 +25,12 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
   useEffect(() => {
     if (canvasMode === "sketch2img") {
       setActiveTool("pencil");
-      setBrushSettings({ width: 3, color: "#000000", opacity: 1 });
-      toast("Draw your sketch, then describe what it should become", {
-        icon: "🎨",
-      });
-    } else if (
-      canvasMode === "inpaint" ||
-      canvasMode === "img2img"
-    ) {
+      // Use a glowing violet color for the AI sketch tool
+      setBrushSettings({ width: 4, color: "#8B5CF6", opacity: 1 });
+    } else if (canvasMode === "img2img") {
+      setActiveTool("select");
+      // We don't discard active object for img2img so the user can just select an image.
+    } else if (canvasMode === "inpaint") {
       if (canvas) {
         canvas.discardActiveObject();
         canvas.requestRenderAll();
@@ -129,8 +126,12 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
 
     const syncSelection = () => {
       const activeObjects = canvas.getActiveObjects();
-      
-      if (!activeObjects || activeObjects.length === 0 || activeObjects.every(o => (o as any).id === "__artboard__")) {
+
+      if (
+        !activeObjects ||
+        activeObjects.length === 0 ||
+        activeObjects.every((o) => (o as any).id === "__artboard__")
+      ) {
         setSelectedObject(null);
         setSelectedObjects([]);
         setSelectionType("none");
@@ -152,7 +153,7 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
             fill: obj.fill?.toString() || "#000000",
             stroke: obj.stroke?.toString() || "#000000",
             strokeWidth: obj.strokeWidth || 0,
-          }))
+          })),
         );
         setSelectionType("multi");
         return;
@@ -220,10 +221,13 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
 
     const handlePathCreated = (e: any) => {
       if (e.path) {
+        const currentMode = useCanvasStore.getState().canvasMode;
+        const isSketch = currentMode === "sketch2img";
         e.path.set({
           perPixelTargetFind: true,
           id: generateId(),
-          name: "Drawing",
+          name: isSketch ? "AI Sketch" : "Drawing",
+          isAiSketch: isSketch,
         });
         handleEvent();
       }
@@ -320,40 +324,40 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
       const { id } = (e as CustomEvent).detail;
       const obj = canvas.getObjects().find((o) => (o as any).id === id);
       if (obj && (obj.type === "image" || obj.type === "Image")) {
-         const objects = canvas.getObjects();
-         const index = objects.indexOf(obj);
-         if (index > 0) {
-            const belowObj = objects[index - 1];
-            if ((belowObj as any).id === "__artboard__" || !belowObj) {
-              return; // Can't flatten with artboard
-            }
+        const objects = canvas.getObjects();
+        const index = objects.indexOf(obj);
+        if (index > 0) {
+          const belowObj = objects[index - 1];
+          if ((belowObj as any).id === "__artboard__" || !belowObj) {
+            return; // Can't flatten with artboard
+          }
 
-            // Group them temporarily to get the bounding box and data URL
-            const group = new fabric.Group([belowObj, obj], { canvas });
-            const dataUrl = group.toDataURL({ format: "png" });
-            
-            // Re-import as a single image
-            const FabricImageClass = (fabric as any).FabricImage || fabric.Image;
-            FabricImageClass.fromURL(dataUrl).then((img: fabric.Image) => {
-               (img as any).id = generateId();
-               img.set({
-                 left: group.left,
-                 top: group.top,
-                 scaleX: 1,
-                 scaleY: 1,
-                 name: "Flattened Image",
-               });
-               
-               canvas.remove(belowObj);
-               canvas.remove(obj);
-               
-               // insertAt is not always available in v6, use insertAt or add/moveTo
-               canvas.insertAt(index - 1, img);
-               
-               canvas.setActiveObject(img);
-               canvas.requestRenderAll();
+          // Group them temporarily to get the bounding box and data URL
+          const group = new fabric.Group([belowObj, obj], { canvas });
+          const dataUrl = group.toDataURL({ format: "png" });
+
+          // Re-import as a single image
+          const FabricImageClass = (fabric as any).FabricImage || fabric.Image;
+          FabricImageClass.fromURL(dataUrl).then((img: fabric.Image) => {
+            (img as any).id = generateId();
+            img.set({
+              left: group.left,
+              top: group.top,
+              scaleX: 1,
+              scaleY: 1,
+              name: "Flattened Image",
             });
-         }
+
+            canvas.remove(belowObj);
+            canvas.remove(obj);
+
+            // insertAt is not always available in v6, use insertAt or add/moveTo
+            canvas.insertAt(index - 1, img);
+
+            canvas.setActiveObject(img);
+            canvas.requestRenderAll();
+          });
+        }
       }
     };
 
@@ -476,23 +480,60 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
     canvas.selection = false;
     canvas.defaultCursor = "default";
 
-    const isAiModeWithoutSelection =
-      canvasMode === "inpaint" ||
-      canvasMode === "img2img";
+    // Auto-cleanup any abandoned AI sketches if we leave sketch2img mode
+    if (canvasMode !== "sketch2img") {
+      let removedAny = false;
+      canvas.getObjects().forEach((obj) => {
+        if ((obj as any).isAiSketch) {
+          canvas.remove(obj);
+          removedAny = true;
+        }
+      });
+      if (removedAny) canvas.requestRenderAll();
+    }
+
+    const isAiModeWithoutSelection = canvasMode === "inpaint";
 
     canvas.forEachObject((obj) => {
       if (!obj.get("locked") && (obj as any).id !== "__artboard__") {
-        if (activeTool === "hand" || activeTool === "shapes" || activeTool === "eraser") {
+        if (
+          activeTool === "hand" ||
+          activeTool === "shapes" ||
+          activeTool === "eraser"
+        ) {
           obj.set({ selectable: false, evented: false });
         } else if (activeTool === "text") {
-          const isText = obj.type === "textbox" || obj.type === "text" || obj.type === "i-text";
+          const isText =
+            obj.type === "textbox" ||
+            obj.type === "text" ||
+            obj.type === "i-text";
           obj.set({ selectable: isText, evented: isText });
         } else {
-          // In certain AI modes, we disable selection of underlying objects
-          obj.set({
-            selectable: !isAiModeWithoutSelection,
-            evented: !isAiModeWithoutSelection,
-          });
+          if (canvasMode === "img2img") {
+            // AI Improve mode: Objects are selectable targets, but NOT editable
+            obj.set({
+              selectable: true,
+              evented: true,
+              hasControls: false, // Removes the resize/rotate circles
+              hasBorders: true,
+              lockMovementX: true, // Prevents dragging
+              lockMovementY: true,
+              borderColor: "#4C1D95", // Distinct dark professional purple for AI targets
+              borderScaleFactor: 6, // Much thicker boundary so it's easily noticeable
+            });
+          } else {
+            // Normal Edit Mode
+            obj.set({
+              selectable: !isAiModeWithoutSelection,
+              evented: !isAiModeWithoutSelection,
+              hasControls: true,
+              hasBorders: true,
+              lockMovementX: false,
+              lockMovementY: false,
+              borderColor: "#6D28D9", // Restore default theme color
+              borderScaleFactor: 2,
+            });
+          }
         }
       }
     });
@@ -547,7 +588,12 @@ export function useCanvasTools(canvas: fabric.Canvas | null) {
         canvas.setCursor("grabbing");
       } else if (activeTool === "text") {
         const target = (opt as any).target;
-        if (target && (target.type === "textbox" || target.type === "text" || target.type === "i-text")) {
+        if (
+          target &&
+          (target.type === "textbox" ||
+            target.type === "text" ||
+            target.type === "i-text")
+        ) {
           return; // Let fabric handle existing text editing
         }
 
