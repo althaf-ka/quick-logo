@@ -9,13 +9,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@quicklogo/ui/components/accordion";
-import {
-  Sparkle,
-  PaintBrush,
-  Image as ImageIcon,
-  Pencil,
-  Stack,
-} from "@phosphor-icons/react";
+import { ImagesIcon, PaintBrushIcon, StackIcon, ArrowUUpLeft, Trash } from "@phosphor-icons/react";
 import { useWorkflowReadiness } from "../../hooks/use-workflow-readiness";
 import type { WorkflowDefinition } from "../../hooks/use-workflow-readiness";
 import type { GenerationStatus } from "../../hooks/use-canvas-ai";
@@ -53,6 +47,8 @@ export function AiPanel({
     setAiStrength,
     regionBounds,
     resetAIWorkflow,
+    maskBrushSize,
+    setMaskBrushSize,
   } = useCanvasStore();
 
   const { workflows } = useWorkflowReadiness();
@@ -85,20 +81,6 @@ export function AiPanel({
           bg: "bg-pink-500/10",
           accent: "bg-pink-500",
         };
-      case "create-new":
-        return {
-          text: "text-purple-400",
-          border: "border-purple-500",
-          bg: "bg-[#1A102C]",
-          accent: "bg-purple-500",
-        };
-      case "sketch-to-image":
-        return {
-          text: "text-yellow-400",
-          border: "border-yellow-500",
-          bg: "bg-yellow-500/10",
-          accent: "bg-yellow-500",
-        };
       default:
         return {
           text: "text-zinc-400",
@@ -109,18 +91,22 @@ export function AiPanel({
     }
   };
 
-  const getWorkflowIcon = (id: string, themeText: string, size: number = 24) => {
+  const getWorkflowIcon = (
+    id: string,
+    themeText: string,
+    size: number = 24,
+  ) => {
     switch (id) {
       case "improve-image":
-        return <ImageIcon size={size} weight="duotone" className={themeText} />;
+        return (
+          <ImagesIcon size={size} weight="duotone" className={themeText} />
+        );
       case "replace-part":
-        return <PaintBrush size={size} weight="duotone" className={themeText} />;
-      case "create-new":
-        return <Sparkle size={size} weight="duotone" className={themeText} />;
-      case "sketch-to-image":
-        return <Pencil size={size} weight="duotone" className={themeText} />;
+        return (
+          <PaintBrushIcon size={size} weight="duotone" className={themeText} />
+        );
       default:
-        return <Stack size={size} weight="duotone" className={themeText} />;
+        return <StackIcon size={size} weight="duotone" className={themeText} />;
     }
   };
 
@@ -131,9 +117,7 @@ export function AiPanel({
     // Simplify names for the grid
     let shortName = workflow.name;
     if (workflow.id === "improve-image") shortName = "Improve";
-    if (workflow.id === "replace-part") shortName = "Replace";
-    if (workflow.id === "create-new") shortName = "Create";
-    if (workflow.id === "sketch-to-image") shortName = "Sketch";
+    if (workflow.id === "replace-part") shortName = "Modify";
 
     return (
       <button
@@ -180,56 +164,77 @@ export function AiPanel({
         </h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-subtle p-4 space-y-6">
-        
+      <div className="scrollbar-subtle flex-1 space-y-6 overflow-y-auto p-4">
         {/* Unified Top Context Box */}
         {(() => {
           if (activeWorkflow) {
             const activeTheme = getWorkflowTheme(activeWorkflow.id);
             return (
-              <div className={cn("border border-white/5 p-4 relative overflow-hidden flex flex-col gap-3 transition-colors duration-300 rounded-none bg-zinc-950/30", activeTheme.bg)}>
-                <div className={cn("absolute top-0 left-0 right-0 h-[2px]", activeTheme.accent)} />
-                
-                <div className="flex items-center gap-2 mt-1">
+              <div
+                className={cn(
+                  "relative flex flex-col gap-3 overflow-hidden rounded-none border border-white/5 bg-zinc-950/30 p-4 transition-colors duration-300",
+                  activeTheme.bg,
+                )}
+              >
+                <div
+                  className={cn(
+                    "absolute top-0 right-0 left-0 h-[2px]",
+                    activeTheme.accent,
+                  )}
+                />
+
+                <div className="mt-1 flex items-center gap-2">
                   {getWorkflowIcon(activeWorkflow.id, activeTheme.text, 16)}
-                  <h4 className={cn("font-mono text-[11px] font-bold tracking-wider uppercase", activeTheme.text)}>
+                  <h4
+                    className={cn(
+                      "font-mono text-[11px] font-bold tracking-wider uppercase",
+                      activeTheme.text,
+                    )}
+                  >
                     {activeWorkflow.name}
                   </h4>
                 </div>
 
-                <p className="text-[11px] leading-relaxed text-zinc-300 font-mono tracking-wide">
+                <p className="font-mono text-[11px] leading-relaxed tracking-wide text-zinc-300">
                   {activeWorkflow.statusMessage}
                 </p>
 
                 {/* Render clear region button if region exists and mode matches */}
                 {canvasMode === "img2img" && regionBounds && (
-                   <div className="flex items-center justify-between border border-white/10 bg-zinc-900/50 px-3 py-2 text-[10px] font-mono rounded-none mt-2">
-                     <span className="text-zinc-400">
-                       Region: {Math.round(regionBounds.width)} &times; {Math.round(regionBounds.height)} px
-                     </span>
-                     <button
-                       onClick={handleClearRegion}
-                       className="text-zinc-400 hover:text-white transition-colors underline underline-offset-2 uppercase tracking-wider"
-                     >
-                       Clear
-                     </button>
-                   </div>
+                  <div className="mt-2 flex items-center justify-between rounded-none border border-white/10 bg-zinc-900/50 px-3 py-2 font-mono text-[10px]">
+                    <span className="text-zinc-400">
+                      Region: {Math.round(regionBounds.width)} &times;{" "}
+                      {Math.round(regionBounds.height)} px
+                    </span>
+                    <button
+                      onClick={handleClearRegion}
+                      className="tracking-wider text-zinc-400 uppercase underline underline-offset-2 transition-colors hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 )}
+
+
               </div>
             );
           } else {
             return (
-              <div className="border border-white/5 bg-zinc-950/30 p-4 relative overflow-hidden flex flex-col gap-3 transition-colors duration-300 rounded-none">
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-zinc-800" />
-                
-                <div className="flex items-center gap-2 mt-1">
-                  <Stack size={16} weight="duotone" className="text-zinc-500" />
-                  <h4 className="font-mono text-[11px] font-bold tracking-wider uppercase text-zinc-500">
+              <div className="relative flex flex-col gap-3 overflow-hidden rounded-none border border-white/5 bg-zinc-950/30 p-4 transition-colors duration-300">
+                <div className="absolute top-0 right-0 left-0 h-[2px] bg-zinc-800" />
+
+                <div className="mt-1 flex items-center gap-2">
+                  <StackIcon
+                    size={16}
+                    weight="duotone"
+                    className="text-zinc-500"
+                  />
+                  <h4 className="font-mono text-[11px] font-bold tracking-wider text-zinc-500 uppercase">
                     Getting Started
                   </h4>
                 </div>
 
-                <p className="text-[11px] leading-relaxed text-zinc-400 font-mono tracking-wide">
+                <p className="font-mono text-[11px] leading-relaxed tracking-wide text-zinc-400">
                   Select a tool from the grid below to start creating.
                 </p>
               </div>
@@ -241,6 +246,45 @@ export function AiPanel({
         <div className="grid grid-cols-2 gap-2">
           {workflows.map(renderToolButton)}
         </div>
+
+        {/* Render mask tools if inpaint mode */}
+        {canvasMode === "inpaint" && (
+          <div className="flex flex-col gap-4 rounded-none border border-white/10 bg-zinc-950/30 p-4 mt-2">
+            <h4 className="font-mono text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
+              Mask Settings
+            </h4>
+            
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider leading-none">Brush Size</span>
+                <span className="text-[10px] font-mono text-zinc-500 leading-none">{maskBrushSize}</span>
+              </div>
+              <div className="w-full flex items-center h-4">
+                <Slider
+                  value={[maskBrushSize]}
+                  onValueChange={(val) => setMaskBrushSize(Array.isArray(val) ? val[0] : (val as number))}
+                  min={5}
+                  max={100}
+                  step={1}
+                  className="[&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-range]]:bg-violet-500 [&_[data-slot=slider-range]]:rounded-none [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:w-2 [&_[data-slot=slider-thumb]]:h-4 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-thumb]]:transition-transform [&_[data-slot=slider-thumb]]:shadow-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end pt-3 border-t border-white/10">
+               <div className="flex items-center gap-4">
+                 <button onClick={() => window.dispatchEvent(new Event('canvas:mask:undo'))} className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5" title="Undo Stroke">
+                   <ArrowUUpLeft size={14} />
+                   <span className="text-[10px] uppercase tracking-wider font-medium">Undo</span>
+                 </button>
+                 <button onClick={() => window.dispatchEvent(new Event('canvas:mask:clear'))} className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5" title="Clear Mask">
+                   <Trash size={14} />
+                   <span className="text-[10px] uppercase tracking-wider font-medium">Clear</span>
+                 </button>
+               </div>
+            </div>
+          </div>
+        )}
 
         {/* Section: Generation Settings */}
         <Accordion className="w-full">

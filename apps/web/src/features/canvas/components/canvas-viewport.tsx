@@ -45,7 +45,7 @@ export function CanvasViewport({
         // Debounce the viewport transform recalculation to after the CSS transition ends
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-          const artboard = fabricCanvas.getObjects().find(o => (o as any).id === "__artboard__");
+          const artboard = fabricCanvas.getObjects().find(o => o.id === "__artboard__");
           if (artboard) {
             const artWidth = artboard.width || 1024;
             const artHeight = artboard.height || 1024;
@@ -75,10 +75,11 @@ export function CanvasViewport({
     const loadInitialImage = async () => {
       if (!initialImageUrl) return;
 
-      const FabricImageClass = (fabric as any).FabricImage || fabric.Image;
+      const fabricAny = fabric as Record<string, unknown>;
+      const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
       FabricImageClass.fromURL(initialImageUrl, {
         crossOrigin: "anonymous",
-      }).then((img: fabric.Image) => {
+      }).then((img: fabric.FabricImage) => {
         const width = img.width || 1024;
         const height = img.height || 1024;
 
@@ -93,8 +94,8 @@ export function CanvasViewport({
           evented: false,
           hoverCursor: "default",
         });
-        (artboard as any).id = "__artboard__";
-        (artboard as any).name = "Artboard";
+        artboard.id = "__artboard__";
+        artboard.name = "Artboard";
 
         // Scale image to fit within the artboard bounds
         const imgWidth = img.width || 1;
@@ -109,13 +110,13 @@ export function CanvasViewport({
           top: artboard.top! + (height - imgHeight * imgScale) / 2,
           scaleX: imgScale,
           scaleY: imgScale,
-          selectable: true,
+          selectable: false,
           evented: true,
-          locked: false,
-          hoverCursor: "pointer",
+          locked: true,
+          hoverCursor: "default",
         });
-        (img as any).id = "obj_initial_image";
-        (img as any).name = "Source Image";
+        img.id = "obj_initial_image";
+        img.name = "Source Image";
 
         fabricCanvas.add(artboard);
         fabricCanvas.add(img);

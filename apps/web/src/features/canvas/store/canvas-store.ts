@@ -35,6 +35,18 @@ export interface CanvasState {
   brushSettings: BrushSettings;
   setBrushSettings: (settings: Partial<BrushSettings>) => void;
 
+  shapeSettings: { fill: string; stroke: string; strokeWidth: number };
+  setShapeSettings: (settings: Partial<CanvasState["shapeSettings"]>) => void;
+
+  textSettings: {
+    fontFamily: string;
+    fontSize: number;
+    fontWeight: "normal" | "bold";
+    textAlign: "left" | "center" | "right";
+    fill: string;
+  };
+  setTextSettings: (settings: Partial<CanvasState["textSettings"]>) => void;
+
   // Layers (derived from Fabric.js objects)
   layers: CanvasObjectInfo[];
   setLayers: (layers: CanvasObjectInfo[]) => void;
@@ -100,6 +112,24 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   setBrushSettings: (settings) =>
     set((state) => ({
       brushSettings: { ...state.brushSettings, ...settings },
+    })),
+
+  shapeSettings: { fill: "transparent", stroke: "#000000", strokeWidth: 4 },
+  setShapeSettings: (settings) =>
+    set((state) => ({
+      shapeSettings: { ...state.shapeSettings, ...settings },
+    })),
+
+  textSettings: {
+    fontFamily: "Inter",
+    fontSize: 32,
+    fontWeight: "normal",
+    textAlign: "left",
+    fill: "#000000",
+  },
+  setTextSettings: (settings) =>
+    set((state) => ({
+      textSettings: { ...state.textSettings, ...settings },
     })),
 
   layers: [],

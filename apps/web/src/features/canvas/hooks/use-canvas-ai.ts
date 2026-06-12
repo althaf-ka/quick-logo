@@ -56,7 +56,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       
       if (store.canvasMode === "img2img") {
         const activeObj = canvas.getActiveObject();
-        if (activeObj && (activeObj as any).id !== "__artboard__") {
+        if (activeObj && activeObj.id !== "__artboard__") {
           const rect = activeObj.getBoundingRect();
           targetBounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
         } else {
@@ -135,7 +135,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         },
       };
 
-      // @ts-ignore
+      // @ts-expect-error - Hono RPC types mismatch for json payload
       const res = await api.generate.edit.$post({ json: payload });
       if (!res.ok) {
          throw await parseApiError(res);
@@ -166,7 +166,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
 
       setGenerationStatus("compositing");
       
-      const artboard = canvas.getObjects().find((o) => (o as any).id === "__artboard__");
+      const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
       const artboardBounds = artboard 
         ? { 
             left: artboard.left!, 
@@ -196,12 +196,13 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       setGenerationStatus("done");
       toast.success("AI generation complete — placed on canvas");
 
-    } catch (err: any) {
-      console.error(err);
-      if (err instanceof ApiError && err.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
-        toast.error("Not enough credits", { description: err.message });
+    } catch (err) {
+      const error = err as Error & { code?: string };
+      console.error(error);
+      if (error instanceof ApiError && error.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
+        toast.error("Not enough credits", { description: error.message });
       } else {
-        toast.error(err.message || "Generation failed");
+        toast.error(error.message || "Generation failed");
       }
       // Set error explicitly
       store.resetAIWorkflow();
@@ -217,7 +218,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
     // Return all models or filter based on mode if needed
     // Inpaint usually needs specific models if supported, but for now we'll just return all
     return MODELS;
-  }, [store.canvasMode]);
+  }, []);
 
   const selectedModelInfo = availableModels.find((m) => m.id === store.aiModel);
   const credits = selectedModelInfo?.credits || 10;

@@ -9,7 +9,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
 
     const artboard = canvas
       .getObjects()
-      .find((o) => (o as any).id === "__artboard__");
+      .find((o) => o.id === "__artboard__");
     let left, top, width, height;
 
     if (artboard) {
@@ -43,7 +43,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
     return { active };
   };
 
-  const restoreAfterExport = (state: any) => {
+  const restoreAfterExport = (state: { active: fabric.Object[] } | null) => {
     if (!canvas || !state) return;
     if (state.active && state.active.length) {
       if (state.active.length > 1) {
@@ -63,7 +63,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
     if (!canvas) return "";
     const state = prepareForExport();
     const opts = getExportOptions(format, quality);
-    const dataUrl = canvas.toDataURL(opts as any);
+    const dataUrl = canvas.toDataURL(opts as fabric.TDataUrlOptions);
     restoreAfterExport(state);
     return dataUrl;
   };
@@ -81,7 +81,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
 
     const artboard = canvas
       .getObjects()
-      .find((o) => (o as any).id === "__artboard__");
+      .find((o) => o.id === "__artboard__");
     const viewBox = artboard
       ? {
           x: artboard.left || 0,
@@ -91,7 +91,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
         }
       : undefined;
 
-    const svg = canvas.toSVG({ viewBox } as any);
+    const svg = canvas.toSVG({ viewBox } as fabric.TSVGExportOptions);
     restoreAfterExport(state);
     return svg;
   };

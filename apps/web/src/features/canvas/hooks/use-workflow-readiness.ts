@@ -23,8 +23,6 @@ export function useWorkflowReadiness() {
     selectionType,
     selectedObject,
     maskData,
-    regionBounds,
-    layers,
     setCanvasMode,
     setActiveTool,
     activeTool,
@@ -36,8 +34,6 @@ export function useWorkflowReadiness() {
     (selectedObject.type === "image" || selectedObject.type === "FabricImage");
 
   const hasMask = !!maskData;
-  const hasRegion = !!regionBounds;
-  const hasSketch = layers.some((l) => l.type === "path" || l.name === "Drawing");
 
   const workflows = useMemo<WorkflowDefinition[]>(() => {
     return [
@@ -54,9 +50,9 @@ export function useWorkflowReadiness() {
       },
       {
         id: "replace-part",
-        name: "Replace Part of an Image",
+        name: "Modify Area",
         internalId: "inpaint",
-        description: "Replace, remove, or edit a specific area of an image.",
+        description: "Add, remove, or change a specific area of the logo using a brush mask.",
         state: hasMask ? "Ready" : "Needs Input",
         statusMessage: hasMask ? "✓ Mask detected" : "⚠ Paint a mask to continue",
         quickAction: hasMask ? undefined : {
@@ -69,46 +65,10 @@ export function useWorkflowReadiness() {
         progressSequence: ["Paint Mask", "Describe Changes", "Generate"],
         currentStepIndex: hasMask ? 1 : 0,
       },
-      {
-        id: "create-new",
-        name: "Create New Content",
-        internalId: "img2img", // Generate in Selection
-        description: "Create new content inside a selected area of the canvas.",
-        state: hasRegion ? "Ready" : "Needs Input",
-        statusMessage: hasRegion ? "✓ Selection area created" : "⚠ Create a generation area",
-        quickAction: hasRegion ? undefined : {
-          label: "Create Area",
-          action: () => {
-            setCanvasMode("img2img");
-            setActiveTool("select");
-          },
-        },
-        progressSequence: ["Create Area", "Describe What To Generate", "Generate"],
-        currentStepIndex: hasRegion ? 1 : 0,
-      },
-      {
-        id: "sketch-to-image",
-        name: "Turn Sketch Into Artwork",
-        internalId: "sketch2img",
-        description: "Transform a rough sketch into polished artwork.",
-        state: hasSketch ? "Ready" : "Needs Input",
-        statusMessage: hasSketch ? "✓ Sketch detected" : "⚠ Create a sketch to continue",
-        quickAction: hasSketch ? undefined : {
-          label: "Start Sketching",
-          action: () => {
-            setCanvasMode("sketch2img");
-            setActiveTool("pencil");
-          },
-        },
-        progressSequence: ["Create Sketch", "Describe Desired Result", "Generate"],
-        currentStepIndex: hasSketch ? 1 : 0,
-      },
     ];
   }, [
     isImageSelected,
     hasMask,
-    hasRegion,
-    hasSketch,
     setCanvasMode,
     setActiveTool,
   ]);
@@ -118,21 +78,13 @@ export function useWorkflowReadiness() {
   const readyWorkflows = workflows.filter((w) => w.state === "Ready");
 
   // Determine Recommendation Priority
-  if (isImageSelected && !hasMask && !hasRegion && !hasSketch) {
+  if (isImageSelected && !hasMask) {
     recommendedWorkflowId = "improve-image";
   } else if (activeTool === "brush" || hasMask) {
     // If they have a mask or are currently brushing
     if (readyWorkflows.filter(w => w.id !== 'replace-part').length === 0) {
       recommendedWorkflowId = "replace-part";
     }
-  } else if (activeTool === "pencil" || hasSketch) {
-    // If they have a sketch or are sketching
-    if (readyWorkflows.filter(w => w.id !== 'sketch-to-image').length === 0) {
-      recommendedWorkflowId = "sketch-to-image";
-    }
-  } else if (!isImageSelected && !hasMask && !hasSketch) {
-    // Completely empty canvas / no selection
-    recommendedWorkflowId = "create-new";
   }
 
   // If we have multiple ready workflows that conflict, we don't recommend a single one.
@@ -141,7 +93,7 @@ export function useWorkflowReadiness() {
   }
 
   const isEmptyState =
-    !isImageSelected && !hasMask && !hasRegion && !hasSketch && readyWorkflows.length === 0;
+    !isImageSelected && !hasMask && readyWorkflows.length === 0;
 
   return {
     workflows,

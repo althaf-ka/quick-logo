@@ -12,10 +12,61 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
 
     let hoveredObject: fabric.Object | null = null;
     const originalShadows = new Map<fabric.Object, fabric.Shadow | null>();
+    const originalStates = new Map<fabric.Object, { 
+      selectable: boolean; 
+      evented: boolean; 
+      locked: boolean; 
+      hoverCursor: string;
+      lockMovementX: boolean;
+      lockMovementY: boolean;
+      lockScalingX: boolean;
+      lockScalingY: boolean;
+      lockRotation: boolean;
+      hasControls: boolean;
+    }>();
 
-    const handleMouseOver = (opt: any) => {
+    // Pre-set states for img2img mode
+    canvas.getObjects().forEach((obj) => {
+      if (obj.id === "__artboard__") return;
+
+      originalStates.set(obj, {
+        selectable: obj.get("selectable") ?? true,
+        evented: obj.get("evented") ?? true,
+        locked: obj.get("locked") ?? false,
+        hoverCursor: obj.get("hoverCursor") ?? "default",
+        lockMovementX: obj.get("lockMovementX") ?? false,
+        lockMovementY: obj.get("lockMovementY") ?? false,
+        lockScalingX: obj.get("lockScalingX") ?? false,
+        lockScalingY: obj.get("lockScalingY") ?? false,
+        lockRotation: obj.get("lockRotation") ?? false,
+        hasControls: obj.get("hasControls") ?? true,
+      });
+
+      if (obj.type === "image" || obj.type === "Image") {
+        obj.set({
+          selectable: true,
+          evented: true,
+          locked: false,
+          hoverCursor: "pointer",
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
+          hasControls: false,
+        });
+      } else {
+        obj.set({
+          selectable: false,
+          evented: false,
+          hoverCursor: "default",
+        });
+      }
+    });
+
+    const handleMouseOver = (opt: fabric.TEvent & { target?: fabric.Object }) => {
       const target = opt.target;
-      if (target && target.id !== "__artboard__" && !target.get("locked")) {
+      if (target && target.id !== "__artboard__" && (target.type === "image" || target.type === "Image")) {
         hoveredObject = target;
         target.set({ hoverCursor: "pointer" });
 
@@ -40,7 +91,7 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       }
     };
 
-    const handleMouseOut = (opt: any) => {
+    const handleMouseOut = (opt: fabric.TEvent & { target?: fabric.Object }) => {
       const target = opt.target;
       if (target && target.id !== "__artboard__") {
         // Restore original shadow
@@ -71,12 +122,7 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       }
     };
 
-    // Pre-set hoverCursor for all objects
-    canvas.getObjects().forEach((obj) => {
-      if (!obj.get("locked") && (obj as any).id !== "__artboard__") {
-        obj.set("hoverCursor", "pointer");
-      }
-    });
+    // (Hover cursor was already set in the pre-set loop above)
 
     // --- SELECTION GLOW ANIMATION ---
     let animationFrameId: number;
@@ -130,10 +176,40 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
     // Start the animation loop
     animationFrameId = requestAnimationFrame(renderPulse);
 
+    const onAfterRender = (opt: { ctx: CanvasRenderingContext2D }) => {
+      const ctx = opt.ctx;
+      if (!ctx || !currentlyPulsingObject) return;
+
+      ctx.save();
+      
+      const vpt = canvas.viewportTransform;
+      if (vpt) {
+        ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
+      }
+      
+      const matrix = currentlyPulsingObject.calcTransformMatrix();
+      ctx.transform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+      
+      ctx.strokeStyle = "#6D28D9";
+      
+      const scaleX = currentlyPulsingObject.scaleX || 1;
+      const scaleY = currentlyPulsingObject.scaleY || 1;
+      const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+      const zoom = canvas.getZoom();
+      ctx.lineWidth = 4 / (avgScale * zoom);
+      
+      const w = currentlyPulsingObject.width || 0;
+      const h = currentlyPulsingObject.height || 0;
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+      
+      ctx.restore();
+    };
+
     canvas.on("mouse:over", handleMouseOver);
     canvas.on("mouse:out", handleMouseOut);
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
+    canvas.on("after:render", onAfterRender);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
@@ -146,6 +222,7 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       canvas.off("mouse:out", handleMouseOut);
       canvas.off("selection:created", handleSelection);
       canvas.off("selection:updated", handleSelection);
+      canvas.off("after:render", onAfterRender);
 
       // Cleanup any remaining shadow
       if (hoveredObject) {
@@ -162,12 +239,25 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       }
       originalShadows.clear();
 
-      // Restore hoverCursor
+      // Restore original object states
       canvas.getObjects().forEach((obj) => {
-        if (!obj.get("locked") && (obj as any).id !== "__artboard__") {
-          obj.set("hoverCursor", "move");
+        const state = originalStates.get(obj);
+        if (state) {
+          obj.set({
+            selectable: state.selectable,
+            evented: state.evented,
+            locked: state.locked,
+            hoverCursor: state.hoverCursor,
+            lockMovementX: state.lockMovementX,
+            lockMovementY: state.lockMovementY,
+            lockScalingX: state.lockScalingX,
+            lockScalingY: state.lockScalingY,
+            lockRotation: state.lockRotation,
+            hasControls: state.hasControls,
+          });
         }
       });
+      originalStates.clear();
     };
   }, [canvas, canvasMode]);
 }

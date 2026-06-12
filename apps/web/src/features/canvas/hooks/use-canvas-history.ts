@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 
@@ -9,13 +9,13 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
   const isHistoryChanging = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const syncStore = () => {
+  const syncStore = useCallback(() => {
     setHistoryState(undoStack.current.length > 1, redoStack.current.length > 0);
-  };
+  }, [setHistoryState]);
 
-  const serialize = () => {
+  const serialize = useCallback(() => {
     if (!canvas) return "";
-    const json = (canvas as any).toJSON([
+    const json = canvas.toObject([
       "id",
       "name",
       "selectable",
@@ -23,38 +23,40 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       "locked",
       "zIndex",
     ]);
-    json.objects = json.objects.filter((obj: any) => obj.id !== "__artboard__");
+    json.objects = json.objects.filter(
+      (obj: { id?: string }) => obj.id !== "__artboard__",
+    );
     return JSON.stringify(json);
-  };
+  }, [canvas]);
 
-  const load = (state: string) => {
-    if (!canvas || !state) return Promise.resolve();
-    isHistoryChanging.current = true;
+  const load = useCallback(
+    async (state: string) => {
+      if (!canvas || !state) return Promise.resolve();
+      isHistoryChanging.current = true;
 
-    const artboard = canvas
-      .getObjects()
-      .find((o) => (o as any).id === "__artboard__");
-    const jsonToLoad = JSON.parse(state);
+      const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
+      const jsonToLoad = JSON.parse(state);
 
-    if (artboard) {
-      jsonToLoad.objects.unshift(
-        artboard.toObject([
-          "id",
-          "name",
-          "selectable",
-          "evented",
-          "locked",
-          "zIndex",
-        ]),
-      );
-    }
+      if (artboard) {
+        jsonToLoad.objects.unshift(
+          artboard.toObject([
+            "id",
+            "name",
+            "selectable",
+            "evented",
+            "locked",
+            "zIndex",
+          ]),
+        );
+      }
 
-    return canvas.loadFromJSON(jsonToLoad).then(() => {
+      await canvas.loadFromJSON(jsonToLoad);
       canvas.requestRenderAll();
       isHistoryChanging.current = false;
       syncStore();
-    });
-  };
+    },
+    [canvas, syncStore],
+  );
 
   // Setup auto-save listeners
   useEffect(() => {
@@ -110,7 +112,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       canvas.off("text:changed", handleEvent);
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [canvas]);
+  }, [canvas, serialize, syncStore]);
 
   // Setup history controls
   useEffect(() => {
@@ -144,23 +146,43 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
-        (canvas && (canvas.getActiveObject() as any)?.isEditing)
+        (canvas && (canvas.getActiveObject() as fabric.IText)?.isEditing)
       ) {
         return;
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
+        const state = useCanvasStore.getState();
+        
         if (e.shiftKey) {
-          handleRedo();
+          if (state.canvasMode !== "inpaint") {
+            handleRedo();
+          }
         } else {
-          handleUndo();
+          if (state.canvasMode === "inpaint") {
+            window.dispatchEvent(new Event("canvas:mask:undo"));
+          } else {
+            handleUndo();
+          }
         }
       }
     };
 
-    const handleCustomUndo = () => handleUndo();
-    const handleCustomRedo = () => handleRedo();
+    const handleCustomUndo = () => {
+      const state = useCanvasStore.getState();
+      if (state.canvasMode === "inpaint") {
+        window.dispatchEvent(new Event("canvas:mask:undo"));
+      } else {
+        handleUndo();
+      }
+    };
+    const handleCustomRedo = () => {
+      const state = useCanvasStore.getState();
+      if (state.canvasMode !== "inpaint") {
+        handleRedo();
+      }
+    };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("canvas:undo", handleCustomUndo);
@@ -171,5 +193,5 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       window.removeEventListener("canvas:undo", handleCustomUndo);
       window.removeEventListener("canvas:redo", handleCustomRedo);
     };
-  }, [canvas]);
+  }, [canvas, load]);
 }

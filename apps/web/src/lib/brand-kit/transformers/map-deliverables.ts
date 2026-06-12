@@ -5,7 +5,29 @@ import type {
   PresentationConfig,
 } from "../../../types/brand-kit";
 
-export function mapDeliverables(results: any): DeliverablesConfig {
+type GenerateResults = {
+  logoVariations?: unknown[];
+  socialMedia?: Array<{ platform: string; type: string; size?: string; contentText?: string }>;
+  businessCard?: {
+    layout?: "minimal" | "classic" | "bold";
+    includeQr?: boolean;
+    name?: string;
+    title?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+  favicons?: unknown[];
+  brandedBackdrops?: Record<string, unknown>;
+  brandPresentation?: {
+    slidesCount?: number;
+    theme?: "dark" | "light" | "dynamic";
+  };
+  brandGuidelines?: Record<string, unknown>;
+  logoUrl?: string;
+};
+
+export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
   const logoVariationsExist = !!(
     results.logoVariations && results.logoVariations.length > 0
   );
@@ -34,10 +56,10 @@ export function mapDeliverables(results: any): DeliverablesConfig {
   const socialMediaConfig: SocialMediaConfig = results.socialMedia
     ? {
         platforms: Array.from(
-          new Set(results.socialMedia.map((s: any) => s.platform)),
+          new Set((results.socialMedia as Array<{ platform: string }>).map((s) => s.platform)),
         ),
         dimensions: results.socialMedia.reduce(
-          (acc: Record<string, string>, s: any) => {
+          (acc: Record<string, string>, s) => {
             if (s.size) acc[s.type] = s.size;
             return acc;
           },

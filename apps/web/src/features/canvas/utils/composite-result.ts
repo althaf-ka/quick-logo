@@ -11,16 +11,15 @@ export async function compositeAIResult(
     generationGroupId?: string;
     generatedFromObjectId?: string | null;
   },
-): Promise<fabric.Image> {
+): Promise<fabric.FabricImage> {
   return new Promise((resolve, reject) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const FabricImageClass = (fabric as any).FabricImage || fabric.Image;
+    const fabricAny = fabric as Record<string, unknown>;
+    const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
     
     FabricImageClass.fromURL(resultImageUrl, { crossOrigin: "anonymous" }).then(
-      (img: fabric.Image) => {
+      (img: fabric.FabricImage) => {
         // Find existing AI region selector to remove it
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const regionSelector = canvas.getObjects().find((o) => (o as any).id === "__ai_region__");
+        const regionSelector = canvas.getObjects().find((o) => o.id === "__ai_region__");
 
         switch (mode) {
           case "img2img": {
@@ -41,11 +40,11 @@ export async function compositeAIResult(
               selectable: true,
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
-            } as any);
+            });
 
             // Remove the original targeted image since it's being upgraded/replaced
             if (options.generatedFromObjectId) {
-              const originalObj = canvas.getObjects().find(o => (o as any).id === options.generatedFromObjectId);
+              const originalObj = canvas.getObjects().find(o => o.id === options.generatedFromObjectId);
               if (originalObj) {
                 canvas.remove(originalObj);
               }
@@ -74,7 +73,7 @@ export async function compositeAIResult(
               selectable: true,
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
-            } as any);
+            });
             break;
           }
 
@@ -95,7 +94,7 @@ export async function compositeAIResult(
               selectable: true,
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
-            } as any);
+            });
 
             // Remove the sketches (pencil paths) since they are now baked into the generated image
             canvas.getObjects().forEach((o) => {

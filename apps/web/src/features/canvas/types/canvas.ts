@@ -33,6 +33,12 @@ export interface BrushSettings {
   opacity: number;
 }
 
+export interface ShapeSettings {
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
 export interface TextSettings {
   fontFamily: string;
   fontSize: number;
@@ -62,6 +68,7 @@ export interface SelectedObjectProps {
   fontStyle?: string;
   textAlign?: string;
   text?: string;
+  locked?: boolean;
 }
 
 export type CanvasMode =

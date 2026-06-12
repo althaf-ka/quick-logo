@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CanvasToolbar } from "./toolbar/canvas-toolbar";
 import { CanvasViewport } from "./canvas-viewport";
 
@@ -85,7 +85,10 @@ export function CanvasEditor({
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("properties");
+  const [activeTab, setActiveTab] = useState<string>("ai");
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  const { activeTool } = useCanvasStore();
 
   const [isCompact, setIsCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -98,6 +101,14 @@ export function CanvasEditor({
       if (isCompact) setSidebarOpen(true);
     }
   }, [canvasMode, isCompact]);
+
+  useEffect(() => {
+    // If a manual editing tool is selected (not hand/select), switch to properties tab
+    if (activeTool && activeTool !== "hand" && activeTool !== "select") {
+      setActiveTab("properties");
+      if (isCompact) setSidebarOpen(true);
+    }
+  }, [activeTool, isCompact]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -140,38 +151,38 @@ export function CanvasEditor({
     }
   };
 
-  const handleDownload = async (
-    format: "png" | "jpeg" | "svg" | "webp" = "png",
-    quality = 0.92,
-  ) => {
-    if (!canvas) return;
-    setIsDownloading(true);
-    try {
-      let data: Blob | string;
-      const ext = format;
-      if (format === "svg") {
-        data = exportToSvg();
-        data = new Blob([data as string], { type: "image/svg+xml" });
-      } else if (format === "jpeg") {
-        data = await exportToJpeg(quality);
-      } else if (format === "webp") {
-        data = await exportToWebp(quality);
-      } else {
-        data = await exportToPng();
-      }
+  const handleDownload = useCallback(
+    async (format: "png" | "jpeg" | "svg" | "webp" = "png", quality = 0.92) => {
+      if (!canvas) return;
+      setIsDownloading(true);
+      try {
+        let data: Blob | string;
+        const ext = format;
+        if (format === "svg") {
+          data = exportToSvg();
+          data = new Blob([data as string], { type: "image/svg+xml" });
+        } else if (format === "jpeg") {
+          data = await exportToJpeg(quality);
+        } else if (format === "webp") {
+          data = await exportToWebp(quality);
+        } else {
+          data = await exportToPng();
+        }
 
-      const url = URL.createObjectURL(data as Blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `quicklogo-export-${Date.now()}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Failed to download image");
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+        const url = URL.createObjectURL(data as Blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `quicklogo-export-${Date.now()}.${ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        toast.error("Failed to download image");
+      } finally {
+        setIsDownloading(false);
+      }
+    },
+    [canvas, exportToSvg, exportToJpeg, exportToWebp, exportToPng],
+  );
 
   useEffect(() => {
     const handleExport = (e: Event) => {
@@ -180,6 +191,16 @@ export function CanvasEditor({
     };
     window.addEventListener("canvas:export", handleExport);
     return () => window.removeEventListener("canvas:export", handleExport);
+  }, [canvas, handleDownload]);
+
+  useEffect(() => {
+    if (!canvas) return;
+    const updateZoom = () => setZoomLevel(Math.round(canvas.getZoom() * 100));
+    canvas.on("mouse:wheel", updateZoom);
+    updateZoom();
+    return () => {
+      canvas.off("mouse:wheel", updateZoom);
+    };
   }, [canvas]);
 
   const handleZoom = (direction: "in" | "out" | "fit") => {
@@ -188,7 +209,7 @@ export function CanvasEditor({
     if (direction === "fit") {
       const artboard = canvas
         .getObjects()
-        .find((o) => (o as any).id === "__artboard__");
+        .find((o) => o.id === "__artboard__");
       if (artboard) {
         const width = artboard.width! * (artboard.scaleX || 1);
         const height = artboard.height! * (artboard.scaleY || 1);
@@ -205,6 +226,7 @@ export function CanvasEditor({
           canvas.height! / 2 - (height * scale) / 2,
         ]);
         canvas.requestRenderAll();
+        setZoomLevel(Math.round(canvas.getZoom() * 100));
       }
     } else {
       let zoom = canvas.getZoom();
@@ -215,17 +237,18 @@ export function CanvasEditor({
         new fabric.Point(canvas.width! / 2, canvas.height! / 2),
         zoom,
       );
+      setZoomLevel(Math.round(zoom * 100));
     }
   };
 
-  const currentZoom = Math.round((canvas?.getZoom() || 1) * 100);
+  const currentZoom = zoomLevel;
 
   const handleClearAIInputs = () => {
     if (!canvas) return;
 
     const objects = canvas.getObjects();
     const toRemove = objects.filter(
-      (o) => (o as any).id === "__ai_region__" || (o as any).isAiSketch,
+      (o) => o.id === "__ai_region__" || o.isAiSketch,
     );
 
     if (toRemove.length > 0) {
@@ -348,7 +371,9 @@ export function CanvasEditor({
           )}
           <select
             className="text-muted-foreground/50 hover:text-muted-foreground hidden cursor-pointer appearance-none border border-white/[0.06] bg-transparent px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase outline-none sm:block"
-            onChange={(e) => handleDownload(e.target.value as any)}
+            onChange={(e) =>
+              handleDownload(e.target.value as "png" | "jpeg" | "svg" | "webp")
+            }
             value=""
           >
             <option value="" disabled>
