@@ -4,7 +4,7 @@ import { useCanvasStore } from "../store/canvas-store";
 import { generateId } from "../utils/fabric-helpers";
 
 export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
-  const { activeTool, activeShape, brushSettings, setActiveTool } = useCanvasStore();
+  const setActiveTool = useCanvasStore((s) => s.setActiveTool);
 
   useEffect(() => {
     if (!canvas) return;
@@ -18,6 +18,7 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
     let hoveredObjectForBorder: fabric.Object | null = null;
 
     const onMouseOver = (opt: fabric.TEvent & { target?: fabric.Object }) => {
+      const { activeTool } = useCanvasStore.getState();
       if (activeTool !== "select") return;
       const target = opt.target;
       if (
@@ -38,6 +39,7 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
     };
 
     const onAfterRender = (opt: { ctx: CanvasRenderingContext2D }) => {
+      const { activeTool } = useCanvasStore.getState();
       const ctx = opt.ctx;
       if (!ctx) return;
       if (
@@ -46,33 +48,41 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
         hoveredObjectForBorder !== canvas.getActiveObject()
       ) {
         ctx.save();
-        
+
         const vpt = canvas.viewportTransform;
         if (vpt) {
           ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
         }
-        
+
         const matrix = hoveredObjectForBorder.calcTransformMatrix();
-        ctx.transform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
-        
+        ctx.transform(
+          matrix[0],
+          matrix[1],
+          matrix[2],
+          matrix[3],
+          matrix[4],
+          matrix[5],
+        );
+
         ctx.strokeStyle = "#6D28D9";
-        
+
         const scaleX = hoveredObjectForBorder.scaleX || 1;
         const scaleY = hoveredObjectForBorder.scaleY || 1;
         const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
         const zoom = canvas.getZoom();
         ctx.lineWidth = 2 / (avgScale * zoom);
-        
+
         const w = hoveredObjectForBorder.width || 0;
         const h = hoveredObjectForBorder.height || 0;
         ctx.strokeRect(-w / 2, -h / 2, w, h);
-        
+
         ctx.restore();
       }
     };
 
     const onMouseDown = (opt: fabric.TEvent) => {
-      const { shapeSettings, textSettings } = useCanvasStore.getState();
+      const { activeTool, activeShape, shapeSettings, textSettings } =
+        useCanvasStore.getState();
       const e = opt.e as MouseEvent;
       const pointer = canvas.getScenePoint(opt.e);
 
@@ -82,7 +92,8 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
         lastPosY = e.clientY;
         canvas.setCursor("grabbing");
       } else if (activeTool === "text") {
-        const target = (opt as fabric.TEvent & { target?: fabric.Object }).target;
+        const target = (opt as fabric.TEvent & { target?: fabric.Object })
+          .target;
         if (
           target &&
           (target.type === "textbox" ||
@@ -112,7 +123,8 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
         canvas.requestRenderAll();
       } else if (activeTool === "eraser") {
         isDragging = true;
-        const target = (opt as fabric.TEvent & { target?: fabric.Object }).target;
+        const target = (opt as fabric.TEvent & { target?: fabric.Object })
+          .target;
         if (
           target &&
           target.id !== "__artboard__" &&
@@ -163,6 +175,7 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
     };
 
     const onMouseMove = (opt: fabric.TEvent) => {
+      const { activeTool, activeShape } = useCanvasStore.getState();
       const e = opt.e as MouseEvent;
       if (!isDragging) return;
 
@@ -176,7 +189,8 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
           lastPosY = e.clientY;
         }
       } else if (activeTool === "eraser" && isDragging) {
-        const target = (opt as fabric.TEvent & { target?: fabric.Object }).target;
+        const target = (opt as fabric.TEvent & { target?: fabric.Object })
+          .target;
         if (
           target &&
           target.id !== "__artboard__" &&
@@ -223,6 +237,7 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
     };
 
     const onMouseUp = () => {
+      const { activeTool } = useCanvasStore.getState();
       if (activeTool === "hand") {
         canvas.setCursor("grab");
       } else if (activeTool === "shapes" && shapeRef) {
@@ -252,5 +267,5 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
       canvas.off("mouse:out", onMouseOut);
       canvas.off("after:render", onAfterRender);
     };
-  }, [canvas, activeTool, activeShape, brushSettings, setActiveTool]);
+  }, [canvas, setActiveTool]);
 }

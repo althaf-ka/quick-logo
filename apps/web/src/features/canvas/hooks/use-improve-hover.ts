@@ -3,7 +3,7 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 
 export function useImproveHover(canvas: fabric.Canvas | null) {
-  const { canvasMode } = useCanvasStore();
+  const canvasMode = useCanvasStore((s) => s.canvasMode);
 
   useEffect(() => {
     if (!canvas) return;
@@ -12,18 +12,21 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
 
     let hoveredObject: fabric.Object | null = null;
     const originalShadows = new Map<fabric.Object, fabric.Shadow | null>();
-    const originalStates = new Map<fabric.Object, { 
-      selectable: boolean; 
-      evented: boolean; 
-      locked: boolean; 
-      hoverCursor: string;
-      lockMovementX: boolean;
-      lockMovementY: boolean;
-      lockScalingX: boolean;
-      lockScalingY: boolean;
-      lockRotation: boolean;
-      hasControls: boolean;
-    }>();
+    const originalStates = new Map<
+      fabric.Object,
+      {
+        selectable: boolean;
+        evented: boolean;
+        locked: boolean;
+        hoverCursor: string;
+        lockMovementX: boolean;
+        lockMovementY: boolean;
+        lockScalingX: boolean;
+        lockScalingY: boolean;
+        lockRotation: boolean;
+        hasControls: boolean;
+      }
+    >();
 
     // Pre-set states for img2img mode
     canvas.getObjects().forEach((obj) => {
@@ -64,9 +67,15 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       }
     });
 
-    const handleMouseOver = (opt: fabric.TEvent & { target?: fabric.Object }) => {
+    const handleMouseOver = (
+      opt: fabric.TEvent & { target?: fabric.Object },
+    ) => {
       const target = opt.target;
-      if (target && target.id !== "__artboard__" && (target.type === "image" || target.type === "Image")) {
+      if (
+        target &&
+        target.id !== "__artboard__" &&
+        (target.type === "image" || target.type === "Image")
+      ) {
         hoveredObject = target;
         target.set({ hoverCursor: "pointer" });
 
@@ -91,7 +100,9 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       }
     };
 
-    const handleMouseOut = (opt: fabric.TEvent & { target?: fabric.Object }) => {
+    const handleMouseOut = (
+      opt: fabric.TEvent & { target?: fabric.Object },
+    ) => {
       const target = opt.target;
       if (target && target.id !== "__artboard__") {
         // Restore original shadow
@@ -181,27 +192,34 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       if (!ctx || !currentlyPulsingObject) return;
 
       ctx.save();
-      
+
       const vpt = canvas.viewportTransform;
       if (vpt) {
         ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
       }
-      
+
       const matrix = currentlyPulsingObject.calcTransformMatrix();
-      ctx.transform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
-      
+      ctx.transform(
+        matrix[0],
+        matrix[1],
+        matrix[2],
+        matrix[3],
+        matrix[4],
+        matrix[5],
+      );
+
       ctx.strokeStyle = "#6D28D9";
-      
+
       const scaleX = currentlyPulsingObject.scaleX || 1;
       const scaleY = currentlyPulsingObject.scaleY || 1;
       const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
       const zoom = canvas.getZoom();
       ctx.lineWidth = 4 / (avgScale * zoom);
-      
+
       const w = currentlyPulsingObject.width || 0;
       const h = currentlyPulsingObject.height || 0;
       ctx.strokeRect(-w / 2, -h / 2, w, h);
-      
+
       ctx.restore();
     };
 

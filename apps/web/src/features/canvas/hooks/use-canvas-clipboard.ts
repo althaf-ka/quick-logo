@@ -3,8 +3,6 @@ import * as fabric from "fabric";
 import { generateId } from "../utils/fabric-helpers";
 
 export function useCanvasClipboard(canvas: fabric.Canvas | null) {
-
-
   useEffect(() => {
     if (!canvas) return;
 
@@ -83,7 +81,10 @@ export function useCanvasClipboard(canvas: fabric.Canvas | null) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("canvas:delete-object", handleDeleteObject);
-      window.removeEventListener("canvas:duplicate-object", handleDuplicateObject);
+      window.removeEventListener(
+        "canvas:duplicate-object",
+        handleDuplicateObject,
+      );
     };
   }, [canvas]);
 }

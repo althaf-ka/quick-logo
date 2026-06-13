@@ -41,9 +41,12 @@ export function useWorkflowReadiness() {
         id: "improve-image",
         name: "Improve Existing Image",
         internalId: "img2img",
-        description: "Enhance quality, style, lighting, colors, details, or overall appearance of an existing image.",
+        description:
+          "Enhance quality, style, lighting, colors, details, or overall appearance of an existing image.",
         state: isImageSelected ? "Ready" : "Needs Input",
-        statusMessage: isImageSelected ? "✓ Image selected" : "⚠ Select an image to continue",
+        statusMessage: isImageSelected
+          ? "✓ Image selected"
+          : "⚠ Select an image to continue",
         quickAction: undefined, // Cannot automate selection
         progressSequence: ["Select Image", "Describe Changes", "Generate"],
         currentStepIndex: isImageSelected ? 1 : 0,
@@ -52,26 +55,26 @@ export function useWorkflowReadiness() {
         id: "replace-part",
         name: "Modify Area",
         internalId: "inpaint",
-        description: "Add, remove, or change a specific area of the logo using a brush mask.",
+        description:
+          "Add, remove, or change a specific area of the logo using a brush mask.",
         state: hasMask ? "Ready" : "Needs Input",
-        statusMessage: hasMask ? "✓ Mask detected" : "⚠ Paint a mask to continue",
-        quickAction: hasMask ? undefined : {
-          label: "Start Masking",
-          action: () => {
-            setCanvasMode("inpaint");
-            setActiveTool("brush");
-          },
-        },
+        statusMessage: hasMask
+          ? "✓ Mask detected"
+          : "⚠ Paint a mask to continue",
+        quickAction: hasMask
+          ? undefined
+          : {
+              label: "Start Masking",
+              action: () => {
+                setCanvasMode("inpaint");
+                setActiveTool("brush");
+              },
+            },
         progressSequence: ["Paint Mask", "Describe Changes", "Generate"],
         currentStepIndex: hasMask ? 1 : 0,
       },
     ];
-  }, [
-    isImageSelected,
-    hasMask,
-    setCanvasMode,
-    setActiveTool,
-  ]);
+  }, [isImageSelected, hasMask, setCanvasMode, setActiveTool]);
 
   // Context-Aware Recommendations
   let recommendedWorkflowId: string | null = null;
@@ -82,7 +85,7 @@ export function useWorkflowReadiness() {
     recommendedWorkflowId = "improve-image";
   } else if (activeTool === "brush" || hasMask) {
     // If they have a mask or are currently brushing
-    if (readyWorkflows.filter(w => w.id !== 'replace-part').length === 0) {
+    if (readyWorkflows.filter((w) => w.id !== "replace-part").length === 0) {
       recommendedWorkflowId = "replace-part";
     }
   }

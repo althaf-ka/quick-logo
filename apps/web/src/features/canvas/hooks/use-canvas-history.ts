@@ -3,7 +3,7 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 
 export function useCanvasHistory(canvas: fabric.Canvas | null) {
-  const { setHistoryState } = useCanvasStore();
+  const setHistoryState = useCanvasStore((s) => s.setHistoryState);
   const undoStack = useRef<string[]>([]);
   const redoStack = useRef<string[]>([]);
   const isHistoryChanging = useRef(false);
@@ -154,7 +154,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         const state = useCanvasStore.getState();
-        
+
         if (e.shiftKey) {
           if (state.canvasMode !== "inpaint") {
             handleRedo();

@@ -14,7 +14,7 @@ import { NavUser } from "./nav-user";
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props} className="border-r">
-      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-2 py-0">
+      <SidebarHeader className="border-sidebar-border h-14 justify-center border-b px-2 py-0">
         <NavHeader />
       </SidebarHeader>
 

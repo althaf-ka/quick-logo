@@ -7,7 +7,12 @@ import type {
 
 type GenerateResults = {
   logoVariations?: unknown[];
-  socialMedia?: Array<{ platform: string; type: string; size?: string; contentText?: string }>;
+  socialMedia?: Array<{
+    platform: string;
+    type: string;
+    size?: string;
+    contentText?: string;
+  }>;
   businessCard?: {
     layout?: "minimal" | "classic" | "bold";
     includeQr?: boolean;
@@ -56,7 +61,11 @@ export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
   const socialMediaConfig: SocialMediaConfig = results.socialMedia
     ? {
         platforms: Array.from(
-          new Set((results.socialMedia as Array<{ platform: string }>).map((s) => s.platform)),
+          new Set(
+            (results.socialMedia as Array<{ platform: string }>).map(
+              (s) => s.platform,
+            ),
+          ),
         ),
         dimensions: results.socialMedia.reduce(
           (acc: Record<string, string>, s) => {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { useMaskBrush } from "../hooks/use-mask-brush";
+import { useShallow } from "zustand/react/shallow";
 
 interface MaskOverlayProps {
   mainCanvas: fabric.Canvas | null;
@@ -11,7 +12,14 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [maskCanvas, setMaskCanvas] = useState<fabric.Canvas | null>(null);
-  const { canvasMode, activeTool, setMaskData, maskData } = useCanvasStore();
+  const { canvasMode, activeTool, setMaskData, maskData } = useCanvasStore(
+    useShallow((s) => ({
+      canvasMode: s.canvasMode,
+      activeTool: s.activeTool,
+      setMaskData: s.setMaskData,
+      maskData: s.maskData,
+    })),
+  );
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -83,13 +91,12 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
   const isVisible = canvasMode === "inpaint";
 
   return (
-    <div className={`absolute inset-0 z-40 ${isVisible ? (isInteractive ? "pointer-events-auto" : "pointer-events-none") : "hidden"}`}>
-      {/* Container for the mask canvas */}
-      <div ref={containerRef} className="absolute inset-0 w-full h-full">
+    <div
+      className={`absolute inset-0 z-40 ${isVisible ? (isInteractive ? "pointer-events-auto" : "pointer-events-none") : "hidden"}`}
+    >
+      <div ref={containerRef} className="absolute inset-0 h-full w-full">
         <canvas ref={canvasRef} />
       </div>
-
-      {/* Toolbar moved to ai-panel.tsx */}
     </div>
   );
 }

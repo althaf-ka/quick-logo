@@ -1,4 +1,5 @@
 import { useCanvasStore } from "../../store/canvas-store";
+import { useShallow } from "zustand/react/shallow";
 import { Input } from "@quicklogo/ui/components/input";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { FontPicker } from "../../../../components/brand-kit/font-picker";
@@ -24,6 +25,25 @@ import {
   TrashIcon,
 } from "@phosphor-icons/react";
 
+const handleUpdate = (changes: Record<string, unknown>) => {
+  window.dispatchEvent(
+    new CustomEvent("canvas:update-object", { detail: changes }),
+  );
+};
+
+const dispatchAction = (
+  action: string,
+  detail: Record<string, unknown> = {},
+) => {
+  window.dispatchEvent(new CustomEvent(`canvas:${action}`, { detail }));
+};
+
+const handleAlign = (alignment: string) => {
+  window.dispatchEvent(
+    new CustomEvent("canvas:align", { detail: { alignment } }),
+  );
+};
+
 export function PropertiesPanel() {
   const {
     selectedObject,
@@ -34,26 +54,18 @@ export function PropertiesPanel() {
     setShapeSettings,
     textSettings,
     setTextSettings,
-  } = useCanvasStore();
-
-  const handleUpdate = (changes: Record<string, unknown>) => {
-    window.dispatchEvent(
-      new CustomEvent("canvas:update-object", { detail: changes }),
-    );
-  };
-
-  const dispatchAction = (
-    action: string,
-    detail: Record<string, unknown> = {},
-  ) => {
-    window.dispatchEvent(new CustomEvent(`canvas:${action}`, { detail }));
-  };
-
-  const handleAlign = (alignment: string) => {
-    window.dispatchEvent(
-      new CustomEvent("canvas:align", { detail: { alignment } }),
-    );
-  };
+  } = useCanvasStore(
+    useShallow((s) => ({
+      selectedObject: s.selectedObject,
+      activeTool: s.activeTool,
+      brushSettings: s.brushSettings,
+      setBrushSettings: s.setBrushSettings,
+      shapeSettings: s.shapeSettings,
+      setShapeSettings: s.setShapeSettings,
+      textSettings: s.textSettings,
+      setTextSettings: s.setTextSettings,
+    })),
+  );
 
   if (!selectedObject) {
     if (activeTool === "pencil" || activeTool === "eraser") {

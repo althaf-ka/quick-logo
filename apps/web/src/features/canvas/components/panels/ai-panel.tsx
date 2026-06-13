@@ -1,4 +1,5 @@
 import { useCanvasStore } from "../../store/canvas-store";
+import { useShallow } from "zustand/react/shallow";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
 import { getModelsForContext } from "@quicklogo/ai-providers/models";
@@ -9,7 +10,13 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@quicklogo/ui/components/accordion";
-import { ImagesIcon, PaintBrushIcon, StackIcon, ArrowUUpLeft, Trash } from "@phosphor-icons/react";
+import {
+  ArrowUUpLeftIcon,
+  ImagesIcon,
+  PaintBrushIcon,
+  StackIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 import { useWorkflowReadiness } from "../../hooks/use-workflow-readiness";
 import type { WorkflowDefinition } from "../../hooks/use-workflow-readiness";
 import type { GenerationStatus } from "../../hooks/use-canvas-ai";
@@ -33,6 +40,45 @@ function getStatusText(generationStatus: GenerationStatus) {
   return "Generating...";
 }
 
+const getWorkflowTheme = (id: string) => {
+  switch (id) {
+    case "improve-image":
+      return {
+        text: "text-blue-400",
+        border: "border-blue-500",
+        bg: "bg-blue-500/10",
+        accent: "bg-blue-500",
+      };
+    case "replace-part":
+      return {
+        text: "text-pink-400",
+        border: "border-pink-500",
+        bg: "bg-pink-500/10",
+        accent: "bg-pink-500",
+      };
+    default:
+      return {
+        text: "text-zinc-400",
+        border: "border-zinc-500",
+        bg: "bg-zinc-500/10",
+        accent: "bg-zinc-500",
+      };
+  }
+};
+
+const getWorkflowIcon = (id: string, themeText: string, size: number = 24) => {
+  switch (id) {
+    case "improve-image":
+      return <ImagesIcon size={size} weight="duotone" className={themeText} />;
+    case "replace-part":
+      return (
+        <PaintBrushIcon size={size} weight="duotone" className={themeText} />
+      );
+    default:
+      return <StackIcon size={size} weight="duotone" className={themeText} />;
+  }
+};
+
 export function AiPanel({
   isGenerating,
   generationStatus,
@@ -49,7 +95,20 @@ export function AiPanel({
     resetAIWorkflow,
     maskBrushSize,
     setMaskBrushSize,
-  } = useCanvasStore();
+  } = useCanvasStore(
+    useShallow((s) => ({
+      canvasMode: s.canvasMode,
+      setCanvasMode: s.setCanvasMode,
+      aiModel: s.aiModel,
+      setAiModel: s.setAiModel,
+      aiStrength: s.aiStrength,
+      setAiStrength: s.setAiStrength,
+      regionBounds: s.regionBounds,
+      resetAIWorkflow: s.resetAIWorkflow,
+      maskBrushSize: s.maskBrushSize,
+      setMaskBrushSize: s.setMaskBrushSize,
+    })),
+  );
 
   const { workflows } = useWorkflowReadiness();
 
@@ -64,51 +123,6 @@ export function AiPanel({
     const matchingTool = workflows.find((w) => w.internalId === canvasMode);
     return matchingTool ? matchingTool.id : null;
   })();
-
-  const getWorkflowTheme = (id: string) => {
-    switch (id) {
-      case "improve-image":
-        return {
-          text: "text-blue-400",
-          border: "border-blue-500",
-          bg: "bg-blue-500/10",
-          accent: "bg-blue-500",
-        };
-      case "replace-part":
-        return {
-          text: "text-pink-400",
-          border: "border-pink-500",
-          bg: "bg-pink-500/10",
-          accent: "bg-pink-500",
-        };
-      default:
-        return {
-          text: "text-zinc-400",
-          border: "border-zinc-500",
-          bg: "bg-zinc-500/10",
-          accent: "bg-zinc-500",
-        };
-    }
-  };
-
-  const getWorkflowIcon = (
-    id: string,
-    themeText: string,
-    size: number = 24,
-  ) => {
-    switch (id) {
-      case "improve-image":
-        return (
-          <ImagesIcon size={size} weight="duotone" className={themeText} />
-        );
-      case "replace-part":
-        return (
-          <PaintBrushIcon size={size} weight="duotone" className={themeText} />
-        );
-      default:
-        return <StackIcon size={size} weight="duotone" className={themeText} />;
-    }
-  };
 
   const renderToolButton = (workflow: WorkflowDefinition) => {
     const isActive = activeToolId === workflow.id;
@@ -214,8 +228,6 @@ export function AiPanel({
                     </button>
                   </div>
                 )}
-
-
               </div>
             );
           } else {
@@ -249,39 +261,63 @@ export function AiPanel({
 
         {/* Render mask tools if inpaint mode */}
         {canvasMode === "inpaint" && (
-          <div className="flex flex-col gap-4 rounded-none border border-white/10 bg-zinc-950/30 p-4 mt-2">
+          <div className="mt-2 flex flex-col gap-4 rounded-none border border-white/10 bg-zinc-950/30 p-4">
             <h4 className="font-mono text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
               Mask Settings
             </h4>
-            
+
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between px-0.5">
-                <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider leading-none">Brush Size</span>
-                <span className="text-[10px] font-mono text-zinc-500 leading-none">{maskBrushSize}</span>
+                <span className="text-[10px] leading-none font-medium tracking-wider text-zinc-400 uppercase">
+                  Brush Size
+                </span>
+                <span className="font-mono text-[10px] leading-none text-zinc-500">
+                  {maskBrushSize}
+                </span>
               </div>
-              <div className="w-full flex items-center h-4">
+              <div className="flex h-4 w-full items-center">
                 <Slider
                   value={[maskBrushSize]}
-                  onValueChange={(val) => setMaskBrushSize(Array.isArray(val) ? val[0] : (val as number))}
+                  onValueChange={(val) =>
+                    setMaskBrushSize(
+                      Array.isArray(val) ? val[0] : (val as number),
+                    )
+                  }
                   min={5}
                   max={100}
                   step={1}
-                  className="[&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-range]]:bg-violet-500 [&_[data-slot=slider-range]]:rounded-none [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:w-2 [&_[data-slot=slider-thumb]]:h-4 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-thumb]]:transition-transform [&_[data-slot=slider-thumb]]:shadow-sm"
+                  className="[&_[data-slot=slider-range]]:rounded-none [&_[data-slot=slider-range]]:bg-violet-500 [&_[data-slot=slider-thumb]]:h-4 [&_[data-slot=slider-thumb]]:w-2 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-sm [&_[data-slot=slider-thumb]]:transition-transform [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-white/10"
                 />
               </div>
             </div>
-            
-            <div className="flex items-center justify-end pt-3 border-t border-white/10">
-               <div className="flex items-center gap-4">
-                 <button onClick={() => window.dispatchEvent(new Event('canvas:mask:undo'))} className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5" title="Undo Stroke">
-                   <ArrowUUpLeft size={14} />
-                   <span className="text-[10px] uppercase tracking-wider font-medium">Undo</span>
-                 </button>
-                 <button onClick={() => window.dispatchEvent(new Event('canvas:mask:clear'))} className="text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5" title="Clear Mask">
-                   <Trash size={14} />
-                   <span className="text-[10px] uppercase tracking-wider font-medium">Clear</span>
-                 </button>
-               </div>
+
+            <div className="flex items-center justify-end border-t border-white/10 pt-3">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() =>
+                    window.dispatchEvent(new Event("canvas:mask:undo"))
+                  }
+                  className="flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-white"
+                  title="Undo Stroke"
+                >
+                  <ArrowUUpLeftIcon size={14} />
+                  <span className="text-[10px] font-medium tracking-wider uppercase">
+                    Undo
+                  </span>
+                </button>
+                <button
+                  onClick={() =>
+                    window.dispatchEvent(new Event("canvas:mask:clear"))
+                  }
+                  className="flex items-center gap-1.5 text-red-400 transition-colors hover:text-red-300"
+                  title="Clear Mask"
+                >
+                  <TrashIcon size={14} />
+                  <span className="text-[10px] font-medium tracking-wider uppercase">
+                    Clear
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         )}

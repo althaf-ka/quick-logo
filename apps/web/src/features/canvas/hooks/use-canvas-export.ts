@@ -7,9 +7,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
   ) => {
     if (!canvas) return null;
 
-    const artboard = canvas
-      .getObjects()
-      .find((o) => o.id === "__artboard__");
+    const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
     let left, top, width, height;
 
     if (artboard) {
@@ -79,9 +77,7 @@ export function useCanvasExport(canvas: fabric.Canvas | null) {
     if (!canvas) return "";
     const state = prepareForExport();
 
-    const artboard = canvas
-      .getObjects()
-      .find((o) => o.id === "__artboard__");
+    const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
     const viewBox = artboard
       ? {
           x: artboard.left || 0,

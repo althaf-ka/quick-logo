@@ -3,6 +3,7 @@ import { CanvasToolbar } from "./toolbar/canvas-toolbar";
 import { CanvasViewport } from "./canvas-viewport";
 
 import { useCanvasStore } from "../store/canvas-store";
+import { useShallow } from "zustand/react/shallow";
 import { MaskOverlay } from "./mask-overlay";
 import { AiPanel } from "./panels/ai-panel";
 import { PropertiesPanel } from "./panels/properties-panel";
@@ -15,18 +16,6 @@ import {
 } from "@quicklogo/ui/components/tabs";
 import { useCanvasExport } from "../hooks/use-canvas-export";
 import { useImproveHover } from "../hooks/use-improve-hover";
-
-// Set global professional selection styles
-Object.assign(fabric.Object.prototype, {
-  transparentCorners: false,
-  cornerColor: "#FFFFFF",
-  cornerStrokeColor: "#6D28D9",
-  borderColor: "#6D28D9",
-  cornerSize: 10,
-  padding: 0,
-  cornerStyle: "circle",
-  borderScaleFactor: 2,
-});
 
 import { useCanvasAI } from "../hooks/use-canvas-ai";
 import { uploadFileToImageKit } from "@/lib/imagekit";
@@ -77,7 +66,20 @@ export function CanvasEditor({
     canUndo,
     canRedo,
     selectedObject,
-  } = useCanvasStore();
+    activeTool,
+  } = useCanvasStore(
+    useShallow((s) => ({
+      canvasMode: s.canvasMode,
+      aiPrompt: s.aiPrompt,
+      setAiPrompt: s.setAiPrompt,
+      setRegionBounds: s.setRegionBounds,
+      maskData: s.maskData,
+      canUndo: s.canUndo,
+      canRedo: s.canRedo,
+      selectedObject: s.selectedObject,
+      activeTool: s.activeTool,
+    })),
+  );
   const { handleGenerate, isGenerating, generationStatus, credits } =
     useCanvasAI(canvas, imageId);
   useImproveHover(canvas);
@@ -87,8 +89,6 @@ export function CanvasEditor({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ai");
   const [zoomLevel, setZoomLevel] = useState(100);
-
-  const { activeTool } = useCanvasStore();
 
   const [isCompact, setIsCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -118,6 +118,20 @@ export function CanvasEditor({
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
+  useEffect(() => {
+    // Set global professional selection styles once
+    Object.assign(fabric.Object.prototype, {
+      transparentCorners: false,
+      cornerColor: "#FFFFFF",
+      cornerStrokeColor: "#6D28D9",
+      borderColor: "#6D28D9",
+      cornerSize: 10,
+      padding: 0,
+      cornerStyle: "circle",
+      borderScaleFactor: 2,
+    });
+  }, []);
+
   const saveMutation = useMutation({
     mutationFn: async ({ imageUrl }: { imageUrl: string }) => {
       const res = await api.images[":id"]["canvas-save"].$post({
@@ -133,7 +147,9 @@ export function CanvasEditor({
     },
   });
 
-  const handleSave = async () => {
+  const { mutateAsync: saveImage } = saveMutation;
+
+  const handleSave = useCallback(async () => {
     if (!canvas) return;
     try {
       const blob = await Promise.resolve(exportToPng());
@@ -142,14 +158,14 @@ export function CanvasEditor({
         type: "image/png",
       });
       const uploadUrl = await uploadFileToImageKit(file);
-      const saved = await saveMutation.mutateAsync({ imageUrl: uploadUrl });
+      const saved = await saveImage({ imageUrl: uploadUrl });
       toast.success("Design saved successfully!");
       onSaveComplete(saved.imageId || imageId);
     } catch (e) {
       console.error(e);
       toast.error("Failed to save edited design");
     }
-  };
+  }, [canvas, exportToPng, saveImage, imageId, onSaveComplete]);
 
   const handleDownload = useCallback(
     async (format: "png" | "jpeg" | "svg" | "webp" = "png", quality = 0.92) => {
@@ -203,47 +219,48 @@ export function CanvasEditor({
     };
   }, [canvas]);
 
-  const handleZoom = (direction: "in" | "out" | "fit") => {
-    if (!canvas) return;
+  const handleZoom = useCallback(
+    (direction: "in" | "out" | "fit") => {
+      if (!canvas) return;
 
-    if (direction === "fit") {
-      const artboard = canvas
-        .getObjects()
-        .find((o) => o.id === "__artboard__");
-      if (artboard) {
-        const width = artboard.width! * (artboard.scaleX || 1);
-        const height = artboard.height! * (artboard.scaleY || 1);
-        const padding = 40;
-        const scaleX = (canvas.width! - padding * 2) / width;
-        const scaleY = (canvas.height! - padding * 2) / height;
-        const scale = Math.min(scaleX, scaleY, 1);
-        canvas.setViewportTransform([
-          scale,
-          0,
-          0,
-          scale,
-          canvas.width! / 2 - (width * scale) / 2,
-          canvas.height! / 2 - (height * scale) / 2,
-        ]);
-        canvas.requestRenderAll();
-        setZoomLevel(Math.round(canvas.getZoom() * 100));
+      if (direction === "fit") {
+        const artboard = canvas
+          .getObjects()
+          .find((o) => o.id === "__artboard__");
+        if (artboard) {
+          const width = artboard.width! * (artboard.scaleX || 1);
+          const height = artboard.height! * (artboard.scaleY || 1);
+          const padding = 40;
+          const scaleX = (canvas.width! - padding * 2) / width;
+          const scaleY = (canvas.height! - padding * 2) / height;
+          const scale = Math.min(scaleX, scaleY, 1);
+          canvas.setViewportTransform([
+            scale,
+            0,
+            0,
+            scale,
+            canvas.width! / 2 - (width * scale) / 2,
+            canvas.height! / 2 - (height * scale) / 2,
+          ]);
+          canvas.requestRenderAll();
+          setZoomLevel(Math.round(canvas.getZoom() * 100));
+        }
+      } else {
+        let zoom = canvas.getZoom();
+        zoom *= direction === "in" ? 1.1 : 0.9;
+        if (zoom > 20) zoom = 20;
+        if (zoom < 0.01) zoom = 0.01;
+        canvas.zoomToPoint(
+          new fabric.Point(canvas.width! / 2, canvas.height! / 2),
+          zoom,
+        );
+        setZoomLevel(Math.round(zoom * 100));
       }
-    } else {
-      let zoom = canvas.getZoom();
-      zoom *= direction === "in" ? 1.1 : 0.9;
-      if (zoom > 20) zoom = 20;
-      if (zoom < 0.01) zoom = 0.01;
-      canvas.zoomToPoint(
-        new fabric.Point(canvas.width! / 2, canvas.height! / 2),
-        zoom,
-      );
-      setZoomLevel(Math.round(zoom * 100));
-    }
-  };
+    },
+    [canvas],
+  );
 
-  const currentZoom = zoomLevel;
-
-  const handleClearAIInputs = () => {
+  const handleClearAIInputs = useCallback(() => {
     if (!canvas) return;
 
     const objects = canvas.getObjects();
@@ -260,7 +277,11 @@ export function CanvasEditor({
     canvas.requestRenderAll();
 
     setRegionBounds(null);
-  };
+  }, [canvas, setRegionBounds]);
+
+  const handleClearTarget = useCallback(() => {
+    useCanvasStore.getState().resetAIWorkflow();
+  }, []);
 
   const rightPanelContent = (
     <Tabs
@@ -340,7 +361,7 @@ export function CanvasEditor({
             <MagnifyingGlassMinusIcon size={14} />
           </button>
           <span className="text-muted-foreground/60 w-10 text-center font-mono text-[9px] tabular-nums">
-            {currentZoom}%
+            {zoomLevel}%
           </span>
           <button
             onClick={() => handleZoom("in")}
@@ -449,9 +470,7 @@ export function CanvasEditor({
                               ? "Sketch Drawing"
                               : undefined
                       }
-                      onClearTarget={() =>
-                        useCanvasStore.getState().resetAIWorkflow()
-                      }
+                      onClearTarget={handleClearTarget}
                       isLoading={isGenerating}
                       submitDisabled={!!validationError}
                       validationError={validationError}

@@ -69,7 +69,7 @@ function AuthenticatedLayout() {
         <AppSidebar />
         <SidebarInset className="h-dvh overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-            <SidebarTrigger className="-ml-1 size-8 cursor-pointer text-muted-foreground hover:text-foreground transition-colors" />
+            <SidebarTrigger className="text-muted-foreground hover:text-foreground -ml-1 size-8 cursor-pointer transition-colors" />
             <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
           </header>
 

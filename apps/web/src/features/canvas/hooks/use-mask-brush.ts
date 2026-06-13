@@ -20,17 +20,33 @@ function syncMaskBrushSettings(
   }
 }
 
+import { useShallow } from "zustand/react/shallow";
+
 export function useMaskBrush(
   mainCanvas: fabric.Canvas | null,
   maskCanvas: fabric.Canvas | null,
 ) {
-  const { canvasMode, maskBrushSize, setMaskData, canvasWidth: artboardWidth, canvasHeight: artboardHeight } = useCanvasStore();
-  
+  const {
+    canvasMode,
+    maskBrushSize,
+    setMaskData,
+    canvasWidth: artboardWidth,
+    canvasHeight: artboardHeight,
+  } = useCanvasStore(
+    useShallow((s) => ({
+      canvasMode: s.canvasMode,
+      maskBrushSize: s.maskBrushSize,
+      setMaskData: s.setMaskData,
+      canvasWidth: s.canvasWidth,
+      canvasHeight: s.canvasHeight,
+    })),
+  );
+
   // Update brush settings
   useEffect(() => {
     if (!maskCanvas) return;
     const canvas = maskCanvas;
-    
+
     syncMaskBrushSettings(canvas, canvasMode, maskBrushSize);
   }, [maskCanvas, canvasMode, maskBrushSize]);
 
@@ -41,7 +57,9 @@ export function useMaskBrush(
     const syncTransform = () => {
       const vpt = mainCanvas.viewportTransform;
       if (vpt) {
-        maskCanvas.setViewportTransform(vpt.slice() as [number, number, number, number, number, number]);
+        maskCanvas.setViewportTransform(
+          vpt.slice() as [number, number, number, number, number, number],
+        );
         maskCanvas.requestRenderAll();
       }
     };
@@ -66,12 +84,19 @@ export function useMaskBrush(
     const handlePathCreated = () => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
-        const artboard = mainCanvas.getObjects().find(o => o.id === "__artboard__");
+        const artboard = mainCanvas
+          .getObjects()
+          .find((o) => o.id === "__artboard__");
         if (artboard && artboardWidth && artboardHeight) {
           const dataUrl = exportMaskToPng(
             maskCanvas,
-            { left: artboard.left || 0, top: artboard.top || 0, width: artboardWidth, height: artboardHeight },
-            { width: artboardWidth, height: artboardHeight }
+            {
+              left: artboard.left || 0,
+              top: artboard.top || 0,
+              width: artboardWidth,
+              height: artboardHeight,
+            },
+            { width: artboardWidth, height: artboardHeight },
           );
           setMaskData(dataUrl);
         }

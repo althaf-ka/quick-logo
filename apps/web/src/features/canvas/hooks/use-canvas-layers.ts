@@ -5,7 +5,7 @@ import type { CanvasObjectInfo } from "../types/canvas";
 import { generateId } from "../utils/fabric-helpers";
 
 export function useCanvasLayers(canvas: fabric.Canvas | null) {
-  const { setLayers } = useCanvasStore();
+  const setLayers = useCanvasStore((s) => s.setLayers);
 
   useEffect(() => {
     if (!canvas) return;
@@ -17,10 +17,17 @@ export function useCanvasLayers(canvas: fabric.Canvas | null) {
 
       objects.forEach((obj: fabric.Object, idx) => {
         if (!obj.id) obj.id = generateId();
-        
-        if (obj.type === "text" || obj.type === "textbox" || obj.type === "i-text") {
+
+        if (
+          obj.type === "text" ||
+          obj.type === "textbox" ||
+          obj.type === "i-text"
+        ) {
           const textContent = (obj as fabric.IText).text || "";
-          obj.name = textContent.length > 15 ? textContent.substring(0, 15) + "..." : textContent || "Text";
+          obj.name =
+            textContent.length > 15
+              ? textContent.substring(0, 15) + "..."
+              : textContent || "Text";
         } else if (!obj.name) {
           obj.name = `${obj.type} ${idx + 1}`;
         }
@@ -110,7 +117,8 @@ export function useCanvasLayers(canvas: fabric.Canvas | null) {
           const dataUrl = group.toDataURL({ format: "png" });
 
           const fabricAny = fabric as Record<string, unknown>;
-          const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
+          const FabricImageClass = (fabricAny.FabricImage ||
+            fabricAny.Image) as typeof fabric.FabricImage;
           FabricImageClass.fromURL(dataUrl).then((img: fabric.FabricImage) => {
             img.id = generateId();
             img.set({
@@ -134,7 +142,7 @@ export function useCanvasLayers(canvas: fabric.Canvas | null) {
     canvas.on("object:modified", handleEvent);
     canvas.on("object:added", handleEvent);
     canvas.on("object:removed", handleEvent);
-    
+
     // Initial sync
     syncLayers();
 

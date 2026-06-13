@@ -1,59 +1,78 @@
-import React, { useRef } from "react";
+import React, { useRef, useCallback } from "react";
 import { TooltipProvider } from "@quicklogo/ui/components/tooltip";
-import {
-  Cursor,
-  TextT,
-  PencilSimple,
-  Square,
-  Image as ImageIcon,
-  Eraser,
-  Hand,
-} from "@phosphor-icons/react";
 import { ToolButton } from "./tool-button";
 import { useCanvasStore } from "../../store/canvas-store";
+import type { CanvasTool } from "../../types/canvas";
+import {
+  CursorIcon,
+  EraserIcon,
+  HandIcon,
+  ImageIcon,
+  PencilSimpleIcon,
+  SquareIcon,
+  TextTIcon,
+} from "@phosphor-icons/react";
 
 export function CanvasToolbar() {
-  const { activeTool, setActiveTool, canvasMode, resetAIWorkflow } = useCanvasStore();
-
+  const activeTool = useCanvasStore((s) => s.activeTool);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const onToolClick = (tool: any) => {
+  const onToolClick = useCallback((tool: CanvasTool | "image") => {
     if (tool === "image") {
       fileInputRef.current?.click();
     } else {
+      const state = useCanvasStore.getState();
+
       // Professional workflow management:
       // If the user selects a tool that is fundamentally incompatible with the active AI workflow,
       // it means they are trying to break out of the AI workflow to do manual editing.
       // We seamlessly abort the AI workflow so the UI states don't desynchronize.
-      if (canvasMode === "img2img" && tool !== "select" && tool !== "hand") {
-        resetAIWorkflow();
-      } else if (canvasMode === "inpaint" && tool !== "eraser" && tool !== "hand") {
-        resetAIWorkflow();
-      } else if (canvasMode === "sketch2img" && tool !== "pencil" && tool !== "eraser" && tool !== "hand" && tool !== "select") {
-        resetAIWorkflow();
+      if (
+        state.canvasMode === "img2img" &&
+        tool !== "select" &&
+        tool !== "hand"
+      ) {
+        state.resetAIWorkflow();
+      } else if (
+        state.canvasMode === "inpaint" &&
+        tool !== "eraser" &&
+        tool !== "hand"
+      ) {
+        state.resetAIWorkflow();
+      } else if (
+        state.canvasMode === "sketch2img" &&
+        tool !== "pencil" &&
+        tool !== "eraser" &&
+        tool !== "hand" &&
+        tool !== "select"
+      ) {
+        state.resetAIWorkflow();
       }
 
-      setActiveTool(tool);
+      state.setActiveTool(tool);
     }
-  };
+  }, []);
 
-  const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      window.dispatchEvent(
-        new CustomEvent("canvas:add-image", { detail: { file } }),
-      );
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  const onImageChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        window.dispatchEvent(
+          new CustomEvent("canvas:add-image", { detail: { file } }),
+        );
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [],
+  );
 
   return (
     <TooltipProvider>
       <div className="flex h-full w-12 shrink-0 flex-col items-center gap-2 border-r border-white/[0.06] bg-zinc-950 py-2">
         <ToolButton
-          icon={Cursor}
+          icon={CursorIcon}
           label="Select"
           shortcut="V"
           isActive={activeTool === "select"}
@@ -63,28 +82,28 @@ export function CanvasToolbar() {
         <div className="my-1 h-px w-6 shrink-0 bg-white/[0.06]" />
 
         <ToolButton
-          icon={TextT}
+          icon={TextTIcon}
           label="Text"
           shortcut="T"
           isActive={activeTool === "text"}
           onClick={() => onToolClick("text")}
         />
         <ToolButton
-          icon={PencilSimple}
+          icon={PencilSimpleIcon}
           label="Pencil"
           shortcut="P"
           isActive={activeTool === "pencil"}
           onClick={() => onToolClick("pencil")}
         />
         <ToolButton
-          icon={Square}
+          icon={SquareIcon}
           label="Shapes"
           shortcut="S"
           isActive={activeTool === "shapes"}
           onClick={() => onToolClick("shapes")}
         />
         <ToolButton
-          icon={Eraser}
+          icon={EraserIcon}
           label="Eraser"
           shortcut="E"
           isActive={activeTool === "eraser"}
@@ -111,7 +130,7 @@ export function CanvasToolbar() {
         <div className="my-1 h-px w-6 shrink-0 bg-white/[0.06]" />
 
         <ToolButton
-          icon={Hand}
+          icon={HandIcon}
           label="Hand"
           shortcut="H"
           isActive={activeTool === "hand"}
@@ -119,7 +138,6 @@ export function CanvasToolbar() {
         />
 
         <div className="flex-1" />
-
       </div>
     </TooltipProvider>
   );

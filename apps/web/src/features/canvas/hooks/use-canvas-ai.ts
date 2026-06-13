@@ -23,53 +23,61 @@ export type GenerationStatus =
   | "error";
 
 export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
-  const store = useCanvasStore();
+  const isGenerating = useCanvasStore((s) => s.isAiGenerating);
+  const aiModel = useCanvasStore((s) => s.aiModel);
   const { exportToDataUrl } = useCanvasExport(canvas);
   const queryClient = useQueryClient();
-  const [generationStatus, setGenerationStatus] = useState<GenerationStatus>("idle");
-  const isGenerating = store.isAiGenerating;
+  const [generationStatus, setGenerationStatus] =
+    useState<GenerationStatus>("idle");
 
   const handleGenerate = useCallback(async () => {
     if (!canvas || isGenerating) return;
 
-    if (!store.aiPrompt.trim()) {
+    const state = useCanvasStore.getState();
+
+    if (!state.aiPrompt.trim()) {
       toast.error("Please enter a prompt");
       return;
     }
 
-    if (store.canvasMode === "inpaint" && !store.maskData) {
+    if (state.canvasMode === "inpaint" && !state.maskData) {
       toast.error("Please paint a mask first");
       return;
     }
 
-
-
     try {
-      store.setIsAiGenerating(true);
+      state.setIsAiGenerating(true);
       setGenerationStatus("exporting");
 
       // Export Full Canvas
       const canvasImageDataUrl = exportToDataUrl("png");
       if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
 
-      let targetBounds: { left: number; top: number; width: number; height: number } | undefined;
-      
-      if (store.canvasMode === "img2img") {
+      let targetBounds:
+        | { left: number; top: number; width: number; height: number }
+        | undefined;
+
+      if (state.canvasMode === "img2img") {
         const activeObj = canvas.getActiveObject();
         if (activeObj && activeObj.id !== "__artboard__") {
           const rect = activeObj.getBoundingRect();
-          targetBounds = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+          targetBounds = {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+          };
         } else {
           toast.error("Please select an image first");
           setGenerationStatus("idle");
-          store.setIsAiGenerating(false);
+          state.setIsAiGenerating(false);
           return;
         }
       }
 
       // Export Region if needed
       let regionImageDataUrl: string | undefined;
-      if (store.canvasMode === "img2img" && targetBounds) {
+      if (state.canvasMode === "img2img" && targetBounds) {
         regionImageDataUrl = canvas.toDataURL({
           format: "png",
           left: targetBounds.left,
@@ -95,28 +103,40 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         return new File([u8arr], filename, { type: mime });
       };
 
-      const canvasFile = dataUrlToFile(canvasImageDataUrl, `canvas-${Date.now()}.png`);
-      const canvasImageUrl = await uploadFileToImageKit(canvasFile);
-
-      let maskImageUrl: string | undefined;
-      if (store.canvasMode === "inpaint" && store.maskData) {
-        const maskFile = maskDataUrlToFile(store.maskData);
-        maskImageUrl = await uploadFileToImageKit(maskFile);
+      const canvasFile = dataUrlToFile(
+        canvasImageDataUrl,
+        `canvas-${Date.now()}.png`,
+      );
+      let maskFile: File | undefined;
+      if (state.canvasMode === "inpaint" && state.maskData) {
+        maskFile = maskDataUrlToFile(state.maskData);
       }
-
-      let uploadedRegionUrl: string | undefined;
+      let regionFile: File | undefined;
       if (regionImageDataUrl) {
-        const regionFile = dataUrlToFile(regionImageDataUrl, `region-${Date.now()}.png`);
-        uploadedRegionUrl = await uploadFileToImageKit(regionFile);
+        regionFile = dataUrlToFile(
+          regionImageDataUrl,
+          `region-${Date.now()}.png`,
+        );
       }
+
+      const [canvasImageUrl, maskImageUrl, uploadedRegionUrl] =
+        await Promise.all([
+          uploadFileToImageKit(canvasFile),
+          maskFile
+            ? uploadFileToImageKit(maskFile)
+            : Promise.resolve(undefined),
+          regionFile
+            ? uploadFileToImageKit(regionFile)
+            : Promise.resolve(undefined),
+        ]);
 
       setGenerationStatus("generating");
 
       const payload = {
-        prompt: store.aiPrompt,
+        prompt: state.aiPrompt,
         sourceImageId: imageId,
         config: {
-          model: store.aiModel,
+          model: state.aiModel,
           brandName: "",
           imageCount: 1,
           style: "",
@@ -125,11 +145,11 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           customBgColor: "#ffffff",
           referenceImageUrl: uploadedRegionUrl || canvasImageUrl,
           referenceStrength:
-            store.canvasMode === "sketch2img"
-              ? Math.min(store.aiStrength, 40)
-              : store.aiStrength,
+            state.canvasMode === "sketch2img"
+              ? Math.min(state.aiStrength, 40)
+              : state.aiStrength,
           magicPrompt: false,
-          canvasMode: store.canvasMode,
+          canvasMode: state.canvasMode,
           maskImageUrl: maskImageUrl || undefined,
           canvasImageUrl: canvasImageUrl,
         },
@@ -138,9 +158,9 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       // @ts-expect-error - Hono RPC types mismatch for json payload
       const res = await api.generate.edit.$post({ json: payload });
       if (!res.ok) {
-         throw await parseApiError(res);
+        throw await parseApiError(res);
       }
-      
+
       const { imageId: newImageId } = await res.json();
 
       setGenerationStatus("polling");
@@ -148,7 +168,9 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       // Polling logic
       const poll = async () => {
         while (true) {
-          const pollRes = await api.images[":id"].$get({ param: { id: newImageId } });
+          const pollRes = await api.images[":id"].$get({
+            param: { id: newImageId },
+          });
           if (pollRes.ok) {
             const data = await pollRes.json();
             if (data.image?.status === "completed" && data.image?.imageUrl) {
@@ -165,54 +187,58 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       const finalImageUrl = await poll();
 
       setGenerationStatus("compositing");
-      
+
       const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
-      const artboardBounds = artboard 
-        ? { 
-            left: artboard.left!, 
-            top: artboard.top!, 
-            width: artboard.width! * (artboard.scaleX || 1), 
-            height: artboard.height! * (artboard.scaleY || 1) 
+      const artboardBounds = artboard
+        ? {
+            left: artboard.left!,
+            top: artboard.top!,
+            width: artboard.width! * (artboard.scaleX || 1),
+            height: artboard.height! * (artboard.scaleY || 1),
           }
         : { left: 0, top: 0, width: canvas.width!, height: canvas.height! };
 
       const generationGroupId = `gen_${Date.now()}`;
 
-      await compositeAIResult(canvas, finalImageUrl, store.canvasMode, {
+      await compositeAIResult(canvas, finalImageUrl, state.canvasMode, {
         regionBounds: targetBounds,
         artboardBounds,
         generationGroupId,
-        generatedFromObjectId: store.activeAIObjectId,
+        generatedFromObjectId: state.activeAIObjectId,
       });
 
-      store.setGeneratedResultUrl(finalImageUrl);
+      state.setGeneratedResultUrl(finalImageUrl);
 
       // Clear AI workflow
-      store.resetAIWorkflow();
+      state.resetAIWorkflow();
 
       // Invalidate credits
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
-      
+
       setGenerationStatus("done");
       toast.success("AI generation complete — placed on canvas");
-
     } catch (err) {
       const error = err as Error & { code?: string };
       console.error(error);
-      if (error instanceof ApiError && error.code === ERROR_CODES.INSUFFICIENT_CREDITS) {
+      const state = useCanvasStore.getState();
+      if (
+        error instanceof ApiError &&
+        error.code === ERROR_CODES.INSUFFICIENT_CREDITS
+      ) {
         toast.error("Not enough credits", { description: error.message });
       } else {
         toast.error(error.message || "Generation failed");
       }
       // Set error explicitly
-      store.resetAIWorkflow();
+      state.resetAIWorkflow();
       setGenerationStatus("error");
     } finally {
-      store.setIsAiGenerating(false);
+      const state = useCanvasStore.getState();
+      state.setIsAiGenerating(false);
       // Wait a bit before resetting status so UI can show 'done'
       setTimeout(() => setGenerationStatus("idle"), 2000);
     }
-  }, [canvas, isGenerating, store, exportToDataUrl, imageId, queryClient]);
+  }, [canvas, isGenerating, exportToDataUrl, imageId, queryClient]);
 
   const availableModels = useMemo(() => {
     // Return all models or filter based on mode if needed
@@ -220,7 +246,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
     return MODELS;
   }, []);
 
-  const selectedModelInfo = availableModels.find((m) => m.id === store.aiModel);
+  const selectedModelInfo = availableModels.find((m) => m.id === aiModel);
   const credits = selectedModelInfo?.credits || 10;
 
   return {

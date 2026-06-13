@@ -149,4 +149,3 @@ export function getModelsForCanvasMode(mode: string): ModelOption[] {
   }
   return [...MODELS];
 }
-

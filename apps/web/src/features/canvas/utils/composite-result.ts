@@ -7,19 +7,27 @@ export async function compositeAIResult(
   mode: CanvasMode,
   options: {
     regionBounds?: { left: number; top: number; width: number; height: number };
-    artboardBounds?: { left: number; top: number; width: number; height: number };
+    artboardBounds?: {
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+    };
     generationGroupId?: string;
     generatedFromObjectId?: string | null;
   },
 ): Promise<fabric.FabricImage> {
   return new Promise((resolve, reject) => {
     const fabricAny = fabric as Record<string, unknown>;
-    const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
-    
-    FabricImageClass.fromURL(resultImageUrl, { crossOrigin: "anonymous" }).then(
-      (img: fabric.FabricImage) => {
+    const FabricImageClass = (fabricAny.FabricImage ||
+      fabricAny.Image) as typeof fabric.FabricImage;
+
+    FabricImageClass.fromURL(resultImageUrl, { crossOrigin: "anonymous" })
+      .then((img: fabric.FabricImage) => {
         // Find existing AI region selector to remove it
-        const regionSelector = canvas.getObjects().find((o) => o.id === "__ai_region__");
+        const regionSelector = canvas
+          .getObjects()
+          .find((o) => o.id === "__ai_region__");
 
         switch (mode) {
           case "img2img": {
@@ -30,7 +38,7 @@ export async function compositeAIResult(
             // Scale to fit the region
             const scaleX = options.regionBounds.width / img.width!;
             const scaleY = options.regionBounds.height / img.height!;
-            
+
             img.set({
               left: options.regionBounds.left,
               top: options.regionBounds.top,
@@ -44,14 +52,16 @@ export async function compositeAIResult(
 
             // Remove the original targeted image since it's being upgraded/replaced
             if (options.generatedFromObjectId) {
-              const originalObj = canvas.getObjects().find(o => o.id === options.generatedFromObjectId);
+              const originalObj = canvas
+                .getObjects()
+                .find((o) => o.id === options.generatedFromObjectId);
               if (originalObj) {
                 canvas.remove(originalObj);
               }
             }
 
             if (regionSelector) {
-               canvas.remove(regionSelector);
+              canvas.remove(regionSelector);
             }
             break;
           }
@@ -79,7 +89,9 @@ export async function compositeAIResult(
 
           case "sketch2img": {
             if (!options.artboardBounds) {
-              return reject(new Error("Artboard bounds required for sketch2img"));
+              return reject(
+                new Error("Artboard bounds required for sketch2img"),
+              );
             }
 
             const scaleX = options.artboardBounds.width / img.width!;
@@ -112,7 +124,7 @@ export async function compositeAIResult(
         // Since we modified the canvas, fire object:added so useCanvasHistory picks it up
         // (canvas.add already fires object:added internally, so no manual fire is strictly necessary)
         resolve(img);
-      }
-    ).catch(reject);
+      })
+      .catch(reject);
   });
 }

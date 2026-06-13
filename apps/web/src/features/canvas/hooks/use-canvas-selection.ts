@@ -3,8 +3,17 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import type { SelectedObjectProps } from "../types/canvas";
 
+import { useShallow } from "zustand/react/shallow";
+
 export function useCanvasSelection(canvas: fabric.Canvas | null) {
-  const { setSelectedObject, setSelectedObjects, setSelectionType } = useCanvasStore();
+  const { setSelectedObject, setSelectedObjects, setSelectionType } =
+    useCanvasStore(
+      useShallow((s) => ({
+        setSelectedObject: s.setSelectedObject,
+        setSelectedObjects: s.setSelectedObjects,
+        setSelectionType: s.setSelectionType,
+      })),
+    );
 
   useEffect(() => {
     if (!canvas) return;
@@ -39,7 +48,7 @@ export function useCanvasSelection(canvas: fabric.Canvas | null) {
             stroke: obj.stroke?.toString() || "#000000",
             strokeWidth: obj.strokeWidth || 0,
             locked: !!obj.get("locked"),
-          }))
+          })),
         );
         setSelectionType("multi");
         return;

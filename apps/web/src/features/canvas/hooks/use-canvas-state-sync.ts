@@ -29,7 +29,7 @@ const setCanvasPencilBrush = (
 const setCanvasToolSpecificState = (
   c: fabric.Canvas,
   activeTool: string,
-  brushSettings: { color: string; width: number }
+  brushSettings: { color: string; width: number },
 ) => {
   switch (activeTool) {
     case "select":
@@ -54,8 +54,16 @@ const setCanvasToolSpecificState = (
   }
 };
 
+import { useShallow } from "zustand/react/shallow";
+
 export function useCanvasStateSync(canvas: fabric.Canvas | null) {
-  const { activeTool, brushSettings, canvasMode } = useCanvasStore();
+  const { activeTool, brushSettings, canvasMode } = useCanvasStore(
+    useShallow((s) => ({
+      activeTool: s.activeTool,
+      brushSettings: s.brushSettings,
+      canvasMode: s.canvasMode,
+    })),
+  );
 
   useEffect(() => {
     if (!canvas) return;

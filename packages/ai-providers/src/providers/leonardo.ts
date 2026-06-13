@@ -166,9 +166,10 @@ export class LeonardoProvider implements AIProvider {
         initImageId = await this.uploadReferenceImage(referenceUrl);
       }
 
-      const generationId = isV2 && params.canvasMode !== "inpaint"
-        ? await this.generateV2(params, initImageId, opts)
-        : await this.generateV1(params, initImageId, opts, maskImageId);
+      const generationId =
+        isV2 && params.canvasMode !== "inpaint"
+          ? await this.generateV2(params, initImageId, opts)
+          : await this.generateV1(params, initImageId, opts, maskImageId);
       const result = await this.pollGeneration(generationId);
       const imageResponse = await this.fetchWithTimeout(result.url, {}, 120000);
       if (!imageResponse.ok) {

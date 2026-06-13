@@ -137,7 +137,9 @@ export function PromptInput({
   );
 
   const canSubmit =
-    !isLoading && !submitDisabled && (allowEmptySubmit || localValue.trim().length > 0);
+    !isLoading &&
+    !submitDisabled &&
+    (allowEmptySubmit || localValue.trim().length > 0);
 
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
@@ -147,9 +149,12 @@ export function PromptInput({
           title={contextPrompt}
         >
           {validationError ? (
-            <div className="bg-yellow-500/10 border-border/20 flex items-center gap-2 border-b px-3 py-1.5">
-              <WarningCircleIcon weight="bold" className="text-yellow-500 size-3" />
-              <span className="text-yellow-500 font-mono text-[10px] font-bold tracking-wider uppercase">
+            <div className="border-border/20 flex items-center gap-2 border-b bg-yellow-500/10 px-3 py-1.5">
+              <WarningCircleIcon
+                weight="bold"
+                className="size-3 text-yellow-500"
+              />
+              <span className="font-mono text-[10px] font-bold tracking-wider text-yellow-500 uppercase">
                 {validationError}
               </span>
               {onClearTarget ? (

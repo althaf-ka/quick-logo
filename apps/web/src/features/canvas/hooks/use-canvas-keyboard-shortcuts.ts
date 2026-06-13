@@ -3,8 +3,6 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 
 export function useCanvasKeyboardShortcuts(canvas: fabric.Canvas | null) {
-  const { setActiveTool } = useCanvasStore();
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -54,18 +52,20 @@ export function useCanvasKeyboardShortcuts(canvas: fabric.Canvas | null) {
       const key = e.key.toLowerCase();
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+      const state = useCanvasStore.getState();
+
       switch (key) {
         case "v":
-          setActiveTool("select");
+          state.setActiveTool("select");
           break;
         case "t":
-          setActiveTool("text");
+          state.setActiveTool("text");
           break;
         case "p":
-          setActiveTool("pencil");
+          state.setActiveTool("pencil");
           break;
         case "s":
-          setActiveTool("shapes");
+          state.setActiveTool("shapes");
           break;
         case "i": {
           const fileInput = document.querySelector(
@@ -75,15 +75,15 @@ export function useCanvasKeyboardShortcuts(canvas: fabric.Canvas | null) {
           break;
         }
         case "e":
-          setActiveTool("eraser");
+          state.setActiveTool("eraser");
           break;
         case "h":
-          setActiveTool("hand");
+          state.setActiveTool("hand");
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canvas, setActiveTool]);
+  }, [canvas]);
 }

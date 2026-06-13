@@ -71,11 +71,7 @@ export interface SelectedObjectProps {
   locked?: boolean;
 }
 
-export type CanvasMode =
-  | "edit"
-  | "img2img"
-  | "inpaint"
-  | "sketch2img";
+export type CanvasMode = "edit" | "img2img" | "inpaint" | "sketch2img";
 
 export type SelectionType = "none" | "single" | "multi";
 
@@ -91,8 +87,13 @@ export interface CanvasAIState {
   prompt: string;
   isGenerating: boolean;
   model: string;
-  strength: number;        // 0-100, reference/input strength for img2img
-  maskData: string | null;  // Data URL of the mask PNG
-  regionBounds: { left: number; top: number; width: number; height: number } | null;
+  strength: number; // 0-100, reference/input strength for img2img
+  maskData: string | null; // Data URL of the mask PNG
+  regionBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null;
   generatedResultUrl: string | null;
 }

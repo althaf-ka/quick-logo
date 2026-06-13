@@ -88,8 +88,13 @@ export interface CanvasState {
   setMaskData: (data: string | null) => void;
   maskBrushSize: number;
   setMaskBrushSize: (size: number) => void;
-  regionBounds: { left: number; top: number; width: number; height: number } | null;
-  setRegionBounds: (bounds: CanvasState['regionBounds']) => void;
+  regionBounds: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null;
+  setRegionBounds: (bounds: CanvasState["regionBounds"]) => void;
   generatedResultUrl: string | null;
   setGeneratedResultUrl: (url: string | null) => void;
 }
@@ -166,18 +171,19 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   setAiSessionState: (state) => set({ aiSessionState: state }),
   activeAIObjectId: null,
   setActiveAIObjectId: (id) => set({ activeAIObjectId: id }),
-  resetAIWorkflow: () => set({
-    canvasMode: "edit",
-    aiSessionState: "idle",
-    activeAIObjectId: null,
-    regionBounds: null,
-    maskData: null,
-    aiPrompt: "",
-    generatedResultUrl: null
-  }),
-  aiPrompt: '',
+  resetAIWorkflow: () =>
+    set({
+      canvasMode: "edit",
+      aiSessionState: "idle",
+      activeAIObjectId: null,
+      regionBounds: null,
+      maskData: null,
+      aiPrompt: "",
+      generatedResultUrl: null,
+    }),
+  aiPrompt: "",
   setAiPrompt: (prompt) => set({ aiPrompt: prompt }),
-  aiModel: 'quick-seedream',
+  aiModel: "quick-seedream",
   setAiModel: (model) => set({ aiModel: model }),
   aiStrength: 35,
   setAiStrength: (strength) => set({ aiStrength: strength }),

@@ -17,7 +17,7 @@ export function CanvasViewport({
 }: CanvasViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { setCanvasDimensions } = useCanvasStore();
+  const setCanvasDimensions = useCanvasStore((s) => s.setCanvasDimensions);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -45,7 +45,9 @@ export function CanvasViewport({
         // Debounce the viewport transform recalculation to after the CSS transition ends
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-          const artboard = fabricCanvas.getObjects().find(o => o.id === "__artboard__");
+          const artboard = fabricCanvas
+            .getObjects()
+            .find((o) => o.id === "__artboard__");
           if (artboard) {
             const artWidth = artboard.width || 1024;
             const artHeight = artboard.height || 1024;
@@ -76,10 +78,12 @@ export function CanvasViewport({
       if (!initialImageUrl) return;
 
       const fabricAny = fabric as Record<string, unknown>;
-      const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
-      FabricImageClass.fromURL(initialImageUrl, {
-        crossOrigin: "anonymous",
-      }).then((img: fabric.FabricImage) => {
+      const FabricImageClass = (fabricAny.FabricImage ||
+        fabricAny.Image) as typeof fabric.FabricImage;
+      try {
+        const img = (await FabricImageClass.fromURL(initialImageUrl, {
+          crossOrigin: "anonymous",
+        })) as fabric.FabricImage;
         const width = img.width || 1024;
         const height = img.height || 1024;
 
@@ -139,7 +143,9 @@ export function CanvasViewport({
         ]);
 
         fabricCanvas.requestRenderAll();
-      });
+      } catch (e) {
+        console.error("Failed to load initial image", e);
+      }
     };
 
     loadInitialImage();

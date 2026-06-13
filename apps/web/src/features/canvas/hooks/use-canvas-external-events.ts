@@ -4,7 +4,7 @@ import { useCanvasStore } from "../store/canvas-store";
 import { generateId } from "../utils/fabric-helpers";
 
 export function useCanvasExternalEvents(canvas: fabric.Canvas | null) {
-  const { setActiveTool } = useCanvasStore();
+  const setActiveTool = useCanvasStore((s) => s.setActiveTool);
 
   useEffect(() => {
     if (!canvas) return;
@@ -17,7 +17,8 @@ export function useCanvasExternalEvents(canvas: fabric.Canvas | null) {
       reader.onload = (f) => {
         const data = f.target?.result as string;
         const fabricAny = fabric as Record<string, unknown>;
-        const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
+        const FabricImageClass = (fabricAny.FabricImage ||
+          fabricAny.Image) as typeof fabric.FabricImage;
         FabricImageClass.fromURL(data).then((img: fabric.FabricImage) => {
           img.id = generateId();
           img.set({

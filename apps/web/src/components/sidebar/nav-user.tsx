@@ -1,8 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-} from "@quicklogo/ui/components/sidebar";
+import { SidebarMenu, SidebarMenuItem } from "@quicklogo/ui/components/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Avatar,
@@ -29,9 +26,7 @@ export function NavUser() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <div
-          className="group/nav-user hover:border-border/60 hover:bg-muted/40 relative flex items-center gap-3 overflow-hidden rounded-none border border-transparent px-2.5 py-2 transition-all duration-200 ease-linear group-data-[collapsible=icon]:!px-1.5"
-        >
+        <div className="group/nav-user hover:border-border/60 hover:bg-muted/40 relative flex items-center gap-3 overflow-hidden rounded-none border border-transparent px-2.5 py-2 transition-all duration-200 ease-linear group-data-[collapsible=icon]:!px-1.5">
           <span className="bg-primary/60 pointer-events-none absolute top-1/2 left-0 h-6 w-0.5 -translate-y-1/2 opacity-0 transition-opacity group-hover/nav-user:opacity-100" />
 
           <Avatar className="border-border/60 bg-muted/20 size-9 shrink-0 rounded-none border shadow-sm after:rounded-none">
