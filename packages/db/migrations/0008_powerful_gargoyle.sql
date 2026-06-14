@@ -1,0 +1,1 @@
+ALTER TABLE `image` ADD `canvas_state` text;

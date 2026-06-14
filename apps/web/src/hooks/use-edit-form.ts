@@ -12,6 +12,7 @@ export interface EditHistoryEntry {
   url: string;
   prompt: string;
   createdAt: Date;
+  hasCanvasState?: boolean;
 }
 
 type EditStatus = "idle" | "generating" | "polling" | "done" | "error";
@@ -73,6 +74,7 @@ export function useEditForm({
         url: h.imageUrl!,
         prompt: h.prompt,
         createdAt: new Date(h.createdAt),
+        hasCanvasState: !!h.canvasState,
       }));
   }, [fetchResult]);
 
@@ -87,6 +89,7 @@ export function useEditForm({
           createdAt: fetchResult?.image?.createdAt
             ? new Date(fetchResult.image.createdAt)
             : new Date(),
+          hasCanvasState: !!fetchResult?.image?.canvasState,
         },
       ];
     }
@@ -171,7 +174,7 @@ export function useEditForm({
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: async (data: EditApiRequest) => {
-      const res = await api.generate.edit.$post({ json: data });
+      const res = await api.canvas["ai-edit"].$post({ json: data });
       if (!res.ok) {
         throw await parseApiError(res);
       }

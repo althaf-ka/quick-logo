@@ -16,25 +16,13 @@ import {
 } from "@quicklogo/ui/components/tabs";
 import { useCanvasExport } from "../hooks/use-canvas-export";
 import { useImproveHover } from "../hooks/use-improve-hover";
-
 import { useCanvasAI } from "../hooks/use-canvas-ai";
-import { uploadFileToImageKit } from "@/lib/imagekit";
-import { api } from "@/lib/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@quicklogo/ui/components/sonner";
-import { parseApiError } from "@/lib/api-error";
-import {
-  ArrowCounterClockwiseIcon,
-  ArrowClockwiseIcon,
-  MagnifyingGlassMinusIcon,
-  MagnifyingGlassPlusIcon,
-  DownloadIcon,
-  ListIcon,
-  CornersOutIcon,
-} from "@phosphor-icons/react";
 import * as fabric from "fabric";
 import { PromptInput } from "@/components/global/prompt-input";
 import { AnimatePresence, motion } from "motion/react";
+import { CanvasHeader } from "./canvas-header";
+import { useCanvasSave } from "../hooks/use-canvas-save";
 
 import {
   Drawer,
@@ -45,12 +33,14 @@ import {
 
 export interface CanvasEditorProps {
   initialImageUrl: string;
+  initialCanvasState?: string | null;
   imageId: string;
   onSaveComplete: (newImageId: string) => void;
 }
 
 export function CanvasEditor({
   initialImageUrl,
+  initialCanvasState,
   imageId,
   onSaveComplete,
 }: CanvasEditorProps) {
@@ -63,8 +53,6 @@ export function CanvasEditor({
     setAiPrompt,
     setRegionBounds,
     maskData,
-    canUndo,
-    canRedo,
     selectedObject,
     activeTool,
   } = useCanvasStore(
@@ -74,8 +62,6 @@ export function CanvasEditor({
       setAiPrompt: s.setAiPrompt,
       setRegionBounds: s.setRegionBounds,
       maskData: s.maskData,
-      canUndo: s.canUndo,
-      canRedo: s.canRedo,
       selectedObject: s.selectedObject,
       activeTool: s.activeTool,
     })),
@@ -83,32 +69,42 @@ export function CanvasEditor({
   const { handleGenerate, isGenerating, generationStatus, credits } =
     useCanvasAI(canvas, imageId);
   useImproveHover(canvas);
-  const queryClient = useQueryClient();
 
-  const [isDownloading, setIsDownloading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ai");
   const [zoomLevel, setZoomLevel] = useState(100);
+
+  const { isSaving, isDirty, handleSave } = useCanvasSave({
+    canvas,
+    imageId,
+    onSaveComplete,
+    exportToPng,
+  });
 
   const [isCompact, setIsCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 1024px)").matches;
   });
 
-  useEffect(() => {
+  // Store previous values to detect changes during render (React recommended pattern to avoid cascading renders)
+  const [prevCanvasMode, setPrevCanvasMode] = useState(canvasMode);
+  const [prevActiveTool, setPrevActiveTool] = useState(activeTool);
+
+  if (canvasMode !== prevCanvasMode) {
+    setPrevCanvasMode(canvasMode);
     if (canvasMode !== "edit") {
       setActiveTab("ai");
       if (isCompact) setSidebarOpen(true);
     }
-  }, [canvasMode, isCompact]);
+  }
 
-  useEffect(() => {
-    // If a manual editing tool is selected (not hand/select), switch to properties tab
+  if (activeTool !== prevActiveTool) {
+    setPrevActiveTool(activeTool);
     if (activeTool && activeTool !== "hand" && activeTool !== "select") {
       setActiveTab("properties");
       if (isCompact) setSidebarOpen(true);
     }
-  }, [activeTool, isCompact]);
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -132,45 +128,22 @@ export function CanvasEditor({
     });
   }, []);
 
-  const saveMutation = useMutation({
-    mutationFn: async ({ imageUrl }: { imageUrl: string }) => {
-      const res = await api.images[":id"]["canvas-save"].$post({
-        param: { id: imageId },
-        json: { imageUrl, prompt: "Canvas Edit" },
-      });
-      if (!res.ok) throw await parseApiError(res);
-      return res.json() as Promise<{ imageId: string }>;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["image-history", imageId] });
-    },
-  });
+  // Handle Unsaved Changes Warning
+  useEffect(() => {
+    if (!isDirty) return;
 
-  const { mutateAsync: saveImage } = saveMutation;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
 
-  const handleSave = useCallback(async () => {
-    if (!canvas) return;
-    try {
-      const blob = await Promise.resolve(exportToPng());
-      if (!blob) throw new Error("Export failed");
-      const file = new File([blob], `canvas-edit-${Date.now()}.png`, {
-        type: "image/png",
-      });
-      const uploadUrl = await uploadFileToImageKit(file);
-      const saved = await saveImage({ imageUrl: uploadUrl });
-      toast.success("Design saved successfully!");
-      onSaveComplete(saved.imageId || imageId);
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to save edited design");
-    }
-  }, [canvas, exportToPng, saveImage, imageId, onSaveComplete]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   const handleDownload = useCallback(
     async (format: "png" | "jpeg" | "svg" | "webp" = "png", quality = 0.92) => {
       if (!canvas) return;
-      setIsDownloading(true);
       try {
         let data: Blob | string;
         const ext = format;
@@ -193,8 +166,6 @@ export function CanvasEditor({
         URL.revokeObjectURL(url);
       } catch {
         toast.error("Failed to download image");
-      } finally {
-        setIsDownloading(false);
       }
     },
     [canvas, exportToSvg, exportToJpeg, exportToWebp, exportToPng],
@@ -335,92 +306,17 @@ export function CanvasEditor({
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
-      {/* Compact control strip — NOT a second header */}
-      <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-950/50 px-3">
-        {/* Left: Zoom controls & History */}
-        <div className="hidden items-center gap-1.5 md:flex">
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("canvas:undo"))}
-            disabled={!canUndo}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors disabled:opacity-50"
-          >
-            <ArrowCounterClockwiseIcon size={14} />
-          </button>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("canvas:redo"))}
-            disabled={!canRedo}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors disabled:opacity-50"
-          >
-            <ArrowClockwiseIcon size={14} />
-          </button>
-          <div className="mx-2 h-3 w-px bg-white/10" />
-          <button
-            onClick={() => handleZoom("out")}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors"
-          >
-            <MagnifyingGlassMinusIcon size={14} />
-          </button>
-          <span className="text-muted-foreground/60 w-10 text-center font-mono text-[9px] tabular-nums">
-            {zoomLevel}%
-          </span>
-          <button
-            onClick={() => handleZoom("in")}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors"
-          >
-            <MagnifyingGlassPlusIcon size={14} />
-          </button>
-          <button
-            onClick={() => handleZoom("fit")}
-            className="text-muted-foreground/50 hover:text-muted-foreground p-1 transition-colors"
-          >
-            <CornersOutIcon size={14} />
-          </button>
-        </div>
+      <CanvasHeader
+        canvas={canvas}
+        zoomLevel={zoomLevel / 100}
+        handleZoom={(amount) => handleZoom(amount > 0 ? "in" : "out")}
+        handleCenter={() => handleZoom("fit")}
+        handleSave={handleSave}
+        isSaving={isSaving}
+        isDirty={isDirty}
+        handleDownload={handleDownload}
+      />
 
-        {/* Center: Empty for now (or filename) */}
-        <div className="flex flex-1 justify-start overflow-hidden md:justify-center"></div>
-
-        {/* Right: Export + Save */}
-        <div className="flex items-center gap-2">
-          {isCompact && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="text-muted-foreground/50 hover:text-muted-foreground flex items-center gap-1 px-2 py-1 transition-colors"
-            >
-              <ListIcon size={14} />
-            </button>
-          )}
-          <select
-            className="text-muted-foreground/50 hover:text-muted-foreground hidden cursor-pointer appearance-none border border-white/[0.06] bg-transparent px-2 py-1 font-mono text-[9px] font-bold tracking-wider uppercase outline-none sm:block"
-            onChange={(e) =>
-              handleDownload(e.target.value as "png" | "jpeg" | "svg" | "webp")
-            }
-            value=""
-          >
-            <option value="" disabled>
-              Export
-            </option>
-            <option value="png">PNG</option>
-            <option value="jpeg">JPEG</option>
-            <option value="webp">WEBP</option>
-            <option value="svg">SVG</option>
-          </select>
-          <button
-            onClick={() => handleDownload("png")}
-            disabled={!canvas || isDownloading}
-            className="text-muted-foreground/50 hover:text-muted-foreground flex items-center gap-1 px-2 py-1 transition-colors disabled:opacity-50 sm:hidden"
-          >
-            <DownloadIcon size={14} />
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!canvas || saveMutation.isPending}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-colors disabled:opacity-50"
-          >
-            {saveMutation.isPending ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </div>
 
       <div className="relative flex flex-1 overflow-hidden">
         <CanvasToolbar />
@@ -430,6 +326,8 @@ export function CanvasEditor({
             canvas={canvas}
             setCanvas={setCanvas}
             initialImageUrl={initialImageUrl}
+            initialCanvasState={initialCanvasState}
+            imageId={imageId}
           />
           <MaskOverlay mainCanvas={canvas} />
 

@@ -156,7 +156,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       };
 
       // @ts-expect-error - Hono RPC types mismatch for json payload
-      const res = await api.generate.edit.$post({ json: payload });
+      const res = await api.canvas["ai-edit"].$post({ json: payload });
       if (!res.ok) {
         throw await parseApiError(res);
       }

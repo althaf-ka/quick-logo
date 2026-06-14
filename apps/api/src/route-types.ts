@@ -20,3 +20,4 @@ export type { ImagesType } from "./routes/images";
 export type { PaymentsType } from "./routes/payments";
 export type { ProjectsType } from "./routes/projects";
 export type { BrandKitsType } from "./routes/brand-kits";
+export type { CanvasType } from "./routes/canvas";

@@ -185,17 +185,24 @@ export function EditPage({
                   <span className="inline">Download</span>
                 </Button>
                 <Button
-                  variant="default"
+                  variant={selectedEntry?.hasCanvasState ? "default" : "secondary"}
                   size="sm"
                   className={cn(
                     "flex-1 cursor-pointer gap-2 transition-opacity",
+                    selectedEntry?.hasCanvasState && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(var(--primary),0.3)]",
                     areActionsDisabled && "cursor-not-allowed opacity-60",
                   )}
                   disabled={areActionsDisabled}
                   onClick={handleCanvasOpen}
                 >
-                  <PaletteIcon className="size-4" />
-                  <span className="inline">Canvas</span>
+                  {selectedEntry?.hasCanvasState ? (
+                    <SparkleIcon className="size-4" weight="fill" />
+                  ) : (
+                    <PaletteIcon className="size-4" />
+                  )}
+                  <span className="inline">
+                    {selectedEntry?.hasCanvasState ? "Resume Edit" : "Canvas"}
+                  </span>
                 </Button>
               </div>
             </div>
@@ -280,17 +287,23 @@ export function EditPage({
                 Download
               </Button>
               <Button
-                variant="outline"
+                variant={selectedEntry?.hasCanvasState ? "default" : "outline"}
                 size="sm"
                 className={cn(
-                  "border-border/60 hover:bg-muted/50 w-full cursor-pointer justify-start gap-2 rounded-none text-[11px] font-medium transition-colors",
+                  "w-full cursor-pointer justify-start gap-2 rounded-none text-[11px] font-medium transition-colors",
+                  !selectedEntry?.hasCanvasState && "border-border/60 hover:bg-muted/50",
+                  selectedEntry?.hasCanvasState && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(var(--primary),0.3)]",
                   areActionsDisabled && "cursor-not-allowed opacity-60",
                 )}
                 disabled={areActionsDisabled}
                 onClick={handleCanvasOpen}
               >
-                <PaletteIcon className="size-3.5" />
-                Canvas
+                {selectedEntry?.hasCanvasState ? (
+                  <SparkleIcon className="size-3.5" weight="fill" />
+                ) : (
+                  <PaletteIcon className="size-3.5" />
+                )}
+                {selectedEntry?.hasCanvasState ? "Resume Edit" : "Canvas"}
               </Button>
             </div>
           </div>

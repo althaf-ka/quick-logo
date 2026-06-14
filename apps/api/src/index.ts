@@ -14,6 +14,7 @@ import projectsRoute from "./routes/projects";
 import adminRoute from "./routes/admin";
 import logsRoute from "./routes/logs";
 import brandKitsRoute from "./routes/brand-kits";
+import canvasRoute from "./routes/canvas";
 
 import { Bindings, Variables } from "./types";
 import { globalErrorHandler } from "./lib/error-handler";
@@ -68,7 +69,8 @@ const routes = app
   .route("/api/projects", projectsRoute)
   .route("/api/admin", adminRoute)
   .route("/api/logs", logsRoute)
-  .route("/api/brand-kits", brandKitsRoute);
+  .route("/api/brand-kits", brandKitsRoute)
+  .route("/api/canvas", canvasRoute);
 
 export default app;
 export type AppType = typeof routes;

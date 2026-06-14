@@ -3,17 +3,178 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { useCanvasTools } from "../hooks/use-canvas-tools";
 import { useCanvasHistory } from "../hooks/use-canvas-history";
+import { findArtboard } from "../utils/artboard";
 
 export interface CanvasViewportProps {
   canvas: fabric.Canvas | null;
   setCanvas: (canvas: fabric.Canvas | null) => void;
   initialImageUrl?: string;
+  initialCanvasState?: string | null;
+  imageId: string;
+}
+
+async function loadCanvasState(
+  fabricCanvas: fabric.Canvas,
+  stateToLoad: string,
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  setCanvasDimensions: (w: number, h: number) => void,
+  centerArtboard: () => void
+) {
+  try {
+    const parsedState = JSON.parse(stateToLoad);
+
+    delete parsedState.viewportTransform;
+
+    const customPropsSnapshot = (parsedState.objects || []).map((o: Record<string, unknown>) => ({
+      id: o.id as string | undefined,
+      name: o.name as string | undefined,
+      type: o.type as string | undefined,
+      left: o.left as number | undefined,
+      top: o.top as number | undefined,
+    }));
+
+    await fabricCanvas.loadFromJSON(parsedState);
+    
+    const objects = fabricCanvas.getObjects();
+    
+    type CustomFabricObject = fabric.Object & { id?: string; name?: string };
+    
+    objects.forEach((obj, index) => {
+      const saved = customPropsSnapshot[index];
+      if (saved) {
+        const customObj = obj as CustomFabricObject;
+        if (saved.id) customObj.id = saved.id;
+        if (saved.name) customObj.name = saved.name;
+      }
+    });
+    
+    const hasArtboard = objects.some((o) => o.id === "__artboard__");
+    if (!hasArtboard) {
+      const savedArtboard = customPropsSnapshot.find(
+        (o: { id?: string; name?: string; type?: string; left?: number; top?: number }) => o.id === "__artboard__" || o.name === "Artboard",
+      );
+      if (savedArtboard) {
+        const match = objects.find(
+          (o) =>
+            o.type === (savedArtboard.type || "rect") &&
+            Math.abs((o.left || 0) - (savedArtboard.left || 0)) < 1 &&
+            Math.abs((o.top || 0) - (savedArtboard.top || 0)) < 1,
+        );
+        if (match) {
+          const customMatch = match as CustomFabricObject;
+          customMatch.id = "__artboard__";
+          customMatch.name = "Artboard";
+        }
+      }
+    }
+    
+    if (containerRef.current) {
+      fabricCanvas.setDimensions({
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
+      });
+    }
+
+    fabricCanvas.renderAll();
+    
+    const artboard = findArtboard(fabricCanvas);
+    if (artboard) {
+      setCanvasDimensions(artboard.width! * (artboard.scaleX || 1), artboard.height! * (artboard.scaleY || 1));
+    }
+    
+    centerArtboard();
+    
+    setTimeout(() => window.dispatchEvent(new CustomEvent("canvas:loaded")), 100);
+    
+    setTimeout(() => {
+      if (containerRef.current) {
+        fabricCanvas.setDimensions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight,
+        });
+      }
+      centerArtboard();
+    }, 300);
+    
+    return true;
+  } catch (e) {
+    console.error("Failed to load canvas state", e);
+    return false;
+  }
+}
+
+async function loadSourceImage(
+  fabricCanvas: fabric.Canvas,
+  imageUrl: string,
+  setCanvasDimensions: (w: number, h: number) => void,
+  centerArtboard: () => void
+) {
+  const fabricAny = fabric as Record<string, unknown>;
+  const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
+  try {
+    const img = (await FabricImageClass.fromURL(imageUrl, {
+      crossOrigin: "anonymous",
+    })) as fabric.FabricImage;
+    const width = img.width || 1024;
+    const height = img.height || 1024;
+
+    const artboard = new fabric.Rect({
+      originX: "left",
+      originY: "top",
+      left: 0,
+      top: 0,
+      width,
+      height,
+      fill: "#ffffff",
+      selectable: false,
+      evented: false,
+      hoverCursor: "default",
+    });
+    artboard.id = "__artboard__";
+    artboard.name = "Artboard";
+
+    const imgWidth = img.width || 1;
+    const imgHeight = img.height || 1;
+    const imgScaleX = width / imgWidth;
+    const imgScaleY = height / imgHeight;
+    const imgScale = Math.min(imgScaleX, imgScaleY, 1);
+
+    img.set({
+      originX: "left",
+      originY: "top",
+      left: artboard.left! + (width - imgWidth * imgScale) / 2,
+      top: artboard.top! + (height - imgHeight * imgScale) / 2,
+      scaleX: imgScale,
+      scaleY: imgScale,
+      selectable: false,
+      evented: true,
+      locked: true,
+      hoverCursor: "default",
+    });
+    img.id = "obj_initial_image";
+    img.name = "Source Image";
+
+    fabricCanvas.add(artboard);
+    fabricCanvas.add(img);
+
+    setCanvasDimensions(width, height);
+    centerArtboard();
+
+    window.dispatchEvent(new CustomEvent("canvas:loaded"));
+    return true;
+  } catch (e) {
+    console.error("Failed to load initial image", e);
+    window.dispatchEvent(new CustomEvent("canvas:loaded"));
+    return false;
+  }
 }
 
 export function CanvasViewport({
   canvas,
   setCanvas,
   initialImageUrl,
+  initialCanvasState,
+  imageId,
 }: CanvasViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,6 +193,51 @@ export function CanvasViewport({
 
     setCanvas(fabricCanvas);
 
+    // Flag to prevent ResizeObserver from overriding centering during initial async load
+    let initialLoadDone = false;
+
+    // Helper: center the artboard in the viewport
+    const centerArtboard = () => {
+      const artboard = findArtboard(fabricCanvas);
+      
+      let artWidth: number;
+      let artHeight: number;
+      
+      if (artboard) {
+        artWidth = artboard.width! * (artboard.scaleX || 1);
+        artHeight = artboard.height! * (artboard.scaleY || 1);
+      } else {
+        // Fallback: use store dimensions (always set on initial load)
+        const store = useCanvasStore.getState();
+        artWidth = store.canvasWidth || 1024;
+        artHeight = store.canvasHeight || 1024;
+        console.warn("[QuickLogo] Artboard not found, using store dimensions for centering:", artWidth, "x", artHeight);
+      }
+
+      const padding = 60;
+      const currentW = fabricCanvas.width!;
+      const currentH = fabricCanvas.height!;
+      
+      if (currentW <= 0 || currentH <= 0) {
+        console.warn("[QuickLogo] Canvas has zero dimensions, skipping center:", currentW, "x", currentH);
+        return;
+      }
+      
+      const scaleX = (currentW - padding * 2) / artWidth;
+      const scaleY = (currentH - padding * 2) / artHeight;
+      const scale = Math.min(scaleX, scaleY, 1);
+
+      fabricCanvas.setViewportTransform([
+        scale,
+        0,
+        0,
+        scale,
+        currentW / 2 - (artWidth * scale) / 2,
+        currentH / 2 - (artHeight * scale) / 2,
+      ]);
+      fabricCanvas.renderAll();
+    };
+
     // Debounce resize to avoid flash during sidebar collapse/expand animation (200ms CSS transition)
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     const resizeObserver = new ResizeObserver((entries) => {
@@ -42,113 +248,44 @@ export function CanvasViewport({
         // Immediately update canvas size so it doesn't show a gap
         fabricCanvas.setDimensions({ width, height });
 
+        // CRITICAL: Skip recenter until the initial async load has completed.
+        // Otherwise the ResizeObserver fires before objects exist (or right after
+        // centering) and overrides the viewport transform with a stale calculation.
+        if (!initialLoadDone) return;
+
         // Debounce the viewport transform recalculation to after the CSS transition ends
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-          const artboard = fabricCanvas
-            .getObjects()
-            .find((o) => o.id === "__artboard__");
-          if (artboard) {
-            const artWidth = artboard.width || 1024;
-            const artHeight = artboard.height || 1024;
-            const padding = 60;
-            const currentW = fabricCanvas.width!;
-            const currentH = fabricCanvas.height!;
-            const scaleX = (currentW - padding * 2) / artWidth;
-            const scaleY = (currentH - padding * 2) / artHeight;
-            const scale = Math.min(scaleX, scaleY, 1);
-
-            fabricCanvas.setViewportTransform([
-              scale,
-              0,
-              0,
-              scale,
-              currentW / 2 - (artWidth * scale) / 2,
-              currentH / 2 - (artHeight * scale) / 2,
-            ]);
-          }
-          fabricCanvas.requestRenderAll();
+          centerArtboard();
         }, 250);
       }
     });
 
     resizeObserver.observe(containerRef.current);
 
-    const loadInitialImage = async () => {
-      if (!initialImageUrl) return;
+    const initializeCanvas = async () => {
+      const localStateStr = localStorage.getItem(`quicklogo_canvas_${imageId}`);
+      const stateToLoad = localStateStr || initialCanvasState;
 
-      const fabricAny = fabric as Record<string, unknown>;
-      const FabricImageClass = (fabricAny.FabricImage ||
-        fabricAny.Image) as typeof fabric.FabricImage;
-      try {
-        const img = (await FabricImageClass.fromURL(initialImageUrl, {
-          crossOrigin: "anonymous",
-        })) as fabric.FabricImage;
-        const width = img.width || 1024;
-        const height = img.height || 1024;
-
-        // Define an artboard rectangle at 0,0. Viewport transform will center it.
-        const artboard = new fabric.Rect({
-          left: 0,
-          top: 0,
-          width,
-          height,
-          fill: "#ffffff",
-          selectable: false,
-          evented: false,
-          hoverCursor: "default",
-        });
-        artboard.id = "__artboard__";
-        artboard.name = "Artboard";
-
-        // Scale image to fit within the artboard bounds
-        const imgWidth = img.width || 1;
-        const imgHeight = img.height || 1;
-        const imgScaleX = width / imgWidth;
-        const imgScaleY = height / imgHeight;
-        const imgScale = Math.min(imgScaleX, imgScaleY, 1);
-
-        // Center the image on the artboard
-        img.set({
-          left: artboard.left! + (width - imgWidth * imgScale) / 2,
-          top: artboard.top! + (height - imgHeight * imgScale) / 2,
-          scaleX: imgScale,
-          scaleY: imgScale,
-          selectable: false,
-          evented: true,
-          locked: true,
-          hoverCursor: "default",
-        });
-        img.id = "obj_initial_image";
-        img.name = "Source Image";
-
-        fabricCanvas.add(artboard);
-        fabricCanvas.add(img);
-
-        setCanvasDimensions(width, height);
-
-        // Setup initial zoom to fit artboard with padding
-        const padding = 60;
-        const scaleX = (fabricCanvas.width! - padding * 2) / width;
-        const scaleY = (fabricCanvas.height! - padding * 2) / height;
-        const scale = Math.min(scaleX, scaleY, 1);
-
-        fabricCanvas.setViewportTransform([
-          scale,
-          0,
-          0,
-          scale,
-          fabricCanvas.width! / 2 - (width * scale) / 2,
-          fabricCanvas.height! / 2 - (height * scale) / 2,
-        ]);
-
-        fabricCanvas.requestRenderAll();
-      } catch (e) {
-        console.error("Failed to load initial image", e);
+      if (stateToLoad) {
+        const success = await loadCanvasState(fabricCanvas, stateToLoad, containerRef, setCanvasDimensions, centerArtboard);
+        if (success) {
+          initialLoadDone = true;
+          return;
+        }
       }
+
+      if (!initialImageUrl) {
+        initialLoadDone = true;
+        window.dispatchEvent(new CustomEvent("canvas:loaded"));
+        return;
+      }
+
+      await loadSourceImage(fabricCanvas, initialImageUrl, setCanvasDimensions, centerArtboard);
+      initialLoadDone = true;
     };
 
-    loadInitialImage();
+    initializeCanvas();
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
@@ -156,7 +293,7 @@ export function CanvasViewport({
       fabricCanvas.dispose();
       setCanvas(null);
     };
-  }, [initialImageUrl, setCanvas, setCanvasDimensions]);
+  }, [initialImageUrl, initialCanvasState, imageId, setCanvas, setCanvasDimensions]);
 
   // Connect hooks
   useCanvasTools(canvas);

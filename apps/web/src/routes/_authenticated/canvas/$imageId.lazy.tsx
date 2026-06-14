@@ -30,6 +30,7 @@ function CanvasRoute() {
   });
 
   const imageUrl = data?.image?.imageUrl;
+  const canvasState = data?.image?.canvasState;
 
   const handleSaveComplete = (newImageId: string) => {
     navigate({
@@ -69,6 +70,7 @@ function CanvasRoute() {
         <CanvasEditor
           imageId={imageId}
           initialImageUrl={imageUrl}
+          initialCanvasState={canvasState}
           onSaveComplete={handleSaveComplete}
         />
       </Suspense>

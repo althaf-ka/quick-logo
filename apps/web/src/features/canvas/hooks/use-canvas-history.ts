@@ -51,6 +51,18 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       }
 
       await canvas.loadFromJSON(jsonToLoad);
+
+      // CRITICAL: Restore custom properties stripped by loadFromJSON
+      const loadedObjects = canvas.getObjects();
+      const jsonObjects = jsonToLoad.objects || [];
+      type CustomFabricObject = fabric.Object & { id?: string; name?: string };
+      loadedObjects.forEach((obj: fabric.FabricObject, i: number) => {
+        const src = jsonObjects[i];
+        const customObj = obj as CustomFabricObject;
+        if (src?.id) customObj.id = src.id;
+        if (src?.name) customObj.name = src.name;
+      });
+
       canvas.requestRenderAll();
       isHistoryChanging.current = false;
       syncStore();

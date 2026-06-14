@@ -15,6 +15,7 @@ export const images = sqliteTable("image", {
   model: text("model").notNull(),
   config: text("config", { mode: "json" }),
   imageUrl: text("image_url"),
+  canvasState: text("canvas_state"),
   status: text("status", {
     enum: ["pending", "processing", "completed", "failed"],
   })
