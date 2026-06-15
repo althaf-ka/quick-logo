@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useCanvasStore } from "../store/canvas-store";
+import { useShallow } from "zustand/react/shallow";
 
 export type WorkflowState = "Ready" | "Needs Input" | "Coming Soon";
 
@@ -26,7 +27,16 @@ export function useWorkflowReadiness() {
     setCanvasMode,
     setActiveTool,
     activeTool,
-  } = useCanvasStore();
+  } = useCanvasStore(
+    useShallow((s) => ({
+      selectionType: s.selectionType,
+      selectedObject: s.selectedObject,
+      maskData: s.maskData,
+      setCanvasMode: s.setCanvasMode,
+      setActiveTool: s.setActiveTool,
+      activeTool: s.activeTool,
+    })),
+  );
 
   const isImageSelected =
     selectionType === "single" &&

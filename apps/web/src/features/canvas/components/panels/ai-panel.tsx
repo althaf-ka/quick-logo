@@ -2,8 +2,8 @@ import { useCanvasStore } from "../../store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
-import { getModelsForContext } from "@quicklogo/ai-providers/models";
-import { useState } from "react";
+import { getModelsForCanvasMode } from "@quicklogo/ai-providers/models";
+import { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionItem,
@@ -23,7 +23,6 @@ import type { GenerationStatus } from "../../hooks/use-canvas-ai";
 import type { ModelOption } from "@quicklogo/ai-providers/models";
 import { cn } from "@quicklogo/ui/lib/utils";
 
-const EDIT_MODELS = getModelsForContext("edit");
 
 export interface AiPanelProps {
   isGenerating: boolean;
@@ -111,6 +110,14 @@ export function AiPanel({
   );
 
   const { workflows } = useWorkflowReadiness();
+  const currentModels = getModelsForCanvasMode(canvasMode);
+
+  // Automatically switch to a supported model if the current one doesn't support this mode
+  useEffect(() => {
+    if (currentModels.length > 0 && !currentModels.find((m: ModelOption) => m.id === aiModel)) {
+      setAiModel(currentModels[0].id);
+    }
+  }, [canvasMode, aiModel, currentModels, setAiModel]);
 
   const [clickedToolId, setClickedToolId] = useState<string | null>(null);
 
@@ -341,7 +348,7 @@ export function AiPanel({
                 </label>
                 <ModelSelector
                   variant="default"
-                  models={EDIT_MODELS as unknown as ModelOption[]}
+                  models={currentModels as unknown as ModelOption[]}
                   value={aiModel}
                   onChange={setAiModel}
                   context="edit"

@@ -6,6 +6,7 @@ export {
   MODELS,
   getModelCredits,
   getModelsForContext,
+  getModelsForCanvasMode,
 } from "./models";
 export type { ModelContext, ModelId, ModelOption } from "./models";
 

@@ -20,7 +20,9 @@ export async function routePromptAndBuildParams(
   let negativePrompt: string | undefined;
 
   // If the model does not support native enhancement (Alchemy/etc.), we process it locally.
-  if (!mapping.capabilities.nativePromptEnhancement) {
+  // For canvas edits (img2img/inpaint), ALWAYS enhance — edit instructions like "add green bg"
+  // are too vague for V2's reference-based generation and need LLM expansion into full descriptions.
+  if (!mapping.capabilities.nativePromptEnhancement || message.isEdit) {
     const enhanced = await promptEnhancer.enhance(message);
     finalPrompt = enhanced.finalPrompt;
     enhancedPromptText = enhanced.enhancedPrompt;

@@ -29,6 +29,12 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
   const queryClient = useQueryClient();
   const [generationStatus, setGenerationStatus] =
     useState<GenerationStatus>("idle");
+  const [generationBounds, setGenerationBounds] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const handleGenerate = useCallback(async () => {
     if (!canvas || isGenerating) return;
@@ -56,10 +62,17 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       let targetBounds:
         | { left: number; top: number; width: number; height: number }
         | undefined;
+      let activeObjectIdToReplace: string | null = null;
 
       if (state.canvasMode === "img2img") {
         const activeObj = canvas.getActiveObject();
         if (activeObj && activeObj.id !== "__artboard__") {
+          if (!activeObj.id) activeObj.set("id", `obj_${Date.now()}`);
+          activeObjectIdToReplace = activeObj.id ?? null;
+          state.setActiveAIObjectId(activeObjectIdToReplace);
+          
+          // getBoundingRect() ensures we get the absolute top-left coordinates
+          // regardless of whether the object's originX/originY is 'center'.
           const rect = activeObj.getBoundingRect();
           targetBounds = {
             left: rect.left,
@@ -67,6 +80,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
             width: rect.width,
             height: rect.height,
           };
+          setGenerationBounds(targetBounds);
         } else {
           toast.error("Please select an image first");
           setGenerationStatus("idle");
@@ -78,6 +92,14 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       // Export Region if needed
       let regionImageDataUrl: string | undefined;
       if (state.canvasMode === "img2img" && targetBounds) {
+        // Save state, discard selection to hide controls, and reset zoom (viewportTransform)
+        // so that absolute coordinates (targetBounds) align perfectly.
+        const active = canvas.getActiveObjects();
+        canvas.discardActiveObject();
+        const vpt = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        canvas.renderAll(); // MUST be synchronous
+
         regionImageDataUrl = canvas.toDataURL({
           format: "png",
           left: targetBounds.left,
@@ -86,6 +108,17 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           height: targetBounds.height,
           multiplier: 1,
         });
+
+        // Restore state
+        if (vpt) canvas.setViewportTransform(vpt as fabric.TMat2D);
+        if (active && active.length) {
+          if (active.length > 1) {
+            canvas.setActiveObject(new fabric.ActiveSelection(active, { canvas }));
+          } else {
+            canvas.setActiveObject(active[0]);
+          }
+        }
+        canvas.renderAll();
       }
 
       setGenerationStatus("uploading");
@@ -121,12 +154,12 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
 
       const [canvasImageUrl, maskImageUrl, uploadedRegionUrl] =
         await Promise.all([
-          uploadFileToImageKit(canvasFile),
+          uploadFileToImageKit(canvasFile, "anonymous", { isTemp: true }),
           maskFile
-            ? uploadFileToImageKit(maskFile)
+            ? uploadFileToImageKit(maskFile, "anonymous", { isTemp: true })
             : Promise.resolve(undefined),
           regionFile
-            ? uploadFileToImageKit(regionFile)
+            ? uploadFileToImageKit(regionFile, "anonymous", { isTemp: true })
             : Promise.resolve(undefined),
         ]);
 
@@ -166,8 +199,10 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       setGenerationStatus("polling");
 
       // Polling logic
+      const MAX_POLL_ATTEMPTS = 60; // 60 × 10s = 10 min timeout
       const poll = async () => {
-        while (true) {
+        let attempts = 0;
+        while (attempts < MAX_POLL_ATTEMPTS) {
           const pollRes = await api.images[":id"].$get({
             param: { id: newImageId },
           });
@@ -180,8 +215,10 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
               throw new Error("Generation failed on server");
             }
           }
-          await new Promise((resolve) => setTimeout(resolve, 3000));
+          attempts++;
+          await new Promise((resolve) => setTimeout(resolve, 10000));
         }
+        throw new Error("Generation timed out — please try again");
       };
 
       const finalImageUrl = await poll();
@@ -204,7 +241,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         regionBounds: targetBounds,
         artboardBounds,
         generationGroupId,
-        generatedFromObjectId: state.activeAIObjectId,
+        generatedFromObjectId: activeObjectIdToReplace,
       });
 
       state.setGeneratedResultUrl(finalImageUrl);
@@ -216,7 +253,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
 
       setGenerationStatus("done");
-      toast.success("AI generation complete — placed on canvas");
+      toast.success("AI image generated successfully");
     } catch (err) {
       const error = err as Error & { code?: string };
       console.error(error);
@@ -236,7 +273,10 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       const state = useCanvasStore.getState();
       state.setIsAiGenerating(false);
       // Wait a bit before resetting status so UI can show 'done'
-      setTimeout(() => setGenerationStatus("idle"), 2000);
+      setTimeout(() => {
+        setGenerationStatus("idle");
+        setGenerationBounds(null);
+      }, 2000);
     }
   }, [canvas, isGenerating, exportToDataUrl, imageId, queryClient]);
 
@@ -253,6 +293,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
     handleGenerate,
     isGenerating,
     generationStatus,
+    generationBounds,
     credits,
     availableModels,
   };

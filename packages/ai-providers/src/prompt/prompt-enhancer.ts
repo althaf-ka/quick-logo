@@ -19,7 +19,12 @@ export class PromptEnhancer {
   async enhance(message: GenerateImageMessage) {
     const hasReference = !!message.config.referenceImageUrl;
 
-    const basePrompt = message.config.magicPrompt
+    // For edits, ALWAYS use LLM rewrite regardless of magicPrompt flag.
+    // Edit instructions like "add green bg" must be expanded into full visual
+    // descriptions or V2 models produce gibberish from vague 2-word prompts.
+    const shouldRewrite = message.config.magicPrompt || message.isEdit;
+
+    const basePrompt = shouldRewrite
       ? await this.rewriteWithLLM(message)
       : message.prompt;
 
@@ -28,7 +33,7 @@ export class PromptEnhancer {
     return {
       finalPrompt: built.prompt,
       negativePrompt: built.negativePrompt,
-      ...(message.config.magicPrompt && { enhancedPrompt: basePrompt }),
+      ...(shouldRewrite && { enhancedPrompt: basePrompt }),
     };
   }
 
@@ -57,6 +62,7 @@ The user will provide a short instruction on how to modify their current logo.
 Your job is to output a complete, vivid visual description of what the logo should look like AFTER this edit is applied, keeping the original core subject intact.
 
 Rules:
+- CRITICAL: ONLY apply the specific changes the user requested. If they ask to "make the background green", do NOT change the main subject (e.g., if it's an owl, describe an owl, do not describe a leaf). Preserve the original subject conceptually and only alter what is explicitly mentioned in the edit instruction.
 - Output ONLY the rewritten detailed prompt — no explanation, no preamble, no quotes
 - Keep it under 150 words
 - Be specific about shapes, composition, and visual style

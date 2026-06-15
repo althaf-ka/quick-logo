@@ -276,6 +276,13 @@ export class LeonardoProvider implements AIProvider {
     if (refStr >= 75) strengthLabel = "HIGH";
     else if (refStr <= 25) strengthLabel = "LOW";
 
+    // For img2img canvas edits, force HIGH strength to preserve the original
+    // image structure. V2's image_reference is guidance-based, so MID/LOW
+    // produces results too different from the source for editing use cases.
+    if (params.canvasMode === "img2img") {
+      strengthLabel = "HIGH";
+    }
+
     const isIdeogram = params.backendModel.includes("ideogram");
 
     const v2Payload: LeonardoV2Payload = {
@@ -311,6 +318,17 @@ export class LeonardoProvider implements AIProvider {
         ],
       };
     }
+
+    logger.info("[Leonardo V2] Final payload", {
+      model: v2Payload.model,
+      prompt: v2Payload.parameters.prompt,
+      width: v2Payload.parameters.width,
+      height: v2Payload.parameters.height,
+      promptEnhance: v2Payload.parameters.prompt_enhance,
+      hasImageReference: !!initImageId,
+      referenceStrength: strengthLabel,
+      canvasMode: params.canvasMode,
+    });
 
     const genRes = await this.post("/v2/generations", v2Payload);
 

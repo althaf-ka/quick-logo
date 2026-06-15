@@ -47,7 +47,21 @@ export function buildBasePrompt(
 ): { prompt: string; negativePrompt: string } {
   const parts: string[] = [];
 
-  if (hasReference && !message.isEdit) {
+  // For canvas edits (img2img/inpaint), the user's instruction is the primary
+  // directive. Skip automatic style/palette/background modifiers that can
+  // contradict the edit intent (e.g. "add green background" + "transparent bg").
+  if (message.isEdit) {
+    parts.push(basePrompt);
+    parts.push("professional logo, clean design, high quality");
+
+    const negativePrompt = message.config.negativePrompt
+      ? `${message.config.negativePrompt}, blurry, low quality, watermark, text artifacts`
+      : "blurry, low quality, watermark, text artifacts, amateur, distorted, noisy";
+
+    return { prompt: parts.join(", "), negativePrompt };
+  }
+
+  if (hasReference) {
     const level = getReferenceLevel(message.config.referenceStrength ?? 50);
     const instruction = REFERENCE_INSTRUCTIONS[level];
     if (instruction) parts.push(instruction);
@@ -61,8 +75,7 @@ export function buildBasePrompt(
 
   if (
     message.config.brandName &&
-    message.config.brandName.trim().length > 0 &&
-    !message.isEdit
+    message.config.brandName.trim().length > 0
   ) {
     parts.push(`incorporating the text "${message.config.brandName.trim()}"`);
   }

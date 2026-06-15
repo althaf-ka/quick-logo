@@ -82,20 +82,44 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         throw new ForbiddenError();
       }
 
-      const [newImage] = await db
-        .insert(images)
-        .values({
-          projectId: parentImage.projectId,
-          parentId: parentImage.id,
-          prompt: prompt || "Canvas Edit",
-          model: "canvas",
-          status: "completed",
-          imageUrl,
-          creditsUsed: 0,
-        })
-        .returning();
+      if (parentImage.model === "canvas") {
+        // If it's already a canvas edit, update it in place to avoid duplicate history
+        const [updatedImage] = await db
+          .update(images)
+          .set({
+            imageUrl,
+          })
+          .where(eq(images.id, parentImage.id))
+          .returning();
 
-      return c.json({ imageId: newImage?.id }, 200);
+        await db
+          .update(projects)
+          .set({ latestThumbnail: imageUrl })
+          .where(eq(projects.id, parentImage.projectId));
+
+        return c.json({ imageId: updatedImage?.id }, 200);
+      } else {
+        // First time editing this image, branch out a new history record
+        const [newImage] = await db
+          .insert(images)
+          .values({
+            projectId: parentImage.projectId,
+            parentId: parentImage.id,
+            prompt: prompt || "Canvas Edit",
+            model: "canvas",
+            status: "completed",
+            imageUrl,
+            creditsUsed: 0,
+          })
+          .returning();
+
+        await db
+          .update(projects)
+          .set({ latestThumbnail: imageUrl })
+          .where(eq(projects.id, parentImage.projectId));
+
+        return c.json({ imageId: newImage?.id }, 200);
+      }
     },
   );
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { CanvasToolbar } from "./toolbar/canvas-toolbar";
 import { CanvasViewport } from "./canvas-viewport";
+import { ImageLoadingState } from "@/components/global/image-loading-state";
 
 import { useCanvasStore } from "../store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
@@ -66,8 +67,13 @@ export function CanvasEditor({
       activeTool: s.activeTool,
     })),
   );
-  const { handleGenerate, isGenerating, generationStatus, credits } =
-    useCanvasAI(canvas, imageId);
+  const {
+    handleGenerate,
+    isGenerating,
+    generationStatus,
+    generationBounds,
+    credits,
+  } = useCanvasAI(canvas, imageId);
   useImproveHover(canvas);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -330,6 +336,38 @@ export function CanvasEditor({
             imageId={imageId}
           />
           <MaskOverlay mainCanvas={canvas} />
+
+          <AnimatePresence>
+            {isGenerating && generationBounds && (() => {
+              const zoom = canvas?.getZoom() ?? 1;
+              const vpt = canvas?.viewportTransform;
+              return (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute z-40 overflow-hidden bg-zinc-950/80 backdrop-blur-sm shadow-2xl ring-1 ring-white/10"
+                  style={{
+                    left: generationBounds.left * zoom + (vpt?.[4] ?? 0),
+                    top: generationBounds.top * zoom + (vpt?.[5] ?? 0),
+                    width: generationBounds.width * zoom,
+                    height: generationBounds.height * zoom,
+                  }}
+                >
+                  <ImageLoadingState
+                    isOverlay
+                    label={
+                      generationStatus === "exporting" || generationStatus === "uploading"
+                        ? "Preparing image..."
+                        : generationStatus === "polling" || generationStatus === "compositing"
+                          ? "Finalizing result..."
+                          : "Generating..."
+                    }
+                  />
+                </motion.div>
+              );
+            })()}
+          </AnimatePresence>
 
           <AnimatePresence>
             {canvasMode !== "edit" && !isGenerating && (

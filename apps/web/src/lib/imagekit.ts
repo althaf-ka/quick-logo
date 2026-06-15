@@ -3,6 +3,11 @@ import { api } from "./api";
 export async function uploadFileToImageKit(
   file: File,
   userId: string = "anonymous",
+  options?: {
+    isTemp?: boolean;
+    folder?: string;
+    tags?: string[];
+  }
 ): Promise<string> {
   const authRes = await api.upload.auth.$get();
 
@@ -20,7 +25,18 @@ export async function uploadFileToImageKit(
   formData.append("signature", auth.signature);
   formData.append("expire", auth.expire.toString());
   formData.append("token", auth.token);
-  formData.append("folder", `/quick-logo/users/${userId}/references`);
+  let folder = `/quick-logo/users/${userId}/references`;
+  if (options?.folder) {
+    folder = options.folder;
+  } else if (options?.isTemp) {
+    // Much cleaner: a single, shared temp folder since these are meant to be deleted.
+    folder = `/quick-logo/temp`;
+  }
+  formData.append("folder", folder);
+  
+  if (options?.tags && options.tags.length > 0) {
+    formData.append("tags", options.tags.join(","));
+  }
 
   const uploadRes = await fetch(
     "https://upload.imagekit.io/api/v1/files/upload",
