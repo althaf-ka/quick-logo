@@ -2,9 +2,10 @@ import type { ModelId } from "@quicklogo/shared";
 import type { AIProvider } from "../types";
 import { WorkersAIProvider } from "./workers-ai";
 import { LeonardoProvider } from "./leonardo";
+import { ReplicateProvider } from "./replicate";
 
 export interface ModelMapping {
-  provider: "workers-ai" | "leonardo";
+  provider: "workers-ai" | "leonardo" | "replicate";
   inputType: "json" | "multipart";
   backendModel: string;
   capabilities: {
@@ -64,79 +65,69 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     defaultParams: { steps: 20, guidance: 7.5 },
   },
   "quick-leo-fast": {
-    provider: "leonardo",
+    provider: "replicate",
     inputType: "json",
-    backendModel: "nano-banana-2",
+    backendModel: "black-forest-labs/flux-1.1-pro",
     capabilities: {
-      nativePromptEnhancement: true,
+      nativePromptEnhancement: false,
       imageToImage: true,
-      inpaint: true,
-      apiSchema: "v2",
     },
     defaultParams: {
       width: 1024,
       height: 1024,
-      providerOptions: {
-        apiSchema: "v2",
-        alchemy: false,
-        ultra: false,
-        contrast: 3.5,
-      },
     },
   },
   "quick-ideogram": {
-    provider: "leonardo",
+    provider: "replicate",
     inputType: "json",
-    backendModel: "ideogram-v3.0",
+    backendModel: "ideogram-ai/ideogram-v3-turbo",
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: false,
-      apiSchema: "v2",
+      inpaint: true,
     },
     defaultParams: {
       width: 1024,
       height: 1024,
-      providerOptions: {
-        apiSchema: "v2",
-        mode: "TURBO",
-      },
     },
   },
   "quick-seedream": {
-    provider: "leonardo",
+    provider: "replicate",
     inputType: "json",
-    backendModel: "seedream-4.5",
+    backendModel: "black-forest-labs/flux-kontext-pro",
     capabilities: {
-      nativePromptEnhancement: true,
+      nativePromptEnhancement: false,
       imageToImage: true,
-      apiSchema: "v2",
     },
     defaultParams: {
       width: 1024,
       height: 1024,
-      providerOptions: {
-        apiSchema: "v2",
-      },
     },
   },
   "quick-nano-banana": {
-    provider: "leonardo",
+    provider: "replicate",
     inputType: "json",
-    backendModel: "nano-banana-2",
+    backendModel: "black-forest-labs/flux-2-pro",
     capabilities: {
-      nativePromptEnhancement: true,
+      nativePromptEnhancement: false,
       imageToImage: true,
-      inpaint: true,
-      apiSchema: "v2",
     },
     defaultParams: {
       width: 1024,
       height: 1024,
-      providerOptions: {
-        apiSchema: "v2",
-        alchemy: false,
-        ultra: false,
-      },
+    },
+  },
+  "quick-imagen": {
+    provider: "replicate",
+    inputType: "json",
+    backendModel: "google/imagen-4",
+    capabilities: {
+      nativePromptEnhancement: false,
+      imageToImage: false,
+    },
+    defaultParams: {
+      width: 1024,
+      height: 1024,
     },
   },
 };
@@ -148,6 +139,7 @@ export interface ProviderDeps {
   ai: Ai;
   env?: {
     LEONARDO_API_KEY?: string;
+    REPLICATE_API_TOKEN?: string;
   };
 }
 
@@ -169,6 +161,12 @@ export function createProvider(
         throw new Error("LEONARDO_API_KEY is missing in ProviderDeps");
       }
       return new LeonardoProvider(deps.env.LEONARDO_API_KEY);
+    }
+    case "replicate": {
+      if (!deps.env?.REPLICATE_API_TOKEN) {
+        throw new Error("REPLICATE_API_TOKEN is missing in ProviderDeps");
+      }
+      return new ReplicateProvider(deps.env.REPLICATE_API_TOKEN);
     }
     default:
       throw new Error(`Unknown provider: ${mapping.provider}`);

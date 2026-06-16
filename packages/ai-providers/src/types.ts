@@ -3,6 +3,7 @@ export interface GenerationParams {
   negativePrompt?: string;
   backendModel: string;
   style?: string;
+  magicPrompt?: boolean;
   referenceImage?: string;
   referenceStrength?: number;
   steps?: number;

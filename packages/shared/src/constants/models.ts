@@ -7,6 +7,7 @@ export const MODEL_IDS = [
   "quick-leo-fast",
   "quick-seedream",
   "quick-nano-banana",
+  "quick-imagen",
 ] as const;
 
 export type ModelId = (typeof MODEL_IDS)[number];
@@ -83,6 +84,7 @@ export const MODELS: ModelOption[] = [
     icon: "crown",
     features: ["Cinematic", "High detail", "Professional typography"],
     supportsReferenceImage: false,
+    supportsInpaint: true,
   },
   {
     id: "quick-leo-fast",
@@ -122,6 +124,17 @@ export const MODELS: ModelOption[] = [
     features: ["Ultra-fast", "Playful", "Minimalist"],
     supportsReferenceImage: true,
     supportsInpaint: true,
+  },
+  {
+    id: "quick-imagen",
+    name: "Imagen 4",
+    label: "Google Flagship",
+    description: "Google's Imagen 4 flagship model for stunning realism.",
+    friendlyDescription: "Highly realistic and top-tier generation quality",
+    credits: 8,
+    icon: "crown",
+    features: ["High quality", "Realism", "Flagship"],
+    supportsReferenceImage: false,
   },
 ];
 

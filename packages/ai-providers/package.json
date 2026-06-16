@@ -26,7 +26,8 @@
   },
   "dependencies": {
     "@quicklogo/server-telemetry": "workspace:*",
-    "@quicklogo/shared": "workspace:*"
+    "@quicklogo/shared": "workspace:*",
+    "replicate": "^1.4.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",

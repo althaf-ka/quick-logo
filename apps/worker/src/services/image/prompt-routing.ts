@@ -33,6 +33,7 @@ export async function routePromptAndBuildParams(
     prompt: finalPrompt,
     negativePrompt: negativePrompt || "",
     backendModel: mapping.backendModel,
+    magicPrompt: message.config.magicPrompt,
     ...mapping.defaultParams,
     maskImage: message.config.maskImageUrl,
     canvasImage: message.config.canvasImageUrl,

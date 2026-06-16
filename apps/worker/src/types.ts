@@ -5,4 +5,5 @@ export interface Env {
   AI: Ai;
   IMAGEKIT_PRIVATE_KEY: string;
   LEONARDO_API_KEY?: string;
+  REPLICATE_API_TOKEN?: string;
 }

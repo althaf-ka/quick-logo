@@ -19,14 +19,7 @@ import { createLogger } from "@quicklogo/server-telemetry";
 import { withRetry, withTimeout } from "../core/pipeline-helpers";
 import { parseAndValidateAiResponse } from "../core/ai-response-parser";
 
-/**
- * Orchestrator class for the Image Generation pipeline.
- *
- * Responsibilities:
- * - Coordinates pure services (validation, prompt routing, uploading).
- * - Manages infrastructure side-effects (AI provider calls, DB updates, storage).
- * - Provides robust error handling, retries, and timeouts for resilient processing.
- */
+// Orchestrator for the Image Generation pipeline.
 export class ImageGenerationPipeline {
   private promptEnhancer: PromptEnhancer;
   private logger: ReturnType<typeof createLogger>;
@@ -41,14 +34,7 @@ export class ImageGenerationPipeline {
     this.logger = createLogger("worker", { db: this.db });
   }
 
-  /**
-   * Processes a single image generation message from the worker queue.
-   *
-   * @param message - The validated message payload containing configuration and prompt details.
-   * @throws {PipelineError} If a non-retryable validation or processing error occurs.
-   * @throws {AiProviderError} If the AI provider fails to generate an image after retries.
-   * @throws {StorageError} If uploading the final image to storage fails after retries.
-   */
+  // Processes a single image generation message from the worker queue.
   async process(message: GenerateImageMessage): Promise<void> {
     const { imageId, projectId, userId } = message;
 
@@ -66,12 +52,12 @@ export class ImageGenerationPipeline {
         this.promptEnhancer,
       );
 
-      // 3. Provider Generation (with Retry & Timeout)
+      // 3. Provider Generation (3min timeout to allow for model cold-starts, polling, and downloads)
       const provider = createProvider(mapping, { ai: this.ai, env: this.env });
       const rawResult = await withRetry(
-        () => withTimeout(() => provider.generate(routeResult.params), 60000), // 60s timeout for image generation
-        3, // 3 retries
-        2000, // 2s base delay
+        () => withTimeout(() => provider.generate(routeResult.params), 180000),
+        3,
+        2000,
       );
 
       // 4. Parse & Validate Provider Response
