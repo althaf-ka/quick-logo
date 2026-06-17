@@ -4,6 +4,7 @@ import { useCanvasStore } from "../store/canvas-store";
 import { useCanvasTools } from "../hooks/use-canvas-tools";
 import { useCanvasHistory } from "../hooks/use-canvas-history";
 import { findArtboard } from "../utils/artboard";
+import { restoreCustomProperties, type CustomFabricObject, FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
 
 export interface CanvasViewportProps {
   canvas: fabric.Canvas | null;
@@ -18,40 +19,42 @@ async function loadCanvasState(
   stateToLoad: string,
   containerRef: React.RefObject<HTMLDivElement | null>,
   setCanvasDimensions: (w: number, h: number) => void,
-  centerArtboard: () => void
+  centerArtboard: () => void,
 ) {
   try {
     const parsedState = JSON.parse(stateToLoad);
 
     delete parsedState.viewportTransform;
 
-    const customPropsSnapshot = (parsedState.objects || []).map((o: Record<string, unknown>) => ({
-      id: o.id as string | undefined,
-      name: o.name as string | undefined,
-      type: o.type as string | undefined,
-      left: o.left as number | undefined,
-      top: o.top as number | undefined,
-    }));
+    const customPropsSnapshot = (parsedState.objects || []).map(
+      (o: Record<string, unknown>) => {
+        const snap: Record<string, unknown> = {};
+        FABRIC_CUSTOM_PROPERTIES.forEach(prop => {
+          snap[prop] = o[prop];
+        });
+        snap.type = o.type;
+        snap.left = o.left;
+        snap.top = o.top;
+        return snap;
+      }
+    );
 
     await fabricCanvas.loadFromJSON(parsedState);
-    
+
     const objects = fabricCanvas.getObjects();
-    
-    type CustomFabricObject = fabric.Object & { id?: string; name?: string };
-    
-    objects.forEach((obj, index) => {
-      const saved = customPropsSnapshot[index];
-      if (saved) {
-        const customObj = obj as CustomFabricObject;
-        if (saved.id) customObj.id = saved.id;
-        if (saved.name) customObj.name = saved.name;
-      }
-    });
-    
+
+    restoreCustomProperties(fabricCanvas, { objects: customPropsSnapshot });
+
     const hasArtboard = objects.some((o) => o.id === "__artboard__");
     if (!hasArtboard) {
       const savedArtboard = customPropsSnapshot.find(
-        (o: { id?: string; name?: string; type?: string; left?: number; top?: number }) => o.id === "__artboard__" || o.name === "Artboard",
+        (o: {
+          id?: string;
+          name?: string;
+          type?: string;
+          left?: number;
+          top?: number;
+        }) => o.id === "__artboard__" || o.name === "Artboard",
       );
       if (savedArtboard) {
         const match = objects.find(
@@ -64,10 +67,25 @@ async function loadCanvasState(
           const customMatch = match as CustomFabricObject;
           customMatch.id = "__artboard__";
           customMatch.name = "Artboard";
+          customMatch.selectable = false;
+          customMatch.evented = false;
+          customMatch.hoverCursor = "default";
+        }
+      } else {
+        const match = objects.find(
+          (o) => o.type === "rect" || o.type === "Rect",
+        );
+        if (match && objects.indexOf(match) === 0) {
+          const customMatch = match as CustomFabricObject;
+          customMatch.id = "__artboard__";
+          customMatch.name = "Artboard";
+          customMatch.selectable = false;
+          customMatch.evented = false;
+          customMatch.hoverCursor = "default";
         }
       }
     }
-    
+
     if (containerRef.current) {
       fabricCanvas.setDimensions({
         width: containerRef.current.clientWidth,
@@ -76,16 +94,22 @@ async function loadCanvasState(
     }
 
     fabricCanvas.renderAll();
-    
+
     const artboard = findArtboard(fabricCanvas);
     if (artboard) {
-      setCanvasDimensions(artboard.width! * (artboard.scaleX || 1), artboard.height! * (artboard.scaleY || 1));
+      setCanvasDimensions(
+        artboard.width! * (artboard.scaleX || 1),
+        artboard.height! * (artboard.scaleY || 1),
+      );
     }
-    
+
     centerArtboard();
-    
-    setTimeout(() => window.dispatchEvent(new CustomEvent("canvas:loaded")), 100);
-    
+
+    setTimeout(
+      () => window.dispatchEvent(new CustomEvent("canvas:loaded")),
+      100,
+    );
+
     setTimeout(() => {
       if (containerRef.current) {
         fabricCanvas.setDimensions({
@@ -95,7 +119,7 @@ async function loadCanvasState(
       }
       centerArtboard();
     }, 300);
-    
+
     return true;
   } catch (e) {
     console.error("Failed to load canvas state", e);
@@ -107,10 +131,11 @@ async function loadSourceImage(
   fabricCanvas: fabric.Canvas,
   imageUrl: string,
   setCanvasDimensions: (w: number, h: number) => void,
-  centerArtboard: () => void
+  centerArtboard: () => void,
 ) {
   const fabricAny = fabric as Record<string, unknown>;
-  const FabricImageClass = (fabricAny.FabricImage || fabricAny.Image) as typeof fabric.FabricImage;
+  const FabricImageClass = (fabricAny.FabricImage ||
+    fabricAny.Image) as typeof fabric.FabricImage;
   try {
     const img = (await FabricImageClass.fromURL(imageUrl, {
       crossOrigin: "anonymous",
@@ -199,10 +224,10 @@ export function CanvasViewport({
     // Helper: center the artboard in the viewport
     const centerArtboard = () => {
       const artboard = findArtboard(fabricCanvas);
-      
+
       let artWidth: number;
       let artHeight: number;
-      
+
       if (artboard) {
         artWidth = artboard.width! * (artboard.scaleX || 1);
         artHeight = artboard.height! * (artboard.scaleY || 1);
@@ -211,18 +236,28 @@ export function CanvasViewport({
         const store = useCanvasStore.getState();
         artWidth = store.canvasWidth || 1024;
         artHeight = store.canvasHeight || 1024;
-        console.warn("[QuickLogo] Artboard not found, using store dimensions for centering:", artWidth, "x", artHeight);
+        console.warn(
+          "[QuickLogo] Artboard not found, using store dimensions for centering:",
+          artWidth,
+          "x",
+          artHeight,
+        );
       }
 
       const padding = 60;
       const currentW = fabricCanvas.width!;
       const currentH = fabricCanvas.height!;
-      
+
       if (currentW <= 0 || currentH <= 0) {
-        console.warn("[QuickLogo] Canvas has zero dimensions, skipping center:", currentW, "x", currentH);
+        console.warn(
+          "[QuickLogo] Canvas has zero dimensions, skipping center:",
+          currentW,
+          "x",
+          currentH,
+        );
         return;
       }
-      
+
       const scaleX = (currentW - padding * 2) / artWidth;
       const scaleY = (currentH - padding * 2) / artHeight;
       const scale = Math.min(scaleX, scaleY, 1);
@@ -263,12 +298,21 @@ export function CanvasViewport({
 
     resizeObserver.observe(containerRef.current);
 
+    let isDisposed = false;
+
     const initializeCanvas = async () => {
       const localStateStr = localStorage.getItem(`quicklogo_canvas_${imageId}`);
       const stateToLoad = localStateStr || initialCanvasState;
 
       if (stateToLoad) {
-        const success = await loadCanvasState(fabricCanvas, stateToLoad, containerRef, setCanvasDimensions, centerArtboard);
+        const success = await loadCanvasState(
+          fabricCanvas,
+          stateToLoad,
+          containerRef,
+          setCanvasDimensions,
+          centerArtboard,
+        );
+        if (isDisposed) return;
         if (success) {
           initialLoadDone = true;
           return;
@@ -276,24 +320,38 @@ export function CanvasViewport({
       }
 
       if (!initialImageUrl) {
+        if (isDisposed) return;
         initialLoadDone = true;
         window.dispatchEvent(new CustomEvent("canvas:loaded"));
         return;
       }
 
-      await loadSourceImage(fabricCanvas, initialImageUrl, setCanvasDimensions, centerArtboard);
+      await loadSourceImage(
+        fabricCanvas,
+        initialImageUrl,
+        setCanvasDimensions,
+        centerArtboard,
+      );
+      if (isDisposed) return;
       initialLoadDone = true;
     };
 
     initializeCanvas();
 
     return () => {
+      isDisposed = true;
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       fabricCanvas.dispose();
       setCanvas(null);
     };
-  }, [initialImageUrl, initialCanvasState, imageId, setCanvas, setCanvasDimensions]);
+  }, [
+    initialImageUrl,
+    initialCanvasState,
+    imageId,
+    setCanvas,
+    setCanvasDimensions,
+  ]);
 
   // Connect hooks
   useCanvasTools(canvas);

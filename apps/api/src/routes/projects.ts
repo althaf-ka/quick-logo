@@ -25,7 +25,17 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const user = c.get("user");
       const { cursor, limit } = c.req.valid("query");
 
-      // Subquery: pick the latest image per project (by created_at desc)
+      const latestImageAgg = db
+        .select({
+          projectId: images.projectId,
+          maxCreatedAt: sql<number>`MAX(${images.createdAt})`.as(
+            "max_created_at",
+          ),
+        })
+        .from(images)
+        .groupBy(images.projectId)
+        .as("latest_image_agg");
+
       const latestImage = db
         .select({
           projectId: images.projectId,
@@ -33,7 +43,13 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           status: images.status,
         })
         .from(images)
-        .orderBy(desc(images.createdAt))
+        .innerJoin(
+          latestImageAgg,
+          and(
+            eq(images.projectId, latestImageAgg.projectId),
+            eq(images.createdAt, latestImageAgg.maxCreatedAt)
+          )
+        )
         .as("latest_image");
 
       const rows = await db
@@ -57,7 +73,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           ),
         )
         .orderBy(desc(projects.createdAt))
-        .groupBy(projects.id)
         .limit(limit + 1);
 
       const hasMore = rows.length > limit;

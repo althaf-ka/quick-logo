@@ -133,6 +133,14 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       }
     };
 
+    const handleSelectionCleared = () => {
+      if (currentlyPulsingObject) {
+        currentlyPulsingObject.set("shadow", savedSelectionShadow);
+        currentlyPulsingObject.set("dirty", true);
+        currentlyPulsingObject = null;
+      }
+    };
+
     // (Hover cursor was already set in the pre-set loop above)
 
     // --- SELECTION GLOW ANIMATION ---
@@ -189,7 +197,7 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
 
     const onAfterRender = (opt: { ctx: CanvasRenderingContext2D }) => {
       const ctx = opt.ctx;
-      if (!ctx || !currentlyPulsingObject) return;
+      if (!ctx || !currentlyPulsingObject || currentlyPulsingObject !== canvas.getActiveObject()) return;
 
       ctx.save();
 
@@ -227,6 +235,7 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
     canvas.on("mouse:out", handleMouseOut);
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
+    canvas.on("selection:cleared", handleSelectionCleared);
     canvas.on("after:render", onAfterRender);
 
     return () => {
@@ -240,6 +249,7 @@ export function useImproveHover(canvas: fabric.Canvas | null) {
       canvas.off("mouse:out", handleMouseOut);
       canvas.off("selection:created", handleSelection);
       canvas.off("selection:updated", handleSelection);
+      canvas.off("selection:cleared", handleSelectionCleared);
       canvas.off("after:render", onAfterRender);
 
       // Cleanup any remaining shadow

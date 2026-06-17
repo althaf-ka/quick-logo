@@ -147,6 +147,11 @@ export class ReplicateProvider implements AIProvider {
       case "google/imagen-4":
         input.image_size = "1K";
         break;
+      case "black-forest-labs/flux-1.1-pro":
+      case "black-forest-labs/flux-2-pro":
+      case "black-forest-labs/flux-kontext-pro":
+        input.prompt_upsampling = params.magicPrompt !== false;
+        break;
     }
   }
 

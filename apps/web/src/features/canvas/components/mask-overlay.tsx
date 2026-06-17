@@ -74,8 +74,7 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
         maskCanvas.remove(objects[objects.length - 1]);
         maskCanvas.requestRenderAll();
 
-        // @ts-expect-error - Fabric type mismatch for custom events
-        maskCanvas.fire("path:created", { path: undefined }); // trigger re-export
+        maskCanvas.fire("path:created", { path: undefined as unknown as fabric.Path }); // trigger re-export
       }
     };
 

@@ -54,7 +54,7 @@ export const generateApiConfigSchema = z.object({
   referenceStrength: z.number().min(0).max(100).optional().default(50),
   magicPrompt: z.boolean().optional().default(true),
   canvasMode: z
-    .enum(["edit", "img2img", "inpaint", "text2img", "sketch2img"])
+    .enum(["edit", "img2img", "inpaint", "text2img"])
     .optional()
     .default("edit"),
   maskImageUrl: z.url().optional(),

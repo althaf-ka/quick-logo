@@ -19,10 +19,10 @@ export class PromptEnhancer {
   async enhance(message: GenerateImageMessage) {
     const hasReference = !!message.config.referenceImageUrl;
 
-    // For edits, ALWAYS use LLM rewrite regardless of magicPrompt flag.
-    // Edit instructions like "add green bg" must be expanded into full visual
-    // descriptions or V2 models produce gibberish from vague 2-word prompts.
-    const shouldRewrite = message.config.magicPrompt || message.isEdit;
+    // We should respect the magicPrompt toggle even for edits.
+    // This allows passing raw instructions (like "add text OMINGLE") to the model
+    // which is the professional way to handle instruct-based models or standard inpainting.
+    const shouldRewrite = message.config.magicPrompt;
 
     const basePrompt = shouldRewrite
       ? await this.rewriteWithLLM(message)

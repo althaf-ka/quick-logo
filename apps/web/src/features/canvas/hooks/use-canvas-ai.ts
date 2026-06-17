@@ -8,9 +8,10 @@ import { toast } from "@quicklogo/ui/components/sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AUTH_KEYS } from "@/hooks/use-auth";
 import { parseApiError, ApiError, ERROR_CODES } from "@/lib/api-error";
-import { maskDataUrlToFile } from "../utils/mask-export";
+import { maskDataUrlToFile, dataUrlToFile } from "../utils/mask-export";
 import { compositeAIResult } from "../utils/composite-result";
 import { MODELS } from "@quicklogo/ai-providers/models";
+import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
 
 export type GenerationStatus =
   | "idle"
@@ -22,7 +23,12 @@ export type GenerationStatus =
   | "done"
   | "error";
 
-export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
+export function useCanvasAI(
+  canvas: fabric.Canvas | null,
+  imageId: string,
+  isDirty?: boolean,
+  initialImageUrl?: string
+) {
   const isGenerating = useCanvasStore((s) => s.isAiGenerating);
   const aiModel = useCanvasStore((s) => s.aiModel);
   const { exportToDataUrl } = useCanvasExport(canvas);
@@ -56,19 +62,37 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       setGenerationStatus("exporting");
 
       // Export Full Canvas
-      const canvasImageDataUrl = exportToDataUrl("png");
-      if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
+      let canvasImageUrlPromise: Promise<string>;
+      let canvasImageDataUrl: string | undefined;
+
+      // Optimization: If the canvas is completely untouched, we can reuse the original image URL!
+      if (isDirty === false && initialImageUrl) {
+        canvasImageUrlPromise = Promise.resolve(initialImageUrl);
+      } else {
+        canvasImageDataUrl = exportToDataUrl("png");
+        if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
+
+
+        const canvasFile = dataUrlToFile(
+          canvasImageDataUrl,
+          `canvas-${Date.now()}.png`,
+        );
+        canvasImageUrlPromise = uploadFileToImageKit(canvasFile, "anonymous", { isTemp: true });
+      }
 
       let targetBounds:
         | { left: number; top: number; width: number; height: number }
         | undefined;
       let activeObjectIdToReplace: string | null = null;
+      let isPristineSourceImage = false;
 
       if (state.canvasMode === "img2img") {
         const activeObj = canvas.getActiveObject();
         if (activeObj && activeObj.id !== "__artboard__") {
           if (!activeObj.id) activeObj.set("id", `obj_${Date.now()}`);
           activeObjectIdToReplace = activeObj.id ?? null;
+          isPristineSourceImage = (activeObjectIdToReplace === "obj_initial_image" && isDirty === false);
+          
           state.setActiveAIObjectId(activeObjectIdToReplace);
           
           // getBoundingRect() ensures we get the absolute top-left coordinates
@@ -91,16 +115,22 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
 
       // Export Region if needed
       let regionImageDataUrl: string | undefined;
-      if (state.canvasMode === "img2img" && targetBounds) {
-        // Save state, discard selection to hide controls, and reset zoom (viewportTransform)
-        // so that absolute coordinates (targetBounds) align perfectly.
-        const active = canvas.getActiveObjects();
-        canvas.discardActiveObject();
-        const vpt = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
-        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-        canvas.renderAll(); // MUST be synchronous
+      let uploadedRegionUrlPromise: Promise<string | undefined> = Promise.resolve(undefined);
 
-        regionImageDataUrl = canvas.toDataURL({
+      if (state.canvasMode === "img2img" && targetBounds) {
+        if (isPristineSourceImage && initialImageUrl) {
+          // Optimization: Skip region export/upload entirely, use the original image!
+          uploadedRegionUrlPromise = Promise.resolve(initialImageUrl);
+        } else {
+          // Save state, discard selection to hide controls, and reset zoom (viewportTransform)
+          // so that absolute coordinates (targetBounds) align perfectly.
+          const active = canvas.getActiveObjects();
+          canvas.discardActiveObject();
+          const vpt = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
+          canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+          canvas.renderAll(); // MUST be synchronous
+
+          regionImageDataUrl = canvas.toDataURL({
           format: "png",
           left: targetBounds.left,
           top: targetBounds.top,
@@ -119,27 +149,12 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           }
         }
         canvas.renderAll();
+        }
       }
 
       setGenerationStatus("uploading");
 
-      const dataUrlToFile = (dataUrl: string, filename: string) => {
-        const arr = dataUrl.split(",");
-        const mimeMatch = arr[0].match(/:(.*?);/);
-        const mime = mimeMatch ? mimeMatch[1] : "image/png";
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new File([u8arr], filename, { type: mime });
-      };
 
-      const canvasFile = dataUrlToFile(
-        canvasImageDataUrl,
-        `canvas-${Date.now()}.png`,
-      );
       let maskFile: File | undefined;
       if (state.canvasMode === "inpaint" && state.maskData) {
         maskFile = maskDataUrlToFile(state.maskData);
@@ -150,17 +165,16 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           regionImageDataUrl,
           `region-${Date.now()}.png`,
         );
+        uploadedRegionUrlPromise = uploadFileToImageKit(regionFile, "anonymous", { isTemp: true });
       }
 
       const [canvasImageUrl, maskImageUrl, uploadedRegionUrl] =
         await Promise.all([
-          uploadFileToImageKit(canvasFile, "anonymous", { isTemp: true }),
+          canvasImageUrlPromise,
           maskFile
             ? uploadFileToImageKit(maskFile, "anonymous", { isTemp: true })
             : Promise.resolve(undefined),
-          regionFile
-            ? uploadFileToImageKit(regionFile, "anonymous", { isTemp: true })
-            : Promise.resolve(undefined),
+          uploadedRegionUrlPromise,
         ]);
 
       setGenerationStatus("generating");
@@ -177,10 +191,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           background: "transparent",
           customBgColor: "#ffffff",
           referenceImageUrl: uploadedRegionUrl || canvasImageUrl,
-          referenceStrength:
-            state.canvasMode === "sketch2img"
-              ? Math.min(state.aiStrength, 40)
-              : state.aiStrength,
+          referenceStrength: state.aiStrength,
           magicPrompt: false,
           canvasMode: state.canvasMode,
           maskImageUrl: maskImageUrl || undefined,
@@ -246,6 +257,21 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
 
       state.setGeneratedResultUrl(finalImageUrl);
 
+      // Silently update the canvas state in DB to preserve the project
+      // without forcing a redundant "Canvas Edit" save.
+      try {
+        const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
+        delete json.viewportTransform;
+        await api.canvas[":id"]["state"].$put({
+          param: { id: imageId },
+          json: { canvasState: JSON.stringify(json) },
+        });
+        // Dispatch event to clear the dirty flag in useCanvasSave
+        window.dispatchEvent(new CustomEvent("canvas:saved"));
+      } catch (e) {
+        console.error("Failed to auto-save canvas state after AI composite", e);
+      }
+
       // Clear AI workflow
       state.resetAIWorkflow();
 
@@ -278,7 +304,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         setGenerationBounds(null);
       }, 2000);
     }
-  }, [canvas, isGenerating, exportToDataUrl, imageId, queryClient]);
+  }, [canvas, isGenerating, exportToDataUrl, imageId, queryClient, isDirty, initialImageUrl]);
 
   const availableModels = useMemo(() => {
     // Return all models or filter based on mode if needed

@@ -157,7 +157,7 @@ export function getModelsForCanvasMode(mode: string): ModelOption[] {
   if (mode === "inpaint") {
     return MODELS.filter((m) => m.supportsInpaint);
   }
-  if (mode === "img2img" || mode === "sketch2img") {
+  if (mode === "img2img") {
     return MODELS.filter((m) => m.supportsReferenceImage);
   }
   return [...MODELS];

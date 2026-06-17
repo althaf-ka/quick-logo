@@ -252,12 +252,21 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
       shapeRef = null;
     };
 
+    const onSelection = () => {
+      if (hoveredObjectForBorder) {
+        hoveredObjectForBorder = null;
+        canvas.requestRenderAll();
+      }
+    };
+
     canvas.on("mouse:down", onMouseDown);
     canvas.on("mouse:move", onMouseMove);
     canvas.on("mouse:up", onMouseUp);
     canvas.on("mouse:over", onMouseOver);
     canvas.on("mouse:out", onMouseOut);
     canvas.on("after:render", onAfterRender);
+    canvas.on("selection:created", onSelection);
+    canvas.on("selection:updated", onSelection);
 
     return () => {
       canvas.off("mouse:down", onMouseDown);
@@ -266,6 +275,8 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
       canvas.off("mouse:over", onMouseOver);
       canvas.off("mouse:out", onMouseOut);
       canvas.off("after:render", onAfterRender);
+      canvas.off("selection:created", onSelection);
+      canvas.off("selection:updated", onSelection);
     };
   }, [canvas, setActiveTool]);
 }

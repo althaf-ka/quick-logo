@@ -69,7 +69,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     inputType: "json",
     backendModel: "black-forest-labs/flux-1.1-pro",
     capabilities: {
-      nativePromptEnhancement: false,
+      nativePromptEnhancement: true,
       imageToImage: true,
     },
     defaultParams: {
@@ -96,7 +96,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     inputType: "json",
     backendModel: "black-forest-labs/flux-kontext-pro",
     capabilities: {
-      nativePromptEnhancement: false,
+      nativePromptEnhancement: true,
       imageToImage: true,
     },
     defaultParams: {
@@ -109,7 +109,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     inputType: "json",
     backendModel: "black-forest-labs/flux-2-pro",
     capabilities: {
-      nativePromptEnhancement: false,
+      nativePromptEnhancement: true,
       imageToImage: true,
     },
     defaultParams: {

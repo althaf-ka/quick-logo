@@ -10,7 +10,10 @@ export function useCanvasLayers(canvas: fabric.Canvas | null) {
   useEffect(() => {
     if (!canvas) return;
 
+    let isLoaded = false;
+
     const syncLayers = () => {
+      if (!isLoaded) return;
       const objects = canvas
         .getObjects()
         .filter((o) => o.id !== "__artboard__");
@@ -143,8 +146,12 @@ export function useCanvasLayers(canvas: fabric.Canvas | null) {
     canvas.on("object:added", handleEvent);
     canvas.on("object:removed", handleEvent);
 
-    // Initial sync
-    syncLayers();
+    // Wait for canvas to load before syncing to avoid mutating objects during loadFromJSON
+    const handleLoaded = () => {
+      isLoaded = true;
+      syncLayers();
+    };
+    window.addEventListener("canvas:loaded", handleLoaded);
 
     window.addEventListener("canvas:reorder-object", handleReorderObject);
     window.addEventListener("canvas:toggle-layer", handleToggleLayer);
@@ -154,6 +161,7 @@ export function useCanvasLayers(canvas: fabric.Canvas | null) {
       canvas.off("object:modified", handleEvent);
       canvas.off("object:added", handleEvent);
       canvas.off("object:removed", handleEvent);
+      window.removeEventListener("canvas:loaded", handleLoaded);
       window.removeEventListener("canvas:reorder-object", handleReorderObject);
       window.removeEventListener("canvas:toggle-layer", handleToggleLayer);
       window.removeEventListener("canvas:flatten-image", handleFlattenImage);

@@ -5,6 +5,7 @@ import { uploadFileToImageKit } from "@/lib/imagekit";
 import { api } from "@/lib/api";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { parseApiError } from "@/lib/api-error";
+import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
 
 interface CanvasSaveProps {
   canvas: fabric.Canvas | null;
@@ -17,28 +18,37 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const isCanvasLoaded = useRef(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const handleLoaded = () => {
       isCanvasLoaded.current = true;
     };
+    const handleSaved = () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      setIsDirty(false);
+      localStorage.removeItem(`quicklogo_canvas_${imageId}`);
+    };
     window.addEventListener("canvas:loaded", handleLoaded);
-    return () => window.removeEventListener("canvas:loaded", handleLoaded);
-  }, []);
+    window.addEventListener("canvas:saved", handleSaved);
+    return () => {
+      window.removeEventListener("canvas:loaded", handleLoaded);
+      window.removeEventListener("canvas:saved", handleSaved);
+    };
+  }, [imageId]);
 
   useEffect(() => {
     if (!canvas) return;
 
-    let timeoutId: NodeJS.Timeout;
-    
     const handleLocalSave = () => {
       if (!isCanvasLoaded.current) return;
       setIsDirty(true);
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        // @ts-expect-error - Fabric 6 types
-        const json = canvas.toJSON(["id", "name", "selectable", "evented", "locked"]);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
         delete json.viewportTransform;
         localStorage.setItem(`quicklogo_canvas_${imageId}`, JSON.stringify(json));
       }, 500);
@@ -49,7 +59,7 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
     canvas.on("object:removed", handleLocalSave);
 
     return () => {
-      clearTimeout(timeoutId);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       canvas.off("object:added", handleLocalSave);
       canvas.off("object:modified", handleLocalSave);
       canvas.off("object:removed", handleLocalSave);
@@ -95,11 +105,13 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
       const uploadUrl = await uploadFileToImageKit(file);
       const saved = await saveImage({ imageUrl: uploadUrl });
       
-      // @ts-expect-error - Fabric 6 types
-      const json = canvas.toJSON(["id", "name", "selectable", "evented", "locked"]);
+      const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
       delete json.viewportTransform;
       await saveStateMutateAsync({ id: saved.imageId || imageId, canvasState: JSON.stringify(json) });
       
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
       localStorage.removeItem(`quicklogo_canvas_${imageId}`);
       setIsDirty(false);
       

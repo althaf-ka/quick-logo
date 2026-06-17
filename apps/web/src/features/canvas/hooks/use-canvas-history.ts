@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
+import { FABRIC_CUSTOM_PROPERTIES, restoreCustomProperties } from "../utils/fabric-properties";
 
 export function useCanvasHistory(canvas: fabric.Canvas | null) {
   const setHistoryState = useCanvasStore((s) => s.setHistoryState);
@@ -15,14 +16,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
 
   const serialize = useCallback(() => {
     if (!canvas) return "";
-    const json = canvas.toObject([
-      "id",
-      "name",
-      "selectable",
-      "evented",
-      "locked",
-      "zIndex",
-    ]);
+    const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
     json.objects = json.objects.filter(
       (obj: { id?: string }) => obj.id !== "__artboard__",
     );
@@ -39,29 +33,14 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
 
       if (artboard) {
         jsonToLoad.objects.unshift(
-          artboard.toObject([
-            "id",
-            "name",
-            "selectable",
-            "evented",
-            "locked",
-            "zIndex",
-          ]),
+          artboard.toObject(FABRIC_CUSTOM_PROPERTIES),
         );
       }
 
       await canvas.loadFromJSON(jsonToLoad);
 
       // CRITICAL: Restore custom properties stripped by loadFromJSON
-      const loadedObjects = canvas.getObjects();
-      const jsonObjects = jsonToLoad.objects || [];
-      type CustomFabricObject = fabric.Object & { id?: string; name?: string };
-      loadedObjects.forEach((obj: fabric.FabricObject, i: number) => {
-        const src = jsonObjects[i];
-        const customObj = obj as CustomFabricObject;
-        if (src?.id) customObj.id = src.id;
-        if (src?.name) customObj.name = src.name;
-      });
+      restoreCustomProperties(canvas, jsonToLoad);
 
       canvas.requestRenderAll();
       isHistoryChanging.current = false;
@@ -74,13 +53,16 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
   useEffect(() => {
     if (!canvas) return;
 
-    // Push initial empty canvas state
-    if (undoStack.current.length === 0) {
+    const handleLoaded = () => {
+      // Small timeout to ensure any synchronous rendering is done
       setTimeout(() => {
-        undoStack.current.push(serialize());
-        syncStore();
-      }, 100);
-    }
+        if (undoStack.current.length === 0) {
+          undoStack.current.push(serialize());
+          syncStore();
+        }
+      }, 50);
+    };
+    window.addEventListener("canvas:loaded", handleLoaded);
 
     const saveState = () => {
       if (isHistoryChanging.current) return;
@@ -122,6 +104,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       canvas.off("object:modified", handleEvent);
       canvas.off("path:created", handleEvent);
       canvas.off("text:changed", handleEvent);
+      window.removeEventListener("canvas:loaded", handleLoaded);
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [canvas, serialize, syncStore]);

@@ -1,5 +1,6 @@
 import * as fabric from "fabric";
 import type { CanvasMode } from "../types/canvas";
+import { FABRIC_CUSTOM_PROPERTIES } from "./fabric-properties";
 
 export async function compositeAIResult(
   canvas: fabric.Canvas,
@@ -56,6 +57,28 @@ export async function compositeAIResult(
                 .getObjects()
                 .find((o) => o.id === options.generatedFromObjectId);
               if (originalObj) {
+                const propsToCopy: Record<string, unknown> = {
+                  lockMovementX: originalObj.lockMovementX,
+                  lockMovementY: originalObj.lockMovementY,
+                  lockRotation: originalObj.lockRotation,
+                  lockScalingX: originalObj.lockScalingX,
+                  lockScalingY: originalObj.lockScalingY,
+                  hasControls: originalObj.hasControls,
+                };
+                
+                FABRIC_CUSTOM_PROPERTIES.forEach(prop => {
+                  const val = (originalObj as unknown as Record<string, unknown>)[prop];
+                  if (val !== undefined) {
+                    propsToCopy[prop] = val;
+                  }
+                });
+
+                // Fallback for name if it was somehow stripped
+                if (!propsToCopy.name) {
+                  propsToCopy.name = img.name;
+                }
+
+                img.set(propsToCopy);
                 canvas.remove(originalObj);
               }
             }
@@ -83,36 +106,6 @@ export async function compositeAIResult(
               selectable: true,
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
-            });
-            break;
-          }
-
-          case "sketch2img": {
-            if (!options.artboardBounds) {
-              return reject(
-                new Error("Artboard bounds required for sketch2img"),
-              );
-            }
-
-            const scaleX = options.artboardBounds.width / img.width!;
-            const scaleY = options.artboardBounds.height / img.height!;
-
-            img.set({
-              left: options.artboardBounds.left,
-              top: options.artboardBounds.top,
-              scaleX,
-              scaleY,
-              name: "AI Result — Sketch",
-              selectable: true,
-              generationGroupId: options.generationGroupId,
-              generatedFromObjectId: options.generatedFromObjectId,
-            });
-
-            // Remove the sketches (pencil paths) since they are now baked into the generated image
-            canvas.getObjects().forEach((o) => {
-              if (o.type === "path") {
-                canvas.remove(o);
-              }
             });
             break;
           }

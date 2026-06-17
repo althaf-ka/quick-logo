@@ -48,6 +48,23 @@ export function CanvasEditor({
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
   const { exportToPng, exportToJpeg, exportToSvg, exportToWebp } =
     useCanvasExport(canvas);
+
+  const { isSaving, isDirty, handleSave } = useCanvasSave({
+    canvas,
+    imageId,
+    onSaveComplete,
+    exportToPng,
+  });
+
+  const {
+    handleGenerate,
+    isGenerating,
+    generationStatus,
+    generationBounds,
+    credits,
+  } = useCanvasAI(canvas, imageId, isDirty, initialImageUrl);
+  useImproveHover(canvas);
+
   const {
     canvasMode,
     aiPrompt,
@@ -67,25 +84,10 @@ export function CanvasEditor({
       activeTool: s.activeTool,
     })),
   );
-  const {
-    handleGenerate,
-    isGenerating,
-    generationStatus,
-    generationBounds,
-    credits,
-  } = useCanvasAI(canvas, imageId);
-  useImproveHover(canvas);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("ai");
   const [zoomLevel, setZoomLevel] = useState(100);
-
-  const { isSaving, isDirty, handleSave } = useCanvasSave({
-    canvas,
-    imageId,
-    onSaveComplete,
-    exportToPng,
-  });
 
   const [isCompact, setIsCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -140,7 +142,6 @@ export function CanvasEditor({
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = "";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -384,12 +385,6 @@ export function CanvasEditor({
                     validationError = "Please draw a mask first";
                   } else if (canvasMode === "img2img" && !selectedObject) {
                     validationError = "Please select an image first";
-                  } else if (canvasMode === "sketch2img") {
-                    const hasPaths = canvas
-                      ?.getObjects()
-                      .some((o) => o.type === "path");
-                    if (!hasPaths)
-                      validationError = "Please draw a sketch first";
                   }
 
                   return (
@@ -402,9 +397,7 @@ export function CanvasEditor({
                           ? "Inpaint Mask"
                           : canvasMode === "img2img"
                             ? "Selected Image"
-                            : canvasMode === "sketch2img"
-                              ? "Sketch Drawing"
-                              : undefined
+                            : undefined
                       }
                       onClearTarget={handleClearTarget}
                       isLoading={isGenerating}
@@ -415,9 +408,7 @@ export function CanvasEditor({
                           ? "Describe what should fill the masked area..."
                           : canvasMode === "img2img"
                             ? "Describe how to improve the selected image..."
-                            : canvasMode === "sketch2img"
-                              ? "Describe what your sketch represents..."
-                              : "Describe what to generate..."
+                            : "Describe what to generate..."
                       }
                       credits={credits}
                       size="compact"

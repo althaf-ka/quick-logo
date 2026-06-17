@@ -20,7 +20,7 @@ export interface GenerateImageMessage {
     referenceStrength?: number;
     magicPrompt?: boolean;
     brandName?: string;
-    canvasMode?: "edit" | "img2img" | "inpaint" | "text2img" | "sketch2img";
+    canvasMode?: "edit" | "img2img" | "inpaint" | "text2img";
     maskImageUrl?: string;
     canvasImageUrl?: string;
   };

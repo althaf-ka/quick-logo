@@ -56,10 +56,7 @@ export function exportMaskToPng(
   return dataUrl;
 }
 
-/**
- * Converts mask data URL to a File object for upload.
- */
-export function maskDataUrlToFile(dataUrl: string): File {
+export function dataUrlToFile(dataUrl: string, filename: string): File {
   const arr = dataUrl.split(",");
   const mimeMatch = arr[0].match(/:(.*?);/);
   const mime = mimeMatch ? mimeMatch[1] : "image/png";
@@ -69,5 +66,12 @@ export function maskDataUrlToFile(dataUrl: string): File {
   while (n--) {
     u8arr[n] = bstr.charCodeAt(n);
   }
-  return new File([u8arr], `mask-${Date.now()}.png`, { type: mime });
+  return new File([u8arr], filename, { type: mime });
+}
+
+/**
+ * Converts mask data URL to a File object for upload.
+ */
+export function maskDataUrlToFile(dataUrl: string): File {
+  return dataUrlToFile(dataUrl, `mask-${Date.now()}.png`);
 }

@@ -71,7 +71,7 @@ export interface SelectedObjectProps {
   locked?: boolean;
 }
 
-export type CanvasMode = "edit" | "img2img" | "inpaint" | "sketch2img";
+export type CanvasMode = "edit" | "img2img" | "inpaint";
 
 export type SelectionType = "none" | "single" | "multi";
 
