@@ -57,8 +57,8 @@ export const Route = createFileRoute("/_authenticated/logs")({
 });
 
 function LogsPage() {
-  const [level, setLevel] = useState<string | undefined>();
-  const [source, setSource] = useState<string | undefined>();
+  const [level, setLevel] = useState<"info" | "warn" | "error" | "fatal" | undefined>();
+  const [source, setSource] = useState<"web" | "admin" | "api" | "worker" | undefined>();
   const {
     data,
     fetchNextPage,
@@ -119,7 +119,7 @@ function LogsPage() {
       <div className="flex items-center gap-4">
         <select
           className="border-muted-foreground/20 bg-muted/20 focus:ring-primary h-9 w-37.5 rounded-none border px-3 text-xs focus:ring-1 focus:outline-none"
-          onChange={(e) => setLevel(e.target.value || undefined)}
+          onChange={(e) => setLevel((e.target.value as "info" | "warn" | "error" | "fatal") || undefined)}
           value={level || ""}
         >
           <option value="">All Levels</option>
@@ -131,13 +131,14 @@ function LogsPage() {
 
         <select
           className="border-muted-foreground/20 bg-muted/20 focus:ring-primary h-9 w-37.5 rounded-none border px-3 text-xs focus:ring-1 focus:outline-none"
-          onChange={(e) => setSource(e.target.value || undefined)}
+          onChange={(e) => setSource((e.target.value as "web" | "admin" | "api" | "worker") || undefined)}
           value={source || ""}
         >
           <option value="">All Sources</option>
           <option value="web">Main App</option>
           <option value="admin">Admin Portal</option>
           <option value="api">Backend API</option>
+          <option value="worker">Background Worker</option>
         </select>
 
         <Badge

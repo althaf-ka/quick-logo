@@ -33,8 +33,8 @@ export type AdminLogsResponse = InferResponseType<
 export type AdminLog = AdminLogsResponse["items"][number];
 
 export type LogFilters = {
-  level?: string;
-  source?: string;
+  level?: "info" | "warn" | "error" | "fatal";
+  source?: "web" | "admin" | "api" | "worker";
 };
 
 export function useAdminDashboard() {
@@ -218,10 +218,7 @@ export function useLogActions() {
   const resolveLog = useMutation({
     mutationFn: async (id: string) => {
       // @ts-expect-error - Hono RPC nested route type complexity
-      const res = await api.admin.logs[":id"].$patch({
-        param: { id },
-        json: { status: "resolved" },
-      });
+      const res = await api.admin.logs[":id"].$patch({ param: { id }, json: { status: "resolved" } });
       if (!res.ok) throw new Error("Failed to resolve log");
     },
     onSuccess: () =>
@@ -231,10 +228,7 @@ export function useLogActions() {
   const ignoreLog = useMutation({
     mutationFn: async (id: string) => {
       // @ts-expect-error - Hono RPC nested route type complexity
-      const res = await api.admin.logs[":id"].$patch({
-        param: { id },
-        json: { status: "ignored" },
-      });
+      const res = await api.admin.logs[":id"].$patch({ param: { id }, json: { status: "ignored" } });
       if (!res.ok) throw new Error("Failed to ignore log");
     },
     onSuccess: () =>
@@ -243,7 +237,6 @@ export function useLogActions() {
 
   const deleteLog = useMutation({
     mutationFn: async (id: string) => {
-      // @ts-expect-error - Hono RPC nested route type complexity
       const res = await api.admin.logs[":id"].$delete({
         param: { id },
       });

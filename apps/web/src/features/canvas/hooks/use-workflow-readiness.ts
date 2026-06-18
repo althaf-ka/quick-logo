@@ -7,7 +7,7 @@ export type WorkflowState = "Ready" | "Needs Input" | "Coming Soon";
 export interface WorkflowDefinition {
   id: string;
   name: string;
-  internalId: "img2img" | "inpaint" | "sketch2img" | null;
+  internalId: "img2img" | "inpaint" | null;
   description: string;
   state: WorkflowState;
   statusMessage: string;

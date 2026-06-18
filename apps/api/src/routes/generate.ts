@@ -3,9 +3,8 @@ import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
 import {
   generateApiRequestSchema,
-  editApiRequestSchema,
 } from "@quicklogo/shared";
-import { projects, images, users, eq, sql, and } from "@quicklogo/db";
+import { projects, images, users, eq, sql } from "@quicklogo/db";
 import { getModelCredits } from "@quicklogo/ai-providers/models";
 import type { Bindings, Variables } from "../types";
 import { requireAuth } from "../middleware/require-auth";
@@ -13,8 +12,6 @@ import { validationHook } from "../lib/validator";
 import {
   InsufficientCreditsError,
   UserNotFoundError,
-  NotFoundError,
-  ForbiddenError,
 } from "../lib/errors";
 
 const generate = new Hono<{ Bindings: Bindings; Variables: Variables }>()

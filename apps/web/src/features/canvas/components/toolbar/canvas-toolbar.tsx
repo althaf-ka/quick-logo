@@ -39,14 +39,6 @@ export function CanvasToolbar() {
         tool !== "hand"
       ) {
         state.resetAIWorkflow();
-      } else if (
-        state.canvasMode === "sketch2img" &&
-        tool !== "pencil" &&
-        tool !== "eraser" &&
-        tool !== "hand" &&
-        tool !== "select"
-      ) {
-        state.resetAIWorkflow();
       }
 
       state.setActiveTool(tool);
