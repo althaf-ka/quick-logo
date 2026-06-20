@@ -12,6 +12,7 @@ import { maskDataUrlToFile, dataUrlToFile } from "../utils/mask-export";
 import { compositeAIResult } from "../utils/composite-result";
 import { MODELS } from "@quicklogo/ai-providers/models";
 import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
+import type { EditApiRequest } from "@quicklogo/shared";
 
 export type GenerationStatus =
   | "idle"
@@ -27,7 +28,7 @@ export function useCanvasAI(
   canvas: fabric.Canvas | null,
   imageId: string,
   isDirty?: boolean,
-  initialImageUrl?: string
+  initialImageUrl?: string,
 ) {
   const isGenerating = useCanvasStore((s) => s.isAiGenerating);
   const aiModel = useCanvasStore((s) => s.aiModel);
@@ -72,12 +73,13 @@ export function useCanvasAI(
         canvasImageDataUrl = exportToDataUrl("png");
         if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
 
-
         const canvasFile = dataUrlToFile(
           canvasImageDataUrl,
           `canvas-${Date.now()}.png`,
         );
-        canvasImageUrlPromise = uploadFileToImageKit(canvasFile, "anonymous", { isTemp: true });
+        canvasImageUrlPromise = uploadFileToImageKit(canvasFile, "anonymous", {
+          isTemp: true,
+        });
       }
 
       let targetBounds:
@@ -91,10 +93,12 @@ export function useCanvasAI(
         if (activeObj && activeObj.id !== "__artboard__") {
           if (!activeObj.id) activeObj.set("id", `obj_${Date.now()}`);
           activeObjectIdToReplace = activeObj.id ?? null;
-          isPristineSourceImage = (activeObjectIdToReplace === "obj_initial_image" && isDirty === false);
-          
+          isPristineSourceImage =
+            activeObjectIdToReplace === "obj_initial_image" &&
+            isDirty === false;
+
           state.setActiveAIObjectId(activeObjectIdToReplace);
-          
+
           // getBoundingRect() ensures we get the absolute top-left coordinates
           // regardless of whether the object's originX/originY is 'center'.
           const rect = activeObj.getBoundingRect();
@@ -115,7 +119,8 @@ export function useCanvasAI(
 
       // Export Region if needed
       let regionImageDataUrl: string | undefined;
-      let uploadedRegionUrlPromise: Promise<string | undefined> = Promise.resolve(undefined);
+      let uploadedRegionUrlPromise: Promise<string | undefined> =
+        Promise.resolve(undefined);
 
       if (state.canvasMode === "img2img" && targetBounds) {
         if (isPristineSourceImage && initialImageUrl) {
@@ -126,34 +131,37 @@ export function useCanvasAI(
           // so that absolute coordinates (targetBounds) align perfectly.
           const active = canvas.getActiveObjects();
           canvas.discardActiveObject();
-          const vpt = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
+          const vpt = canvas.viewportTransform
+            ? [...canvas.viewportTransform]
+            : null;
           canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
           canvas.renderAll(); // MUST be synchronous
 
           regionImageDataUrl = canvas.toDataURL({
-          format: "png",
-          left: targetBounds.left,
-          top: targetBounds.top,
-          width: targetBounds.width,
-          height: targetBounds.height,
-          multiplier: 1,
-        });
+            format: "png",
+            left: targetBounds.left,
+            top: targetBounds.top,
+            width: targetBounds.width,
+            height: targetBounds.height,
+            multiplier: 1,
+          });
 
-        // Restore state
-        if (vpt) canvas.setViewportTransform(vpt as fabric.TMat2D);
-        if (active && active.length) {
-          if (active.length > 1) {
-            canvas.setActiveObject(new fabric.ActiveSelection(active, { canvas }));
-          } else {
-            canvas.setActiveObject(active[0]);
+          // Restore state
+          if (vpt) canvas.setViewportTransform(vpt as fabric.TMat2D);
+          if (active && active.length) {
+            if (active.length > 1) {
+              canvas.setActiveObject(
+                new fabric.ActiveSelection(active, { canvas }),
+              );
+            } else {
+              canvas.setActiveObject(active[0]);
+            }
           }
-        }
-        canvas.renderAll();
+          canvas.renderAll();
         }
       }
 
       setGenerationStatus("uploading");
-
 
       let maskFile: File | undefined;
       if (state.canvasMode === "inpaint" && state.maskData) {
@@ -165,7 +173,11 @@ export function useCanvasAI(
           regionImageDataUrl,
           `region-${Date.now()}.png`,
         );
-        uploadedRegionUrlPromise = uploadFileToImageKit(regionFile, "anonymous", { isTemp: true });
+        uploadedRegionUrlPromise = uploadFileToImageKit(
+          regionFile,
+          "anonymous",
+          { isTemp: true },
+        );
       }
 
       const [canvasImageUrl, maskImageUrl, uploadedRegionUrl] =
@@ -179,27 +191,27 @@ export function useCanvasAI(
 
       setGenerationStatus("generating");
 
-      const payload = {
+      const payload: EditApiRequest = {
         prompt: state.aiPrompt,
         sourceImageId: imageId,
         config: {
-          model: state.aiModel,
+          model: state.aiModel as EditApiRequest["config"]["model"],
           brandName: "",
           imageCount: 1,
           style: "",
           colorPalette: "auto",
           background: "transparent",
           customBgColor: "#ffffff",
-          referenceImageUrl: uploadedRegionUrl || canvasImageUrl,
+          referenceImageUrl: uploadedRegionUrl || canvasImageUrl || undefined,
           referenceStrength: state.aiStrength,
           magicPrompt: false,
-          canvasMode: state.canvasMode,
+          canvasMode:
+            state.canvasMode as EditApiRequest["config"]["canvasMode"],
           maskImageUrl: maskImageUrl || undefined,
-          canvasImageUrl: canvasImageUrl,
+          canvasImageUrl: canvasImageUrl || undefined,
         },
       };
 
-      // @ts-expect-error - Hono RPC types mismatch for json payload
       const res = await api.canvas["ai-edit"].$post({ json: payload });
       if (!res.ok) {
         throw await parseApiError(res);
@@ -304,7 +316,15 @@ export function useCanvasAI(
         setGenerationBounds(null);
       }, 2000);
     }
-  }, [canvas, isGenerating, exportToDataUrl, imageId, queryClient, isDirty, initialImageUrl]);
+  }, [
+    canvas,
+    isGenerating,
+    exportToDataUrl,
+    imageId,
+    queryClient,
+    isDirty,
+    initialImageUrl,
+  ]);
 
   const availableModels = useMemo(() => {
     // Return all models or filter based on mode if needed

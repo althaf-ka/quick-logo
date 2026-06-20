@@ -49,7 +49,7 @@ export default {
     const commands = [];
     Object.entries(groups).forEach(([packageDir, files]) => {
       const escapedFiles = files.map((f) => `"${f}"`).join(" ");
-      commands.push(`cd ${packageDir} && pnpm exec eslint --fix ${escapedFiles}`);
+      commands.push(`pnpm --filter ./${packageDir} exec eslint --fix ${escapedFiles}`);
     });
 
     return commands;

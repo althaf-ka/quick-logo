@@ -1,4 +1,4 @@
-import { config } from "@quicklogo/eslint-config/react-internal";
+import { config } from "@quicklogo/eslint-config/base";
 
 /** @type {import("eslint").Linter.Config} */
 export default [

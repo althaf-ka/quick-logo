@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { generateId } from "../utils/fabric-helpers";
+import { CANVAS_CONSTANTS } from "../constants";
 
 export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
   const setActiveTool = useCanvasStore((s) => s.setActiveTool);
@@ -23,7 +24,7 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
       const target = opt.target;
       if (
         target &&
-        target.id !== "__artboard__" &&
+        target.id !== CANVAS_CONSTANTS.ARTBOARD_ID &&
         target !== canvas.getActiveObject()
       ) {
         hoveredObjectForBorder = target;
@@ -127,9 +128,9 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
           .target;
         if (
           target &&
-          target.id !== "__artboard__" &&
-          target.id !== "obj_initial_image" &&
-          target.id !== "__ai_region__" &&
+          target.id !== CANVAS_CONSTANTS.ARTBOARD_ID &&
+          target.id !== CANVAS_CONSTANTS.INITIAL_IMAGE_ID &&
+          target.id !== CANVAS_CONSTANTS.AI_REGION_ID &&
           target.type !== "image" &&
           target.type !== "Image" &&
           target.type !== "image:FabricImage"
@@ -193,9 +194,9 @@ export function useCanvasPointerEvents(canvas: fabric.Canvas | null) {
           .target;
         if (
           target &&
-          target.id !== "__artboard__" &&
-          target.id !== "obj_initial_image" &&
-          target.id !== "__ai_region__" &&
+          target.id !== CANVAS_CONSTANTS.ARTBOARD_ID &&
+          target.id !== CANVAS_CONSTANTS.INITIAL_IMAGE_ID &&
+          target.id !== CANVAS_CONSTANTS.AI_REGION_ID &&
           target.type !== "image" &&
           target.type !== "Image" &&
           target.type !== "image:FabricImage"

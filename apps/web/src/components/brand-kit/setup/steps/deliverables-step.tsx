@@ -20,7 +20,60 @@ import {
   TextTIcon,
   CaretDownIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@quicklogo/ui/lib/utils";
+import { cn, cva } from "@quicklogo/ui/lib/utils";
+
+const cardVariants = cva(
+  "group/card relative overflow-hidden transition-colors duration-200 mb-2 ring-1",
+  {
+    variants: {
+      status: {
+        default: "bg-white/[0.01] ring-white/[0.06] hover:ring-white/[0.1]",
+        selected: "bg-primary/[0.03] ring-primary/25",
+        error: "bg-red-500/[0.03] ring-red-500/40",
+      },
+    },
+    defaultVariants: { status: "default" },
+  },
+);
+
+const iconVariants = cva("shrink-0 transition-colors duration-200", {
+  variants: {
+    status: {
+      default: "text-muted-foreground/40",
+      selected: "text-primary",
+      error: "text-red-500",
+    },
+  },
+  defaultVariants: { status: "default" },
+});
+
+const badgeVariants = cva(
+  "inline-flex items-center gap-1 px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest uppercase ring-1",
+  {
+    variants: {
+      status: {
+        default: "text-muted-foreground/40 bg-white/[0.03] ring-white/[0.08]",
+        selected: "bg-primary/15 text-primary ring-primary/20",
+        error: "bg-red-500/15 text-red-500 ring-red-500/20",
+      },
+    },
+    defaultVariants: { status: "default" },
+  },
+);
+
+const checkboxVariants = cva(
+  "flex size-4 items-center justify-center transition-all duration-200",
+  {
+    variants: {
+      status: {
+        default: "text-white/[0.1] group-hover/card:text-white/[0.25]",
+        selected: "text-primary",
+        error: "text-red-500",
+      },
+    },
+    defaultVariants: { status: "default" },
+  },
+);
 import { Button } from "@quicklogo/ui/components/button";
 import { Label } from "@quicklogo/ui/components/label";
 import { Input } from "@quicklogo/ui/components/input";
@@ -344,19 +397,14 @@ export function DeliverablesStep({
               (key === "businessCard" && contactError) ||
               (key === "brandPresentation" && presentationError);
 
+            const status = isSelected
+              ? isError
+                ? "error"
+                : "selected"
+              : "default";
+
             return (
-              <div
-                key={item.id}
-                className={cn(
-                  "group/card relative overflow-hidden transition-colors duration-200",
-                  "mb-2 ring-1",
-                  isSelected
-                    ? isError
-                      ? "bg-red-500/[0.03] ring-red-500/40"
-                      : "bg-primary/[0.03] ring-primary/25"
-                    : "bg-white/[0.01] ring-white/[0.06] hover:ring-white/[0.1]",
-                )}
-              >
+              <div key={item.id} className={cardVariants({ status })}>
                 {isSelected ? (
                   <div
                     className={cn(
@@ -370,18 +418,7 @@ export function DeliverablesStep({
                   className="flex cursor-pointer items-center gap-3 px-4 py-3"
                   onClick={() => handleDeliverableToggle(key)}
                 >
-                  <div
-                    className={cn(
-                      "shrink-0 transition-colors duration-200",
-                      isSelected
-                        ? isError
-                          ? "text-red-500"
-                          : "text-primary"
-                        : "text-muted-foreground/40",
-                    )}
-                  >
-                    {item.icon}
-                  </div>
+                  <div className={iconVariants({ status })}>{item.icon}</div>
 
                   <div className="min-w-0 flex-1">
                     <h3
@@ -405,16 +442,7 @@ export function DeliverablesStep({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest uppercase ring-1",
-                        isSelected
-                          ? isError
-                            ? "bg-red-500/15 text-red-500 ring-red-500/20"
-                            : "bg-primary/15 text-primary ring-primary/20"
-                          : "text-muted-foreground/40 bg-white/[0.03] ring-white/[0.08]",
-                      )}
-                    >
+                    <span className={badgeVariants({ status })}>
                       {item.cost === 0 ? (
                         "Free"
                       ) : (
@@ -424,16 +452,7 @@ export function DeliverablesStep({
                         </>
                       )}
                     </span>
-                    <div
-                      className={cn(
-                        "flex size-4 items-center justify-center transition-all duration-200",
-                        isSelected
-                          ? isError
-                            ? "text-red-500"
-                            : "text-primary"
-                          : "text-white/[0.1] group-hover/card:text-white/[0.25]",
-                      )}
-                    >
+                    <div className={checkboxVariants({ status })}>
                       {isSelected ? (
                         <CheckSquareIcon weight="fill" className="size-4" />
                       ) : (

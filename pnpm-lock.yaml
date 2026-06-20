@@ -353,6 +353,9 @@ importers:
       '@types/node':
         specifier: ^25.3.3
         version: 25.3.5
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
@@ -474,6 +477,9 @@ importers:
       '@quicklogo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ^5.5.0
         version: 5.9.3

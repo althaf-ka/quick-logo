@@ -10,9 +10,20 @@ import type { InferResponseType } from "@quicklogo/api-client";
 
 export const ADMIN_KEYS = {
   dashboard: ["admin", "dashboard"] as const,
-  users: ["admin", "users"] as const,
-  transactions: (page: number) => ["admin", "transactions", { page }] as const,
-  logs: (filters: LogFilters) => ["admin", "logs", filters] as const,
+  users: {
+    all: ["admin", "users"] as const,
+    search: (searchValue: string, searchField: string) =>
+      [...ADMIN_KEYS.users.all, { searchValue, searchField }] as const,
+  },
+  transactions: {
+    all: ["admin", "transactions"] as const,
+    page: (page: number) => [...ADMIN_KEYS.transactions.all, { page }] as const,
+  },
+  logs: {
+    all: ["admin", "logs"] as const,
+    filtered: (filters: LogFilters) =>
+      [...ADMIN_KEYS.logs.all, filters] as const,
+  },
 };
 
 export type DashboardData = InferResponseType<
@@ -37,6 +48,15 @@ export type LogFilters = {
   source?: "web" | "admin" | "api" | "worker";
 };
 
+export function calculateNextPage(lastPage: {
+  metadata?: { total: number; limit: number; page: number };
+}) {
+  if (!lastPage?.metadata) return undefined;
+  const { total, limit, page } = lastPage.metadata;
+  const totalPages = Math.ceil(total / limit);
+  return page < totalPages ? page + 1 : undefined;
+}
+
 export function useAdminDashboard() {
   return useQuery({
     queryKey: ADMIN_KEYS.dashboard,
@@ -57,7 +77,7 @@ export function useInfiniteAdminUsers(
   searchField: "email" | "name" = "email",
 ) {
   return useInfiniteQuery({
-    queryKey: [...ADMIN_KEYS.users, { searchValue, searchField }],
+    queryKey: ADMIN_KEYS.users.search(searchValue, searchField),
     queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await authClient.admin.listUsers({
         query: {
@@ -107,7 +127,7 @@ export function useAdminActions() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users.all }),
   });
 
   const unbanUser = useMutation({
@@ -116,7 +136,7 @@ export function useAdminActions() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users.all }),
   });
 
   const setRole = useMutation({
@@ -131,7 +151,7 @@ export function useAdminActions() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users.all }),
   });
 
   const impersonateUser = useMutation({
@@ -147,7 +167,7 @@ export function useAdminActions() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.users.all }),
   });
 
   return { banUser, unbanUser, setRole, impersonateUser, removeUser };
@@ -155,7 +175,7 @@ export function useAdminActions() {
 
 export function useAdminTransactions(page = 1) {
   return useQuery({
-    queryKey: ADMIN_KEYS.transactions(page),
+    queryKey: ADMIN_KEYS.transactions.page(page),
     queryFn: async () => {
       const res = await api.admin.transactions.$get({
         query: { page: String(page) },
@@ -168,7 +188,7 @@ export function useAdminTransactions(page = 1) {
 }
 export function useInfiniteAdminTransactions() {
   return useInfiniteQuery({
-    queryKey: ["admin", "transactions", "infinite"],
+    queryKey: [...ADMIN_KEYS.transactions.all, "infinite"],
     queryFn: async ({ pageParam = 1 }) => {
       const res = await api.admin.transactions.$get({
         query: { page: String(pageParam) },
@@ -177,19 +197,13 @@ export function useInfiniteAdminTransactions() {
       return await res.json();
     },
     initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      const totalPages = Math.ceil(
-        (lastPage?.metadata?.total ?? 0) / (lastPage?.metadata?.limit ?? 50),
-      );
-      const currentPage = lastPage?.metadata?.page ?? 1;
-      return currentPage < totalPages ? currentPage + 1 : undefined;
-    },
+    getNextPageParam: calculateNextPage,
   });
 }
 
 export function useInfiniteAdminLogs(filters: LogFilters = {}) {
   return useInfiniteQuery({
-    queryKey: ADMIN_KEYS.logs(filters),
+    queryKey: ADMIN_KEYS.logs.filtered(filters),
     queryFn: async ({ pageParam = 1 }) => {
       const res = await api.admin.logs.$get({
         query: {
@@ -202,13 +216,7 @@ export function useInfiniteAdminLogs(filters: LogFilters = {}) {
       return await res.json();
     },
     initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      const totalPages = Math.ceil(
-        (lastPage?.metadata?.total ?? 0) / (lastPage?.metadata?.limit ?? 50),
-      );
-      const currentPage = lastPage?.metadata?.page ?? 1;
-      return currentPage < totalPages ? currentPage + 1 : undefined;
-    },
+    getNextPageParam: calculateNextPage,
   });
 }
 
@@ -217,22 +225,26 @@ export function useLogActions() {
 
   const resolveLog = useMutation({
     mutationFn: async (id: string) => {
-      // @ts-expect-error - Hono RPC nested route type complexity
-      const res = await api.admin.logs[":id"].$patch({ param: { id }, json: { status: "resolved" } });
+      const res = await api.admin.logs[":id"].$patch({
+        param: { id },
+        json: { status: "resolved" },
+      });
       if (!res.ok) throw new Error("Failed to resolve log");
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "logs"] }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.logs.all }),
   });
 
   const ignoreLog = useMutation({
     mutationFn: async (id: string) => {
-      // @ts-expect-error - Hono RPC nested route type complexity
-      const res = await api.admin.logs[":id"].$patch({ param: { id }, json: { status: "ignored" } });
+      const res = await api.admin.logs[":id"].$patch({
+        param: { id },
+        json: { status: "ignored" },
+      });
       if (!res.ok) throw new Error("Failed to ignore log");
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "logs"] }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.logs.all }),
   });
 
   const deleteLog = useMutation({
@@ -243,7 +255,7 @@ export function useLogActions() {
       if (!res.ok) throw new Error("Failed to delete log");
     },
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "logs"] }),
+      queryClient.invalidateQueries({ queryKey: ADMIN_KEYS.logs.all }),
   });
 
   return { resolveLog, ignoreLog, deleteLog };

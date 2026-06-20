@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
 import { paginationSchema, adminLogsQuerySchema } from "@quicklogo/shared";
 import type { Bindings, Variables } from "../../types";
 import { requireAdmin } from "../../middleware/require-auth";
@@ -279,19 +280,22 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     });
   })
 
-  .patch("/logs/:id", async (c) => {
-    const db = c.get("db");
-    const id = c.req.param("id");
-    const { status } = await c.req.json();
+  .patch(
+    "/logs/:id",
+    zValidator(
+      "json",
+      z.object({ status: z.enum(["resolved", "ignored", "unresolved"]) }),
+    ),
+    async (c) => {
+      const db = c.get("db");
+      const id = c.req.param("id");
+      const { status } = c.req.valid("json");
 
-    if (!["resolved", "ignored", "unresolved"].includes(status)) {
-      return c.json({ error: "Invalid status" }, 400);
-    }
+      await db.update(systemLogs).set({ status }).where(eq(systemLogs.id, id));
 
-    await db.update(systemLogs).set({ status }).where(eq(systemLogs.id, id));
-
-    return c.json({ success: true });
-  })
+      return c.json({ success: true });
+    },
+  )
 
   .delete("/logs/:id", async (c) => {
     const db = c.get("db");

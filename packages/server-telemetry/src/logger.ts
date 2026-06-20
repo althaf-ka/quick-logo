@@ -25,7 +25,7 @@ class ServerLogger {
   ) {
     const timestamp = new Date().toISOString();
 
-    const outputContext: any = { ...context };
+    const outputContext: Record<string, unknown> = { ...context };
     if (err) {
       outputContext.error = err instanceof Error ? err.message : String(err);
       if (err instanceof Error && err.stack) {

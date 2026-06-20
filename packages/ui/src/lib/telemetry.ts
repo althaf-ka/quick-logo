@@ -7,7 +7,7 @@ export interface TelemetryEvent {
   message: string;
   stack?: string;
   pathname?: string;
-  context?: any;
+  context?: Record<string, unknown>;
 }
 
 const REPORT_URL = "/api/logs/report";
@@ -44,19 +44,19 @@ export const telemetry = {
     }
   },
 
-  info(source: LogSource, message: string, context?: any) {
+  info(source: LogSource, message: string, context?: Record<string, unknown>) {
     return this.report({ level: "info", source, message, context });
   },
 
-  warn(source: LogSource, message: string, context?: any) {
+  warn(source: LogSource, message: string, context?: Record<string, unknown>) {
     return this.report({ level: "warn", source, message, context });
   },
 
-  error(source: LogSource, message: string, stack?: string, context?: any) {
+  error(source: LogSource, message: string, stack?: string, context?: Record<string, unknown>) {
     return this.report({ level: "error", source, message, stack, context });
   },
 
-  fatal(source: LogSource, message: string, stack?: string, context?: any) {
+  fatal(source: LogSource, message: string, stack?: string, context?: Record<string, unknown>) {
     return this.report({ level: "fatal", source, message, stack, context });
   },
 };
