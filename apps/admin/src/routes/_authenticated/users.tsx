@@ -86,7 +86,7 @@ function UsersPage() {
             User Management
           </h2>
           <p className="text-muted-foreground">
-            Monitor and manage your platform's user base.
+            Monitor and manage your platform&apos;s user base.
           </p>
         </div>
         <div className="group relative w-full md:w-80">

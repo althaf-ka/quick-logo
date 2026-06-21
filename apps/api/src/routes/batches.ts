@@ -1,7 +1,7 @@
-import { Hono } from "hono";
 import { projects, images, eq, and, desc } from "@quicklogo/db";
-import type { Bindings, Variables } from "../types";
+import { Hono } from "hono";
 import { requireAuth } from "../middleware/require-auth";
+import type { Bindings, Variables } from "../types";
 
 type ImageStatus = "pending" | "processing" | "completed" | "failed";
 

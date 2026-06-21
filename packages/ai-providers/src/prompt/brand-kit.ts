@@ -6,8 +6,6 @@ import {
   BusinessCardVariationKind,
   BrandKitSectionKey,
   BrandKitJsonRequest,
-  BrandKitMessage,
-  BrandKitVisionMessage,
   BrandKitVisionRequest,
   ValidatedBrandContext,
 } from "./types";
@@ -553,6 +551,9 @@ export function buildBrandPresentationGenerationParams({
   fallbackPrompt?: string;
 }): GenerationParams {
   let basePrompt = `Create a stunning modern UI presentation layout for brand "${brandName}".`;
+
+  if (industry) basePrompt += ` Industry: ${industry}.`;
+  if (targetAudience) basePrompt += ` Target Audience: ${targetAudience}.`;
 
   if (selectedVibes?.length || brandPersonality) {
     basePrompt += ` Brand aesthetic: ${selectedVibes?.join(", ") || "modern"}. Personality: ${brandPersonality || "professional"}.`;

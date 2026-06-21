@@ -137,7 +137,7 @@ export function GeneratingSidebar({
               exit={{ opacity: 0, y: -5 }}
               className="text-muted-foreground font-mono text-[10px] leading-relaxed"
             >
-              "{GENERATING_TIPS[tipIndex]}"
+              &quot;{GENERATING_TIPS[tipIndex]}&quot;
             </motion.p>
           </AnimatePresence>
         </div>

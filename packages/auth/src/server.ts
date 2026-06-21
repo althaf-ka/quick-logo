@@ -37,12 +37,6 @@ export function createAuth(db: Database, env: AuthEnv) {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: allowedOrigins,
 
-    advanced: {
-      cookiePrefix: env.BETTER_AUTH_URL.startsWith("https://")
-        ? "__Host-"
-        : undefined,
-    },
-
     onAPIError: {
       errorURL: primaryClientUrl ? `${primaryClientUrl}/login` : "/login",
     },

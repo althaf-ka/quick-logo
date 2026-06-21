@@ -12,13 +12,13 @@ export function formatHandleSocial(value: string): string | undefined {
 }
 
 export function formatLinkedIn(value: string): string | undefined {
-  let cleaned = value.trim();
+  const cleaned = value.trim();
   if (!cleaned) return undefined;
   try {
     const url = new URL(
       cleaned.startsWith("http") ? cleaned : `https://${cleaned}`,
     );
-    let host = url.hostname.replace(/^www\./i, "");
+    const host = url.hostname.replace(/^www\./i, "");
     let path = url.pathname;
     if (path === "/") path = "";
     return `${host}${path}`;
@@ -28,14 +28,14 @@ export function formatLinkedIn(value: string): string | undefined {
 }
 
 export function formatYouTube(value: string): string | undefined {
-  let cleaned = value.trim();
+  const cleaned = value.trim();
   if (!cleaned) return undefined;
   if (cleaned.includes("youtube.com/")) {
     try {
       const url = new URL(
         cleaned.startsWith("http") ? cleaned : `https://${cleaned}`,
       );
-      let host = url.hostname.replace(/^www\./i, "");
+      const host = url.hostname.replace(/^www\./i, "");
       let path = url.pathname;
       if (path === "/") path = "";
       return `${host}${path}`;

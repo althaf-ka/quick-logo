@@ -55,7 +55,7 @@ export function BrandProfileEditor({
               Brand Profile
             </SheetTitle>
             <SheetDescription className="text-muted-foreground/60 pt-2 text-xs leading-relaxed">
-              Provide your contact info and social handles. We'll use these
+              Provide your contact info and social handles. We&apos;ll use these
               across all generated deliverables (like business cards and social
               banners).
             </SheetDescription>

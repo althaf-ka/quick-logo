@@ -10,7 +10,7 @@ export interface GenerationParams {
   width?: number;
   height?: number;
   guidance?: number;
-  providerOptions?: Record<string, any>;
+  providerOptions?: Record<string, unknown>;
   maskImage?: string;
   canvasImage?: string;
   canvasMode?: "edit" | "img2img" | "inpaint" | "text2img";

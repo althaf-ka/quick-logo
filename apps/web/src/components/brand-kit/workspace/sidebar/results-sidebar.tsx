@@ -132,7 +132,7 @@ export function ResultsSidebar({
                   Tagline
                 </span>
                 <span className="text-foreground/80 font-mono text-xs italic">
-                  "{results.brandPresentation.tagline}"
+                  &quot;{results.brandPresentation.tagline}&quot;
                 </span>
               </div>
             ) : null}

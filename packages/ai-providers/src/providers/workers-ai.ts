@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { createLogger } from "@quicklogo/server-telemetry";
 import type { AIProvider, GenerationParams, GenerationResult } from "../types";
+import { secureFetchImage } from "../utils/secure-fetch";
 
 const logger = createLogger("ai-providers");
 
@@ -55,7 +56,7 @@ export class WorkersAIProvider implements AIProvider {
     if (params.guidance != null) input.guidance = params.guidance;
 
     if (params.referenceImage) {
-      const buffer = await this.fetchImage(params.referenceImage);
+      const buffer = await secureFetchImage(params.referenceImage);
       input.image = [...new Uint8Array(buffer)];
       input.strength = (params.referenceStrength ?? 50) / 100;
     }
@@ -77,7 +78,7 @@ export class WorkersAIProvider implements AIProvider {
       form.append("guidance", String(params.guidance));
 
     if (params.referenceImage) {
-      const buffer = await this.fetchImage(params.referenceImage);
+      const buffer = await secureFetchImage(params.referenceImage);
       form.append(
         "input_image_0",
         new Blob([buffer], { type: "image/webp" }),
@@ -94,14 +95,6 @@ export class WorkersAIProvider implements AIProvider {
         contentType: envelope.headers.get("content-type")!,
       },
     });
-  }
-
-  private async fetchImage(url: string): Promise<ArrayBuffer> {
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Reference image fetch failed (${res.status})`);
-    }
-    return res.arrayBuffer();
   }
 
   private async toUint8Array(response: unknown): Promise<Uint8Array> {

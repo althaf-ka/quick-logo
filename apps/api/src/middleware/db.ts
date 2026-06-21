@@ -1,6 +1,7 @@
+import type { D1Database } from "@cloudflare/workers-types";
+import { createDb } from "@quicklogo/db";
+import type { Database } from "@quicklogo/db";
 import { createMiddleware } from "hono/factory";
-import { createDb, type Database } from "@quicklogo/db";
-import { D1Database } from "@cloudflare/workers-types";
 
 type Bindings = {
   DB: D1Database;

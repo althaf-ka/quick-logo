@@ -101,7 +101,6 @@ export function useGenerateForm() {
     if (!activeBatchId) return;
 
     if (isBatchError) {
-      // eslint-disable-next-line
       setStatus("error");
       setLocalError(
         "Failed to fetch generation status. Please try refreshing.",

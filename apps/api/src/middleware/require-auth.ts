@@ -1,6 +1,6 @@
+import { createAuth } from "@quicklogo/auth/server";
 import { createMiddleware } from "hono/factory";
 import type { Bindings, Variables } from "../types";
-import { createAuth } from "@quicklogo/auth/server";
 
 export const requireAuth = createMiddleware<{
   Bindings: Bindings;

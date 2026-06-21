@@ -1,11 +1,11 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { createAuth } from "@quicklogo/auth/server";
 import { systemLogs } from "@quicklogo/db";
 import { logReportSchema } from "@quicklogo/shared";
-import { createAuth } from "@quicklogo/auth/server";
-import type { Bindings, Variables } from "../types";
-import { validationHook } from "../lib/validator";
+import { Hono } from "hono";
 import { sanitizeText, deepSanitize } from "../lib/sanitize";
+import { validationHook } from "../lib/validator";
+import type { Bindings, Variables } from "../types";
 
 const logsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 

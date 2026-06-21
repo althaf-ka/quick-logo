@@ -1,13 +1,13 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { projects, images, users, eq, lt, desc, and, sql } from "@quicklogo/db";
-import { ImageKitProvider } from "@quicklogo/storage";
-import { listQuerySchema } from "@quicklogo/shared";
-import type { Bindings, Variables } from "../types";
-import { requireAuth } from "../middleware/require-auth";
-import { validationHook } from "../lib/validator";
-import { InsufficientCreditsError, NotFoundError } from "../lib/errors";
 import { createLogger } from "@quicklogo/server-telemetry";
+import { listQuerySchema } from "@quicklogo/shared";
+import { ImageKitProvider } from "@quicklogo/storage";
+import { Hono } from "hono";
+import { InsufficientCreditsError, NotFoundError } from "../lib/errors";
+import { validationHook } from "../lib/validator";
+import { requireAuth } from "../middleware/require-auth";
+import type { Bindings, Variables } from "../types";
 
 const logger = createLogger("api");
 
@@ -47,8 +47,8 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           latestImageAgg,
           and(
             eq(images.projectId, latestImageAgg.projectId),
-            eq(images.createdAt, latestImageAgg.maxCreatedAt)
-          )
+            eq(images.createdAt, latestImageAgg.maxCreatedAt),
+          ),
         )
         .as("latest_image");
 

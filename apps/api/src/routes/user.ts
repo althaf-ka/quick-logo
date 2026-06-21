@@ -1,9 +1,9 @@
+import { eq, users } from "@quicklogo/db";
 import { Hono } from "hono";
 import { createFactory } from "hono/factory";
-import { eq, users } from "@quicklogo/db";
-import type { Bindings, Variables } from "../types";
-import { requireAuth } from "../middleware/require-auth";
 import { UserNotFoundError } from "../lib/errors";
+import { requireAuth } from "../middleware/require-auth";
+import type { Bindings, Variables } from "../types";
 
 const factory = createFactory<{ Bindings: Bindings; Variables: Variables }>();
 

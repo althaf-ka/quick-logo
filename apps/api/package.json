@@ -11,7 +11,8 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:migrate:local": "wrangler d1 migrations apply quicklogo-db --local --config wrangler.jsonc",
     "db:migrate:prod": "wrangler d1 migrations apply quicklogo-db --remote --config wrangler.jsonc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@dodopayments/hono": "^0.2.5",
@@ -29,7 +30,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260301.1",
+    "@quicklogo/eslint-config": "workspace:*",
     "@types/node": "^25.3.5",
+    "eslint": "^9.39.1",
     "typescript": "^6.0.3",
     "wrangler": "^4.66.0"
   }

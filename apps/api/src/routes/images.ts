@@ -1,10 +1,10 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
 import { images, projects, eq, desc } from "@quicklogo/db";
-import type { Bindings, Variables } from "../types";
-import { requireAuth } from "../middleware/require-auth";
+import { Hono } from "hono";
+import { z } from "zod";
 import { ForbiddenError, NotFoundError } from "../lib/errors";
+import { requireAuth } from "../middleware/require-auth";
+import type { Bindings, Variables } from "../types";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .get("/:id", requireAuth, async (c) => {

@@ -1,22 +1,22 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
 import { Webhooks } from "@dodopayments/hono";
-import DodoPayments from "dodopayments";
-import { eq, sql, desc, lt, and } from "@quicklogo/db";
+import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
+import { eq, sql, desc, lt, and, users, transactions } from "@quicklogo/db";
+import type { Database } from "@quicklogo/db";
+import { createLogger } from "@quicklogo/server-telemetry";
 import {
   createCheckoutRequestSchema,
   PRICING_TIERS,
   ERROR_CODES,
 } from "@quicklogo/shared";
-import { users, transactions } from "@quicklogo/db";
+import DodoPayments from "dodopayments";
+import { Hono } from "hono";
 import { z } from "zod";
-import { createLogger } from "@quicklogo/server-telemetry";
-import type { Bindings, Variables } from "../types";
-import { requireAuth } from "../middleware/require-auth";
-import { validationHook } from "../lib/validator";
 import { AppError, NotFoundError } from "../lib/errors";
 import { isAllowedRedirect } from "../lib/url";
+import { validationHook } from "../lib/validator";
+import { requireAuth } from "../middleware/require-auth";
+import type { Bindings, Variables } from "../types";
 
 type WebhookMetadata = {
   transaction_id?: string;
@@ -25,7 +25,7 @@ type WebhookMetadata = {
 
 export interface DodoPayload {
   data?: {
-    metadata?: WebhookMetadata;
+    metadata?: Record<string, unknown> | null;
     payment_id?: string;
     abandonment_reason?: string;
     recovered_payment_id?: string;
@@ -39,9 +39,9 @@ export interface DodoPayload {
 const TERMINAL_STATUSES = new Set(["completed", "failed"]);
 
 async function updateTransactionStatus(
-  db: any,
-  payload: any,
-  newStatus: string,
+  db: Database,
+  payload: DodoPayload,
+  newStatus: "completed" | "failed" | "pending" | "processing" | "cancelled",
   label: string,
   logger: ReturnType<typeof createLogger>,
 ): Promise<void> {
@@ -187,7 +187,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         const redirectUrl = dodoSession.url || dodoSession.checkout_url;
 
         return c.json({ url: redirectUrl, transactionId: txId }, 200);
-      } catch (error: any) {
+      } catch (error: unknown) {
         await db
           .update(transactions)
           .set({ status: "failed" })
@@ -196,7 +196,8 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
         logger.error("Dodo checkout creation error", error, {
           txId,
-          responseData: error.response?.data,
+          responseData: (error as { response?: { data?: unknown } })?.response
+            ?.data,
         });
         throw new AppError(
           500,
@@ -385,9 +386,8 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   )
 
   .post("/webhook", async (c) => {
-    const { createDb } = await import("@quicklogo/db");
-    const safeDb = createDb(c.env.DB);
-    const logger = createLogger("api", { db: safeDb });
+    const db = c.get("db");
+    const logger = createLogger("api", { db });
 
     const webhookRunner = Webhooks({
       webhookKey: c.env.DODO_PAYMENTS_WEBHOOK_KEY,
@@ -406,7 +406,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         try {
           const { transaction_id, user_id } = metadata;
 
-          const [localTx] = await safeDb
+          const [localTx] = await db
             .select()
             .from(transactions)
             .where(eq(transactions.id, transaction_id))
@@ -426,14 +426,14 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             return;
           }
 
-          await safeDb.batch([
-            safeDb
+          await db.batch([
+            db
               .update(users)
               .set({
                 credits: sql`${users.credits} + COALESCE((SELECT ${transactions.creditsAdded} FROM ${transactions} WHERE ${transactions.id} = ${transaction_id} AND ${transactions.status} = ${localTx.status}), 0)`,
               })
               .where(eq(users.id, localTx.userId)),
-            safeDb
+            db
               .update(transactions)
               .set({
                 status: "completed",
@@ -463,7 +463,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       onPaymentFailed: async (payload) => {
         await updateTransactionStatus(
-          safeDb,
+          db,
           payload,
           "failed",
           "Payment Failed",
@@ -473,7 +473,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       onPaymentCancelled: async (payload) => {
         await updateTransactionStatus(
-          safeDb,
+          db,
           payload,
           "cancelled",
           "Payment Cancelled",
@@ -483,7 +483,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       onPaymentProcessing: async (payload) => {
         await updateTransactionStatus(
-          safeDb,
+          db,
           payload,
           "processing",
           "Payment Processing",

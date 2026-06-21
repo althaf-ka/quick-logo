@@ -19,7 +19,7 @@ export interface ModelMapping {
     width?: number;
     height?: number;
     guidance?: number;
-    providerOptions?: Record<string, any>;
+    providerOptions?: Record<string, unknown>;
   };
 }
 

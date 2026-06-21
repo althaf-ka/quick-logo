@@ -1,15 +1,5 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
-import {
-  generateBrandKitSchema,
-  refineBrandKitSectionSchema,
-  restoreSectionSchema,
-  restoreFullBrandKitSchema,
-  buildBrandContextSummary,
-  listQuerySchema,
-  getSocialAssetTargetId,
-} from "@quicklogo/shared";
 import {
   brandKits,
   brandKitRevisions,
@@ -21,16 +11,26 @@ import {
   and,
   desc,
 } from "@quicklogo/db";
-import { requireAuth } from "../middleware/require-auth";
-import { validationHook } from "../lib/validator";
+import {
+  generateBrandKitSchema,
+  refineBrandKitSectionSchema,
+  restoreSectionSchema,
+  restoreFullBrandKitSchema,
+  buildBrandContextSummary,
+  listQuerySchema,
+  getSocialAssetTargetId,
+} from "@quicklogo/shared";
+import { Hono } from "hono";
 import {
   InsufficientCreditsError,
   NotFoundError,
   BadRequestError,
 } from "../lib/errors";
+import { validationHook } from "../lib/validator";
+import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
 
-function deepEqual(obj1: any, obj2: any): boolean {
+function deepEqual(obj1: unknown, obj2: unknown): boolean {
   if (obj1 === obj2) return true;
   if (
     typeof obj1 !== "object" ||
@@ -40,11 +40,13 @@ function deepEqual(obj1: any, obj2: any): boolean {
   ) {
     return false;
   }
-  const keys1 = Object.keys(obj1);
-  const keys2 = Object.keys(obj2);
+  const o1 = obj1 as Record<string, unknown>;
+  const o2 = obj2 as Record<string, unknown>;
+  const keys1 = Object.keys(o1);
+  const keys2 = Object.keys(o2);
   if (keys1.length !== keys2.length) return false;
   for (const key of keys1) {
-    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) {
+    if (!keys2.includes(key) || !deepEqual(o1[key], o2[key])) {
       return false;
     }
   }
@@ -226,7 +228,8 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             );
 
           const found = socialAssets.some(
-            (asset: any) => getSocialAssetTargetId(asset) === data.targetItemId,
+            (asset: { platform: string; type: string }) =>
+              getSocialAssetTargetId(asset) === data.targetItemId,
           );
           if (!found)
             throw new BadRequestError(
@@ -313,7 +316,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         return c.json({ status: "success" });
       }
 
-      let newMergedJSON = { ...currentResults };
+      const newMergedJSON = { ...currentResults };
 
       // depending on sectionId, map it to the JSON key
       const sectionKeyMap: Record<string, string> = {

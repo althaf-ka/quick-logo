@@ -236,7 +236,7 @@ export class LeonardoProvider implements AIProvider {
     let fields: Record<string, string>;
     try {
       fields = JSON.parse(fieldsString) as Record<string, string>;
-    } catch (err) {
+    } catch {
       throw new Error(
         "Critial failure parsing Leonardo S3 pre-signed fields JSON structure.",
       );

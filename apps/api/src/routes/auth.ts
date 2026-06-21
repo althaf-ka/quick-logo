@@ -1,5 +1,5 @@
-import { Hono } from "hono";
 import { createAuth } from "@quicklogo/auth/server";
+import { Hono } from "hono";
 import type { Bindings, Variables } from "../types";
 
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>();

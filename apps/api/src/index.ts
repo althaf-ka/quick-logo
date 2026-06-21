@@ -1,25 +1,25 @@
+import { ERROR_CODES } from "@quicklogo/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
+import { globalErrorHandler } from "./lib/error-handler";
+import { getAllowedOrigins } from "./lib/url";
 import { dbMiddleware } from "./middleware/db";
-import authRoute from "./routes/auth";
-import userRoute from "./routes/user";
-import uploadRoute from "./routes/upload";
-import generateRoute from "./routes/generate";
-import batchesRoute from "./routes/batches";
-import imagesRoute from "./routes/images";
-import paymentsRoute from "./routes/payments";
-import projectsRoute from "./routes/projects";
 import adminRoute from "./routes/admin";
-import logsRoute from "./routes/logs";
+import authRoute from "./routes/auth";
+import batchesRoute from "./routes/batches";
 import brandKitsRoute from "./routes/brand-kits";
 import canvasRoute from "./routes/canvas";
+import generateRoute from "./routes/generate";
+import imagesRoute from "./routes/images";
+import logsRoute from "./routes/logs";
+import paymentsRoute from "./routes/payments";
+import projectsRoute from "./routes/projects";
+import uploadRoute from "./routes/upload";
+import userRoute from "./routes/user";
 
-import { Bindings, Variables } from "./types";
-import { globalErrorHandler } from "./lib/error-handler";
-import { ERROR_CODES } from "@quicklogo/shared";
-import { getAllowedOrigins } from "./lib/url";
+import type { Bindings, Variables } from "./types";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -58,6 +58,7 @@ app.use("/api/*", async (c, next) => {
   return csrfMiddleware(c, next);
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const routes = app
   .route("/api/auth", authRoute)
   .route("/api/user", userRoute)
