@@ -4,6 +4,12 @@ export {
   getModelCredits,
   getModelsForContext,
   getModelsForCanvasMode,
+  getModelMaskPolarity,
 } from "@quicklogo/shared";
 
-export type { ModelContext, ModelId, ModelOption } from "@quicklogo/shared";
+export type {
+  ModelContext,
+  ModelId,
+  ModelOption,
+  MaskPolarity,
+} from "@quicklogo/shared";

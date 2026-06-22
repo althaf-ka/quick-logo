@@ -1,7 +1,10 @@
 import { useEffect, useRef, useCallback } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
-import { FABRIC_CUSTOM_PROPERTIES, restoreCustomProperties } from "../utils/fabric-properties";
+import {
+  FABRIC_CUSTOM_PROPERTIES,
+  restoreCustomProperties,
+} from "../utils/fabric-properties";
 
 export function useCanvasHistory(canvas: fabric.Canvas | null) {
   const setHistoryState = useCanvasStore((s) => s.setHistoryState);
@@ -27,14 +30,13 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
     async (state: string) => {
       if (!canvas || !state) return Promise.resolve();
       isHistoryChanging.current = true;
+      (canvas as any).__isHistoryChanging = true;
 
       const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
       const jsonToLoad = JSON.parse(state);
 
       if (artboard) {
-        jsonToLoad.objects.unshift(
-          artboard.toObject(FABRIC_CUSTOM_PROPERTIES),
-        );
+        jsonToLoad.objects.unshift(artboard.toObject(FABRIC_CUSTOM_PROPERTIES));
       }
 
       await canvas.loadFromJSON(jsonToLoad);
@@ -44,6 +46,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
 
       canvas.requestRenderAll();
       isHistoryChanging.current = false;
+      (canvas as any).__isHistoryChanging = false;
       syncStore();
     },
     [canvas, syncStore],

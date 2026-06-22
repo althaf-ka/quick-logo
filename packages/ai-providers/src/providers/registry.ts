@@ -12,6 +12,8 @@ export interface ModelMapping {
     nativePromptEnhancement: boolean;
     imageToImage: boolean;
     inpaint?: boolean;
+    /** Mask polarity: "standard" = white=inpaint, "inverted" = black=inpaint */
+    maskPolarity?: "standard" | "inverted";
     apiSchema?: "v1" | "v2";
   };
   defaultParams: {
@@ -71,6 +73,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
+      inpaint: false,
     },
     defaultParams: {
       width: 1024,
@@ -85,6 +88,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       nativePromptEnhancement: true,
       imageToImage: false,
       inpaint: true,
+      maskPolarity: "inverted",
     },
     defaultParams: {
       width: 1024,
@@ -98,6 +102,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
+      inpaint: false,
     },
     defaultParams: {
       width: 1024,
@@ -111,6 +116,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
+      inpaint: false,
     },
     defaultParams: {
       width: 1024,
@@ -124,6 +130,21 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: false,
       imageToImage: false,
+    },
+    defaultParams: {
+      width: 1024,
+      height: 1024,
+    },
+  },
+  "quick-flux-fill": {
+    provider: "replicate",
+    inputType: "json",
+    backendModel: "black-forest-labs/flux-fill-pro",
+    capabilities: {
+      nativePromptEnhancement: true,
+      imageToImage: false,
+      inpaint: true,
+      maskPolarity: "standard",
     },
     defaultParams: {
       width: 1024,

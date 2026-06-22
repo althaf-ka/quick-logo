@@ -10,7 +10,30 @@ export function validateImageGenerationInput(
     throw new PipelineError("Prompt cannot be empty", false);
   }
 
-  if (message.config.referenceImageUrl && !mapping.capabilities.imageToImage) {
+  const isInpaint =
+    message.config.canvasMode === "inpaint" || !!message.config.maskImageUrl;
+
+  if (isInpaint) {
+    if (!message.config.canvasImageUrl || !message.config.maskImageUrl) {
+      throw new PipelineError(
+        "Inpainting requires both a canvas image and a mask image",
+        false,
+      );
+    }
+  }
+
+  if (isInpaint && !mapping.capabilities.inpaint) {
+    throw new PipelineError(
+      `Model ${mapping.backendModel} does not support inpainting capabilities`,
+      false,
+    );
+  }
+
+  if (
+    message.config.referenceImageUrl &&
+    !isInpaint &&
+    !mapping.capabilities.imageToImage
+  ) {
     throw new PipelineError(
       `Model ${mapping.backendModel} does not support image-to-image capabilities`,
       false,

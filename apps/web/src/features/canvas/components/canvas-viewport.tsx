@@ -4,7 +4,11 @@ import { useCanvasStore } from "../store/canvas-store";
 import { useCanvasTools } from "../hooks/use-canvas-tools";
 import { useCanvasHistory } from "../hooks/use-canvas-history";
 import { findArtboard } from "../utils/artboard";
-import { restoreCustomProperties, type CustomFabricObject, FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
+import {
+  restoreCustomProperties,
+  type CustomFabricObject,
+  FABRIC_CUSTOM_PROPERTIES,
+} from "../utils/fabric-properties";
 
 export interface CanvasViewportProps {
   canvas: fabric.Canvas | null;
@@ -29,14 +33,14 @@ async function loadCanvasState(
     const customPropsSnapshot = (parsedState.objects || []).map(
       (o: Record<string, unknown>) => {
         const snap: Record<string, unknown> = {};
-        FABRIC_CUSTOM_PROPERTIES.forEach(prop => {
+        FABRIC_CUSTOM_PROPERTIES.forEach((prop) => {
           snap[prop] = o[prop];
         });
         snap.type = o.type;
         snap.left = o.left;
         snap.top = o.top;
         return snap;
-      }
+      },
     );
 
     await fabricCanvas.loadFromJSON(parsedState);
@@ -244,7 +248,9 @@ export function CanvasViewport({
         );
       }
 
-      const padding = 60;
+      const paddingTop = 60;
+      const paddingBottom = 160; // Extra space for the floating AI prompt box
+      const paddingX = 60;
       const currentW = fabricCanvas.width!;
       const currentH = fabricCanvas.height!;
 
@@ -258,9 +264,13 @@ export function CanvasViewport({
         return;
       }
 
-      const scaleX = (currentW - padding * 2) / artWidth;
-      const scaleY = (currentH - padding * 2) / artHeight;
+      const scaleX = (currentW - paddingX * 2) / artWidth;
+      const scaleY = (currentH - (paddingTop + paddingBottom)) / artHeight;
       const scale = Math.min(scaleX, scaleY, 1);
+
+      const topOffset =
+        paddingTop +
+        (currentH - paddingTop - paddingBottom - artHeight * scale) / 2;
 
       fabricCanvas.setViewportTransform([
         scale,
@@ -268,7 +278,7 @@ export function CanvasViewport({
         0,
         scale,
         currentW / 2 - (artWidth * scale) / 2,
-        currentH / 2 - (artHeight * scale) / 2,
+        topOffset,
       ]);
       fabricCanvas.renderAll();
     };

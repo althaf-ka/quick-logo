@@ -23,7 +23,6 @@ import type { GenerationStatus } from "../../hooks/use-canvas-ai";
 import type { ModelOption } from "@quicklogo/ai-providers/models";
 import { cn } from "@quicklogo/ui/lib/utils";
 
-
 export interface AiPanelProps {
   isGenerating: boolean;
   generationStatus: GenerationStatus;
@@ -44,23 +43,32 @@ const getWorkflowTheme = (id: string) => {
     case "improve-image":
       return {
         text: "text-blue-400",
+        textHover: "group-hover:text-blue-400",
         border: "border-blue-500",
         bg: "bg-blue-500/10",
         accent: "bg-blue-500",
+        hoverBorder: "hover:border-blue-500/40",
+        hoverBg: "hover:bg-blue-500/5",
       };
     case "replace-part":
       return {
         text: "text-pink-400",
+        textHover: "group-hover:text-pink-400",
         border: "border-pink-500",
         bg: "bg-pink-500/10",
         accent: "bg-pink-500",
+        hoverBorder: "hover:border-pink-500/40",
+        hoverBg: "hover:bg-pink-500/5",
       };
     default:
       return {
         text: "text-zinc-400",
+        textHover: "group-hover:text-zinc-300",
         border: "border-zinc-500",
         bg: "bg-zinc-500/10",
         accent: "bg-zinc-500",
+        hoverBorder: "hover:border-zinc-500/40",
+        hoverBg: "hover:bg-zinc-500/5",
       };
   }
 };
@@ -114,7 +122,10 @@ export function AiPanel({
 
   // Automatically switch to a supported model if the current one doesn't support this mode
   useEffect(() => {
-    if (currentModels.length > 0 && !currentModels.find((m: ModelOption) => m.id === aiModel)) {
+    if (
+      currentModels.length > 0 &&
+      !currentModels.find((m: ModelOption) => m.id === aiModel)
+    ) {
       setAiModel(currentModels[0].id);
     }
   }, [canvasMode, aiModel, currentModels, setAiModel]);
@@ -154,23 +165,23 @@ export function AiPanel({
           }
         }}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-none border p-4 transition-all duration-200",
+          "group relative flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-none border p-4 transition-all duration-300 ease-out",
           isActive
             ? `${theme.bg} ${theme.border}`
-            : "border-white/[0.05] bg-zinc-950/50 hover:border-white/10 hover:bg-zinc-900/50",
+            : `border-white/[0.05] bg-zinc-950/50 ${theme.hoverBorder} ${theme.hoverBg}`,
         )}
       >
-        <div className="transition-transform duration-300 group-hover:-translate-y-0.5">
+        <div className="flex flex-col items-center justify-center gap-3 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-[1.02]">
           {getWorkflowIcon(workflow.id, theme.text)}
+          <span
+            className={cn(
+              "mt-1 text-center font-mono text-[10px] font-bold tracking-wider uppercase transition-colors duration-300 ease-out",
+              isActive ? theme.text : `text-zinc-400 ${theme.textHover}`,
+            )}
+          >
+            {shortName}
+          </span>
         </div>
-        <span
-          className={cn(
-            "mt-1 text-center font-mono text-[10px] font-bold tracking-wider uppercase transition-colors",
-            isActive ? theme.text : "text-zinc-400 group-hover:text-zinc-200",
-          )}
-        >
-          {shortName}
-        </span>
       </button>
     );
   };

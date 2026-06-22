@@ -65,9 +65,11 @@ export async function compositeAIResult(
                   lockScalingY: originalObj.lockScalingY,
                   hasControls: originalObj.hasControls,
                 };
-                
-                FABRIC_CUSTOM_PROPERTIES.forEach(prop => {
-                  const val = (originalObj as unknown as Record<string, unknown>)[prop];
+
+                FABRIC_CUSTOM_PROPERTIES.forEach((prop) => {
+                  const val = (
+                    originalObj as unknown as Record<string, unknown>
+                  )[prop];
                   if (val !== undefined) {
                     propsToCopy[prop] = val;
                   }
@@ -98,6 +100,7 @@ export async function compositeAIResult(
             const scaleY = options.artboardBounds.height / img.height!;
 
             img.set({
+              id: "obj_initial_image", // Mark as the new main image
               left: options.artboardBounds.left,
               top: options.artboardBounds.top,
               scaleX,
@@ -107,6 +110,15 @@ export async function compositeAIResult(
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
             });
+
+            // Remove the old background image to prevent overlapping
+            const oldBg = canvas
+              .getObjects()
+              .find((o) => o.id === "obj_initial_image");
+            if (oldBg) {
+              canvas.remove(oldBg);
+            }
+
             break;
           }
         }

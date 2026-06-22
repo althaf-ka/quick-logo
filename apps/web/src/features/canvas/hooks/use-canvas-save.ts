@@ -14,20 +14,38 @@ interface CanvasSaveProps {
   exportToPng: () => Promise<Blob>;
 }
 
-export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: CanvasSaveProps) {
+export function useCanvasSave({
+  canvas,
+  imageId,
+  onSaveComplete,
+  exportToPng,
+}: CanvasSaveProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const isCanvasLoaded = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedStateRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
+
+  const getCleanState = useCallback((c: fabric.Canvas) => {
+    const json = c.toObject(FABRIC_CUSTOM_PROPERTIES);
+    json.objects = json.objects.filter((o: any) => o.id !== "__artboard__");
+    return JSON.stringify(json);
+  }, []);
 
   useEffect(() => {
     const handleLoaded = () => {
       isCanvasLoaded.current = true;
+      if (canvas) {
+        lastSavedStateRef.current = getCleanState(canvas);
+      }
     };
     const handleSaved = () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+      }
+      if (canvas) {
+        lastSavedStateRef.current = getCleanState(canvas);
       }
       setIsDirty(false);
       localStorage.removeItem(`quicklogo_canvas_${imageId}`);
@@ -38,19 +56,33 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
       window.removeEventListener("canvas:loaded", handleLoaded);
       window.removeEventListener("canvas:saved", handleSaved);
     };
-  }, [imageId]);
+  }, [imageId, canvas, getCleanState]);
 
   useEffect(() => {
     if (!canvas) return;
 
     const handleLocalSave = () => {
       if (!isCanvasLoaded.current) return;
-      setIsDirty(true);
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
       saveTimeoutRef.current = setTimeout(() => {
+        // @ts-expect-error __isHistoryChanging is a custom property attached during undo/redo
+        if (canvas.__isHistoryChanging) return;
+
         const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
         delete json.viewportTransform;
-        localStorage.setItem(`quicklogo_canvas_${imageId}`, JSON.stringify(json));
+
+        const currentState = getCleanState(canvas);
+        if (currentState === lastSavedStateRef.current) {
+          setIsDirty(false);
+        } else {
+          setIsDirty(true);
+        }
+
+        localStorage.setItem(
+          `quicklogo_canvas_${imageId}`,
+          JSON.stringify(json),
+        );
       }, 500);
     };
 
@@ -64,7 +96,7 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
       canvas.off("object:modified", handleLocalSave);
       canvas.off("object:removed", handleLocalSave);
     };
-  }, [canvas, imageId]);
+  }, [canvas, imageId, getCleanState]);
 
   const saveMutation = useMutation({
     mutationFn: async ({ imageUrl }: { imageUrl: string }) => {
@@ -81,7 +113,11 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
     },
   });
 
-  const { mutateAsync: saveStateMutateAsync } = useMutation<void, Error, { id: string; canvasState: string }>({
+  const { mutateAsync: saveStateMutateAsync } = useMutation<
+    void,
+    Error,
+    { id: string; canvasState: string }
+  >({
     mutationFn: async ({ id, canvasState }) => {
       const res = await api.canvas[":id"]["state"].$put({
         param: { id },
@@ -104,17 +140,20 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
       });
       const uploadUrl = await uploadFileToImageKit(file);
       const saved = await saveImage({ imageUrl: uploadUrl });
-      
+
       const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
       delete json.viewportTransform;
-      await saveStateMutateAsync({ id: saved.imageId || imageId, canvasState: JSON.stringify(json) });
-      
+      await saveStateMutateAsync({
+        id: saved.imageId || imageId,
+        canvasState: JSON.stringify(json),
+      });
+
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
       localStorage.removeItem(`quicklogo_canvas_${imageId}`);
       setIsDirty(false);
-      
+
       toast.success("Design saved successfully!");
       if (onSaveComplete) onSaveComplete(saved.imageId || imageId);
     } catch (e) {
@@ -123,7 +162,15 @@ export function useCanvasSave({ canvas, imageId, onSaveComplete, exportToPng }: 
     } finally {
       setIsSaving(false);
     }
-  }, [canvas, exportToPng, saveImage, saveStateMutateAsync, imageId, onSaveComplete, isSaving]);
+  }, [
+    canvas,
+    exportToPng,
+    saveImage,
+    saveStateMutateAsync,
+    imageId,
+    onSaveComplete,
+    isSaving,
+  ]);
 
   return { handleSave, isSaving, isDirty };
 }

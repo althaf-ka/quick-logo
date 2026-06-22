@@ -8,9 +8,16 @@ import { toast } from "@quicklogo/ui/components/sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AUTH_KEYS } from "@/hooks/use-auth";
 import { parseApiError, ApiError, ERROR_CODES } from "@/lib/api-error";
-import { maskDataUrlToFile, dataUrlToFile } from "../utils/mask-export";
+import {
+  maskDataUrlToFile,
+  dataUrlToFile,
+  invertMaskDataUrl,
+} from "../utils/mask-export";
 import { compositeAIResult } from "../utils/composite-result";
-import { MODELS } from "@quicklogo/ai-providers/models";
+import {
+  getModelsForCanvasMode,
+  getModelMaskPolarity,
+} from "@quicklogo/ai-providers/models";
 import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
 import type { EditApiRequest } from "@quicklogo/shared";
 
@@ -165,7 +172,14 @@ export function useCanvasAI(
 
       let maskFile: File | undefined;
       if (state.canvasMode === "inpaint" && state.maskData) {
-        maskFile = maskDataUrlToFile(state.maskData);
+        let finalMaskData = state.maskData;
+        // Data-driven mask polarity: invert the mask if the selected model
+        // expects inverted polarity (e.g., Ideogram uses black=inpaint)
+        const polarity = getModelMaskPolarity(state.aiModel);
+        if (polarity === "inverted") {
+          finalMaskData = await invertMaskDataUrl(state.maskData);
+        }
+        maskFile = maskDataUrlToFile(finalMaskData);
       }
       let regionFile: File | undefined;
       if (regionImageDataUrl) {
@@ -327,9 +341,8 @@ export function useCanvasAI(
   ]);
 
   const availableModels = useMemo(() => {
-    // Return all models or filter based on mode if needed
-    // Inpaint usually needs specific models if supported, but for now we'll just return all
-    return MODELS;
+    const state = useCanvasStore.getState();
+    return getModelsForCanvasMode(state.canvasMode);
   }, []);
 
   const selectedModelInfo = availableModels.find((m) => m.id === aiModel);

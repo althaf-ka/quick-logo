@@ -8,10 +8,18 @@ export const MODEL_IDS = [
   "quick-seedream",
   "quick-nano-banana",
   "quick-imagen",
+  "quick-flux-fill",
 ] as const;
 
 export type ModelId = (typeof MODEL_IDS)[number];
 export type ModelContext = "generate" | "edit";
+
+/**
+ * Defines mask color convention for inpainting models.
+ * - "standard": White pixels = area to inpaint, Black pixels = area to keep
+ * - "inverted": Black pixels = area to inpaint, White pixels = area to keep
+ */
+export type MaskPolarity = "standard" | "inverted";
 
 export interface ModelOption {
   id: ModelId;
@@ -26,6 +34,8 @@ export interface ModelOption {
   recommended?: boolean;
   bestForEdits?: boolean;
   supportsInpaint?: boolean;
+  /** Mask polarity for inpainting. Only relevant when supportsInpaint is true. */
+  maskPolarity?: MaskPolarity;
 }
 
 export const MODELS: ModelOption[] = [
@@ -85,6 +95,7 @@ export const MODELS: ModelOption[] = [
     features: ["Cinematic", "High detail", "Professional typography"],
     supportsReferenceImage: false,
     supportsInpaint: true,
+    maskPolarity: "inverted",
   },
   {
     id: "quick-leo-fast",
@@ -96,7 +107,6 @@ export const MODELS: ModelOption[] = [
     icon: "lightning",
     features: ["Custom Style", "Fast render", "Contrast-tuned"],
     supportsReferenceImage: true,
-    supportsInpaint: true,
   },
   {
     id: "quick-seedream",
@@ -123,7 +133,6 @@ export const MODELS: ModelOption[] = [
     icon: "lightning",
     features: ["Ultra-fast", "Playful", "Minimalist"],
     supportsReferenceImage: true,
-    supportsInpaint: true,
   },
   {
     id: "quick-imagen",
@@ -135,6 +144,21 @@ export const MODELS: ModelOption[] = [
     icon: "crown",
     features: ["High quality", "Realism", "Flagship"],
     supportsReferenceImage: false,
+  },
+  {
+    id: "quick-flux-fill",
+    name: "Flux Fill Pro",
+    label: "Inpaint Expert",
+    description:
+      "Purpose-built inpainting model for precise area modifications.",
+    friendlyDescription:
+      "Best for modifying specific areas of an image with a mask",
+    credits: 8,
+    icon: "brain",
+    features: ["Inpainting", "Outpainting", "Precision edits"],
+    supportsReferenceImage: false,
+    supportsInpaint: true,
+    maskPolarity: "standard",
   },
 ];
 
@@ -161,4 +185,13 @@ export function getModelsForCanvasMode(mode: string): ModelOption[] {
     return MODELS.filter((m) => m.supportsReferenceImage);
   }
   return [...MODELS];
+}
+
+/**
+ * Returns the mask polarity for a given model.
+ * Defaults to "standard" if the model doesn't specify.
+ */
+export function getModelMaskPolarity(modelId: string): MaskPolarity {
+  const model = MODELS.find((m) => m.id === modelId);
+  return model?.maskPolarity ?? "standard";
 }

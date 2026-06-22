@@ -88,16 +88,12 @@ export function useMaskBrush(
           .getObjects()
           .find((o) => o.id === "__artboard__");
         if (artboard && artboardWidth && artboardHeight) {
-          const dataUrl = exportMaskToPng(
-            maskCanvas,
-            {
-              left: artboard.left || 0,
-              top: artboard.top || 0,
-              width: artboardWidth,
-              height: artboardHeight,
-            },
-            { width: artboardWidth, height: artboardHeight },
-          );
+          const dataUrl = exportMaskToPng(maskCanvas, {
+            left: artboard.left || 0,
+            top: artboard.top || 0,
+            width: artboardWidth,
+            height: artboardHeight,
+          });
           setMaskData(dataUrl);
         }
       }, 50);

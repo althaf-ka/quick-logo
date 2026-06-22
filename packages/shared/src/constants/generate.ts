@@ -7,8 +7,14 @@ export {
   getModelCredits,
   getModelsForContext,
   getModelsForCanvasMode,
+  getModelMaskPolarity,
 } from "./models";
-export type { ModelContext, ModelId, ModelOption } from "./models";
+export type {
+  ModelContext,
+  ModelId,
+  ModelOption,
+  MaskPolarity,
+} from "./models";
 
 export const DEFAULT_CONFIG: GenerateConfig = {
   model: MODEL_IDS[0],

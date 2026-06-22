@@ -10,6 +10,8 @@ interface ModelCapability {
   imageFieldIsArray: boolean;
   inpaintImageField: string | null;
   inpaintMaskField: string | null;
+  /** "standard" = white pixels are inpainted. "inverted" = black pixels are inpainted. */
+  maskPolarity: "standard" | "inverted";
   defaultOutputFormat: string;
 }
 
@@ -20,6 +22,7 @@ const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     imageFieldIsArray: false,
     inpaintImageField: null,
     inpaintMaskField: null,
+    maskPolarity: "standard",
     defaultOutputFormat: "png",
   },
   "ideogram-ai/ideogram-v3-turbo": {
@@ -28,6 +31,7 @@ const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     imageFieldIsArray: false,
     inpaintImageField: "image",
     inpaintMaskField: "mask",
+    maskPolarity: "inverted",
     defaultOutputFormat: "",
   },
   "black-forest-labs/flux-kontext-pro": {
@@ -36,6 +40,7 @@ const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     imageFieldIsArray: false,
     inpaintImageField: null,
     inpaintMaskField: null,
+    maskPolarity: "standard",
     defaultOutputFormat: "png",
   },
   "black-forest-labs/flux-2-pro": {
@@ -44,6 +49,7 @@ const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     imageFieldIsArray: true,
     inpaintImageField: null,
     inpaintMaskField: null,
+    maskPolarity: "standard",
     defaultOutputFormat: "png",
   },
   "google/imagen-4": {
@@ -52,6 +58,16 @@ const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     imageFieldIsArray: false,
     inpaintImageField: null,
     inpaintMaskField: null,
+    maskPolarity: "standard",
+    defaultOutputFormat: "png",
+  },
+  "black-forest-labs/flux-fill-pro": {
+    aspectRatio: false,
+    imageField: null,
+    imageFieldIsArray: false,
+    inpaintImageField: "image",
+    inpaintMaskField: "mask",
+    maskPolarity: "standard",
     defaultOutputFormat: "png",
   },
 } as const;
@@ -101,9 +117,7 @@ export class ReplicateProvider implements AIProvider {
     return closestLabel;
   }
 
-  private buildModelInput(
-    params: GenerationParams,
-  ): Record<string, unknown> {
+  private buildModelInput(params: GenerationParams): Record<string, unknown> {
     const model = params.backendModel;
     const caps = MODEL_CAPABILITIES[model];
     const input: Record<string, unknown> = {
@@ -142,10 +156,19 @@ export class ReplicateProvider implements AIProvider {
   ): void {
     switch (model) {
       case "ideogram-ai/ideogram-v3-turbo":
-        input.magic_prompt_option = params.magicPrompt !== false ? "Auto" : "Off";
+        if (params.canvasMode === "inpaint") {
+          input.magic_prompt_option = "Off";
+        } else {
+          input.magic_prompt_option =
+            params.magicPrompt !== false ? "Auto" : "Off";
+        }
         break;
       case "google/imagen-4":
         input.image_size = "1K";
+        break;
+      case "black-forest-labs/flux-fill-pro":
+        input.output_format = "png";
+        input.prompt_upsampling = params.magicPrompt !== false;
         break;
       case "black-forest-labs/flux-1.1-pro":
       case "black-forest-labs/flux-2-pro":
@@ -175,6 +198,8 @@ export class ReplicateProvider implements AIProvider {
       }
       input[caps.inpaintImageField] = params.canvasImage;
       input[caps.inpaintMaskField] = params.maskImage;
+      // Strip aspect_ratio for inpainting — models either ignore it or reject it
+      delete input.aspect_ratio;
       return;
     }
 
@@ -194,7 +219,10 @@ export class ReplicateProvider implements AIProvider {
       input[caps.imageField] = referenceUrl;
     }
 
-    if (model === "black-forest-labs/flux-kontext-pro" && params.referenceImage) {
+    if (
+      model === "black-forest-labs/flux-kontext-pro" &&
+      params.referenceImage
+    ) {
       input.aspect_ratio = "match_input_image";
     }
   }
@@ -273,8 +301,7 @@ export class ReplicateProvider implements AIProvider {
     try {
       const input = this.buildModelInput(params);
 
-      const identifier =
-        params.backendModel as `${string}/${string}`;
+      const identifier = params.backendModel as `${string}/${string}`;
       if (!params.backendModel.includes("/")) {
         throw new Error(
           `Invalid model format "${params.backendModel}" — expected "owner/name"`,
@@ -296,7 +323,10 @@ export class ReplicateProvider implements AIProvider {
           wait: { mode: "block", timeout: 60 },
         },
         (prediction: Prediction) => {
-          if (prediction.status === "succeeded" && prediction.metrics?.predict_time) {
+          if (
+            prediction.status === "succeeded" &&
+            prediction.metrics?.predict_time
+          ) {
             predictTime = prediction.metrics.predict_time * 1000;
           }
         },
