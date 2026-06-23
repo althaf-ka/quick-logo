@@ -33,12 +33,16 @@ export class WorkersAIProvider implements AIProvider {
       };
     } catch (error) {
       logger.error("Generation failed", error, { model: params.backendModel });
+      const status = (error as { status?: number }).status;
+      const isRetryable = status ? status === 429 || status >= 500 : true;
+
       return {
         success: false,
         error:
           error instanceof Error
             ? error.message
             : "Workers AI generation failed",
+        isRetryable,
         metadata: { model: params.backendModel, duration: Date.now() - start },
       };
     }

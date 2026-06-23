@@ -201,10 +201,14 @@ export class LeonardoProvider implements AIProvider {
       };
     } catch (error) {
       logger.error("Generation failed", error, { model: "leonardo" });
+      const status = (error as { status?: number }).status;
+      const isRetryable = status ? status === 429 || status >= 500 : true;
+
       return {
         success: false,
         error:
           error instanceof Error ? error.message : "Leonardo generation failed",
+        isRetryable,
         metadata: { model: params.backendModel, duration: Date.now() - start },
       };
     }
@@ -219,8 +223,11 @@ export class LeonardoProvider implements AIProvider {
     // Get Pre-Signed URL
     const initRes = await this.post("/v1/init-image", { extension: "jpg" });
 
-    if (!initRes.ok)
-      throw new Error(`Leonardo init-image failed: ${initRes.status}`);
+    if (!initRes.ok) {
+      const error = new Error(`Leonardo init-image failed: ${initRes.status}`);
+      (error as { status?: number }).status = initRes.status;
+      throw error;
+    }
     const initData = (await initRes.json()) as {
       uploadInitImage?: { url: string; id: string; fields: string };
     };
@@ -258,10 +265,13 @@ export class LeonardoProvider implements AIProvider {
       { method: "POST", body: formData },
       60000,
     );
-    if (!postRes.ok)
-      throw new Error(
+    if (!postRes.ok) {
+      const error = new Error(
         `Failed to upload reference binary into Leonardo S3: ${postRes.status}`,
       );
+      (error as { status?: number }).status = postRes.status;
+      throw error;
+    }
 
     return initImageId;
   }
@@ -334,9 +344,11 @@ export class LeonardoProvider implements AIProvider {
 
     if (!genRes.ok) {
       const errText = await genRes.text();
-      throw new Error(
+      const error = new Error(
         `Leonardo V2 Generation failed: ${genRes.status} - ${errText}`,
       );
+      (error as any).status = genRes.status;
+      throw error;
     }
 
     const genData = (await genRes.json()) as {
@@ -394,9 +406,11 @@ export class LeonardoProvider implements AIProvider {
 
     if (!genRes.ok) {
       const errText = await genRes.text();
-      throw new Error(
+      const error = new Error(
         `Leonardo V1 Generation failed: ${genRes.status} - ${errText}`,
       );
+      (error as any).status = genRes.status;
+      throw error;
     }
 
     const genData = (await genRes.json()) as {
@@ -419,9 +433,11 @@ export class LeonardoProvider implements AIProvider {
       const fetchRes = await this.get(`/v1/generations/${generationId}`);
 
       if (!fetchRes.ok) {
-        throw new Error(
+        const error = new Error(
           `Leonardo status HTTP check failed: ${fetchRes.status}`,
         );
+        (error as { status?: number }).status = fetchRes.status;
+        throw error;
       }
 
       const statusData = (await fetchRes.json()) as {

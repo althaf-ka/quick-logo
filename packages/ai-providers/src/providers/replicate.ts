@@ -348,12 +348,18 @@ export class ReplicateProvider implements AIProvider {
         model: params.backendModel,
       });
 
+      // Attempt to extract status code from Replicate ApiError
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      const isRetryable = status ? status === 429 || status >= 500 : true;
+
       return {
         success: false,
         error:
           error instanceof Error
             ? error.message
             : "Replicate generation failed",
+        isRetryable,
         metadata: { model: params.backendModel, duration: Date.now() - start },
       };
     }

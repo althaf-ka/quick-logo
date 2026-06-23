@@ -9,7 +9,7 @@ export function parseAndValidateAiResponse(result: GenerationResult): {
   if (!result.success || !result.imageData) {
     throw new AiProviderError(
       result.error ?? "Generation returned no image data",
-      true, // assume retryable if generation failed without explicit fatal error
+      result.isRetryable ?? true, // use provider's retryable flag, fallback to true
     );
   }
 

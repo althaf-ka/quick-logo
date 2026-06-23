@@ -20,8 +20,11 @@
       {
         "queue": "image-generation",
         "max_batch_size": 5,
-        "max_retries": 2,
+        "max_retries": 3,
         "dead_letter_queue": "image-generation-dlq",
+      },
+      {
+        "queue": "image-generation-dlq",
       },
     ],
   },

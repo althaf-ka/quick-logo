@@ -21,6 +21,7 @@ export interface GenerationResult {
   imageData?: Uint8Array;
   format?: "png" | "jpeg" | "webp" | "jpg";
   error?: string;
+  isRetryable?: boolean;
   metadata?: {
     model: string;
     duration?: number;

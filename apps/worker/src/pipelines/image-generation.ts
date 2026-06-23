@@ -92,11 +92,7 @@ export class ImageGenerationPipeline {
         duration: parsedAiResponse.duration,
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
       this.logger.error("Image Pipeline execution failed", error, { imageId });
-
-      await updateImageStatus(this.db, imageId, "failed", errorMessage);
       throw error;
     }
   }
