@@ -28,6 +28,17 @@ export async function routePromptAndBuildParams(
     negativePrompt = enhanced.negativePrompt;
   }
 
+  // Model-agnostic prompt engineering based on editing capabilities
+  if (message.config.canvasMode === "inpaint") {
+    const { editingStrategy } = mapping.capabilities;
+
+    if (editingStrategy === "inpaint-with-prompt") {
+      if (!finalPrompt.toLowerCase().includes("figure 1")) {
+        finalPrompt = `In Figure 1, ${finalPrompt.charAt(0).toLowerCase() + finalPrompt.slice(1)}. Ensure the rest of the image remains exactly the same.`;
+      }
+    }
+  }
+
   const params: GenerationParams = {
     prompt: finalPrompt,
     negativePrompt: negativePrompt || "",

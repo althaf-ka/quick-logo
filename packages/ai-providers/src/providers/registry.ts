@@ -12,6 +12,10 @@ export interface ModelMapping {
     nativePromptEnhancement: boolean;
     imageToImage: boolean;
     inpaint?: boolean;
+    editingStrategy?:
+      | "inpaint-with-mask"
+      | "inpaint-with-prompt"
+      | "remix-image";
     /** Mask polarity: "standard" = white=inpaint, "inverted" = black=inpaint */
     maskPolarity?: "standard" | "inverted";
     apiSchema?: "v1" | "v2";
@@ -88,6 +92,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       nativePromptEnhancement: true,
       imageToImage: false,
       inpaint: true,
+      editingStrategy: "inpaint-with-mask",
       maskPolarity: "inverted",
     },
     defaultParams: {
@@ -98,11 +103,12 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
   "quick-seedream": {
     provider: "replicate",
     inputType: "json",
-    backendModel: "black-forest-labs/flux-kontext-pro",
+    backendModel: "bytedance/seedream-4.5",
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
-      inpaint: false,
+      inpaint: true,
+      editingStrategy: "inpaint-with-prompt",
     },
     defaultParams: {
       width: 1024,
@@ -144,6 +150,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       nativePromptEnhancement: true,
       imageToImage: false,
       inpaint: true,
+      editingStrategy: "inpaint-with-mask",
       maskPolarity: "standard",
     },
     defaultParams: {

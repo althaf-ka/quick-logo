@@ -36,6 +36,7 @@ export interface ModelOption {
   supportsInpaint?: boolean;
   /** Mask polarity for inpainting. Only relevant when supportsInpaint is true. */
   maskPolarity?: MaskPolarity;
+  editingStrategy?: "inpaint-with-mask" | "inpaint-with-prompt" | "remix-image";
 }
 
 export const MODELS: ModelOption[] = [
@@ -96,6 +97,7 @@ export const MODELS: ModelOption[] = [
     supportsReferenceImage: false,
     supportsInpaint: true,
     maskPolarity: "inverted",
+    editingStrategy: "inpaint-with-mask",
   },
   {
     id: "quick-leo-fast",
@@ -120,7 +122,9 @@ export const MODELS: ModelOption[] = [
     icon: "brain",
     features: ["Highly detailed", "Reference image support", "Versatile"],
     supportsReferenceImage: true,
+    supportsInpaint: true,
     bestForEdits: true,
+    editingStrategy: "inpaint-with-prompt",
   },
   {
     id: "quick-nano-banana",
@@ -159,6 +163,7 @@ export const MODELS: ModelOption[] = [
     supportsReferenceImage: false,
     supportsInpaint: true,
     maskPolarity: "standard",
+    editingStrategy: "inpaint-with-mask",
   },
 ];
 

@@ -62,6 +62,7 @@ export function CanvasEditor({
     generationStatus,
     generationBounds,
     credits,
+    availableModels,
   } = useCanvasAI(canvas, imageId, isDirty, initialImageUrl);
   useImproveHover(canvas);
 
@@ -73,6 +74,7 @@ export function CanvasEditor({
     maskData,
     selectedObject,
     activeTool,
+    aiModel,
   } = useCanvasStore(
     useShallow((s) => ({
       canvasMode: s.canvasMode,
@@ -82,6 +84,7 @@ export function CanvasEditor({
       maskData: s.maskData,
       selectedObject: s.selectedObject,
       activeTool: s.activeTool,
+      aiModel: s.aiModel,
     })),
   );
 
@@ -324,7 +327,6 @@ export function CanvasEditor({
         handleDownload={handleDownload}
       />
 
-
       <div className="relative flex flex-1 overflow-hidden">
         <CanvasToolbar />
         {/* Main Canvas Area */}
@@ -339,35 +341,39 @@ export function CanvasEditor({
           <MaskOverlay mainCanvas={canvas} />
 
           <AnimatePresence>
-            {isGenerating && generationBounds && (() => {
-              const zoom = canvas?.getZoom() ?? 1;
-              const vpt = canvas?.viewportTransform;
-              return (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute z-40 overflow-hidden bg-zinc-950/80 backdrop-blur-sm shadow-2xl ring-1 ring-white/10"
-                  style={{
-                    left: generationBounds.left * zoom + (vpt?.[4] ?? 0),
-                    top: generationBounds.top * zoom + (vpt?.[5] ?? 0),
-                    width: generationBounds.width * zoom,
-                    height: generationBounds.height * zoom,
-                  }}
-                >
-                  <ImageLoadingState
-                    isOverlay
-                    label={
-                      generationStatus === "exporting" || generationStatus === "uploading"
-                        ? "Preparing image..."
-                        : generationStatus === "polling" || generationStatus === "compositing"
-                          ? "Finalizing result..."
-                          : "Generating..."
-                    }
-                  />
-                </motion.div>
-              );
-            })()}
+            {isGenerating &&
+              generationBounds &&
+              (() => {
+                const zoom = canvas?.getZoom() ?? 1;
+                const vpt = canvas?.viewportTransform;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute z-40 overflow-hidden bg-zinc-950/80 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm"
+                    style={{
+                      left: generationBounds.left * zoom + (vpt?.[4] ?? 0),
+                      top: generationBounds.top * zoom + (vpt?.[5] ?? 0),
+                      width: generationBounds.width * zoom,
+                      height: generationBounds.height * zoom,
+                    }}
+                  >
+                    <ImageLoadingState
+                      isOverlay
+                      label={
+                        generationStatus === "exporting" ||
+                        generationStatus === "uploading"
+                          ? "Preparing image..."
+                          : generationStatus === "polling" ||
+                              generationStatus === "compositing"
+                            ? "Finalizing result..."
+                            : "Generating..."
+                      }
+                    />
+                  </motion.div>
+                );
+              })()}
           </AnimatePresence>
 
           <AnimatePresence>
@@ -380,8 +386,15 @@ export function CanvasEditor({
                 className="absolute bottom-3 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 px-4"
               >
                 {(() => {
+                  const strategy = availableModels.find(
+                    (m) => m.id === aiModel,
+                  )?.editingStrategy;
                   let validationError = "";
-                  if (canvasMode === "inpaint" && !maskData) {
+                  if (
+                    canvasMode === "inpaint" &&
+                    !maskData &&
+                    strategy !== "inpaint-with-prompt"
+                  ) {
                     validationError = "Please draw a mask first";
                   } else if (canvasMode === "img2img" && !selectedObject) {
                     validationError = "Please select an image first";
@@ -394,7 +407,9 @@ export function CanvasEditor({
                       onSubmit={handleGenerate}
                       targetContext={
                         canvasMode === "inpaint"
-                          ? "Inpaint Mask"
+                          ? strategy === "inpaint-with-prompt"
+                            ? "AI Logo Edit"
+                            : "Inpaint Mask"
                           : canvasMode === "img2img"
                             ? "Selected Image"
                             : undefined
@@ -405,7 +420,9 @@ export function CanvasEditor({
                       validationError={validationError}
                       placeholder={
                         canvasMode === "inpaint"
-                          ? "Describe what should fill the masked area..."
+                          ? strategy === "inpaint-with-prompt"
+                            ? "Describe how to modify the logo..."
+                            : "Describe what should fill the masked area..."
                           : canvasMode === "img2img"
                             ? "Describe how to improve the selected image..."
                             : "Describe what to generate..."

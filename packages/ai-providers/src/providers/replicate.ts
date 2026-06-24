@@ -4,70 +4,81 @@ import { createLogger } from "@quicklogo/server-telemetry";
 
 const logger = createLogger("ai-providers");
 
-interface ModelCapability {
+/**
+ * Defines how a model accepts image modifications.
+ * - inpaint-with-mask: Uses a secondary black-and-white mask image to dictate what to edit.
+ * - inpaint-with-prompt: Uses natural language (the prompt) to deduce what area of the image to edit.
+ * - remix-image: Uses the original image as a structural blueprint to generate a brand new image variation.
+ */
+export type EditingStrategy =
+  | {
+      type: "inpaint-with-mask";
+      imageField: string;
+      maskField: string;
+      polarity: "standard" | "inverted";
+    }
+  | {
+      type: "inpaint-with-prompt";
+      imageField: string;
+      imageFieldIsArray: boolean;
+      figureNaming: "figure-number";
+    }
+  | { type: "remix-image"; imageField: string; strengthField?: string };
+
+export interface ModelCapability {
   aspectRatio: boolean;
-  imageField: string | null;
-  imageFieldIsArray: boolean;
-  inpaintImageField: string | null;
-  inpaintMaskField: string | null;
-  /** "standard" = white pixels are inpainted. "inverted" = black pixels are inpainted. */
-  maskPolarity: "standard" | "inverted";
+  editingStrategy?: EditingStrategy;
   defaultOutputFormat: string;
 }
 
-const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
+export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
   "black-forest-labs/flux-1.1-pro": {
     aspectRatio: true,
-    imageField: "image_prompt",
-    imageFieldIsArray: false,
-    inpaintImageField: null,
-    inpaintMaskField: null,
-    maskPolarity: "standard",
+    editingStrategy: { type: "remix-image", imageField: "image_prompt" },
     defaultOutputFormat: "png",
   },
   "ideogram-ai/ideogram-v3-turbo": {
     aspectRatio: true,
-    imageField: null,
-    imageFieldIsArray: false,
-    inpaintImageField: "image",
-    inpaintMaskField: "mask",
-    maskPolarity: "inverted",
+    editingStrategy: {
+      type: "inpaint-with-mask",
+      imageField: "image",
+      maskField: "mask",
+      polarity: "inverted",
+    },
     defaultOutputFormat: "",
   },
   "black-forest-labs/flux-kontext-pro": {
     aspectRatio: true,
-    imageField: "input_image",
-    imageFieldIsArray: false,
-    inpaintImageField: null,
-    inpaintMaskField: null,
-    maskPolarity: "standard",
+    editingStrategy: { type: "remix-image", imageField: "input_image" },
     defaultOutputFormat: "png",
   },
   "black-forest-labs/flux-2-pro": {
     aspectRatio: true,
-    imageField: "input_images",
-    imageFieldIsArray: true,
-    inpaintImageField: null,
-    inpaintMaskField: null,
-    maskPolarity: "standard",
+    editingStrategy: { type: "remix-image", imageField: "input_images" },
     defaultOutputFormat: "png",
   },
   "google/imagen-4": {
     aspectRatio: true,
-    imageField: null,
-    imageFieldIsArray: false,
-    inpaintImageField: null,
-    inpaintMaskField: null,
-    maskPolarity: "standard",
     defaultOutputFormat: "png",
   },
   "black-forest-labs/flux-fill-pro": {
     aspectRatio: false,
-    imageField: null,
-    imageFieldIsArray: false,
-    inpaintImageField: "image",
-    inpaintMaskField: "mask",
-    maskPolarity: "standard",
+    editingStrategy: {
+      type: "inpaint-with-mask",
+      imageField: "image",
+      maskField: "mask",
+      polarity: "standard",
+    },
+    defaultOutputFormat: "png",
+  },
+  "bytedance/seedream-4.5": {
+    aspectRatio: true,
+    editingStrategy: {
+      type: "inpaint-with-prompt",
+      imageField: "image_urls",
+      imageFieldIsArray: true,
+      figureNaming: "figure-number",
+    },
     defaultOutputFormat: "png",
   },
 } as const;
@@ -156,12 +167,8 @@ export class ReplicateProvider implements AIProvider {
   ): void {
     switch (model) {
       case "ideogram-ai/ideogram-v3-turbo":
-        if (params.canvasMode === "inpaint") {
-          input.magic_prompt_option = "Off";
-        } else {
-          input.magic_prompt_option =
-            params.magicPrompt !== false ? "Auto" : "Off";
-        }
+        input.magic_prompt_option = "Auto";
+        input.style_type = "Auto";
         break;
       case "google/imagen-4":
         input.image_size = "1K";
@@ -184,46 +191,44 @@ export class ReplicateProvider implements AIProvider {
     input: Record<string, unknown>,
     params: GenerationParams,
   ): void {
-    // Inpaint mode
-    if (
-      params.canvasMode === "inpaint" &&
-      params.canvasImage &&
-      params.maskImage
-    ) {
-      if (!caps.inpaintImageField || !caps.inpaintMaskField) {
-        logger.warn(
-          `[Replicate] Model "${model}" does not support inpainting — ignoring`,
-        );
-        return;
+    const mode = params.canvasMode;
+    const strategy = caps.editingStrategy;
+
+    if (!strategy) return;
+    if (mode !== "inpaint" && mode !== "img2img") return;
+
+    switch (strategy.type) {
+      case "inpaint-with-mask": {
+        if (mode === "inpaint" && params.canvasImage && params.maskImage) {
+          input[strategy.imageField] = params.canvasImage;
+          input[strategy.maskField] = params.maskImage;
+          delete input.aspect_ratio;
+        }
+        break;
       }
-      input[caps.inpaintImageField] = params.canvasImage;
-      input[caps.inpaintMaskField] = params.maskImage;
-      // Strip aspect_ratio for inpainting — models either ignore it or reject it
-      delete input.aspect_ratio;
-      return;
-    }
-
-    const referenceUrl = params.referenceImage || params.canvasImage;
-    if (!referenceUrl) return;
-
-    if (!caps.imageField) {
-      logger.warn(
-        `[Replicate] Model "${model}" does not support reference images — ignoring`,
-      );
-      return;
-    }
-
-    if (caps.imageFieldIsArray) {
-      input[caps.imageField] = [referenceUrl];
-    } else {
-      input[caps.imageField] = referenceUrl;
-    }
-
-    if (
-      model === "black-forest-labs/flux-kontext-pro" &&
-      params.referenceImage
-    ) {
-      input.aspect_ratio = "match_input_image";
+      case "inpaint-with-prompt": {
+        if (params.canvasImage) {
+          if (strategy.imageFieldIsArray) {
+            input[strategy.imageField] = [params.canvasImage];
+          } else {
+            input[strategy.imageField] = params.canvasImage;
+          }
+        }
+        break;
+      }
+      case "remix-image": {
+        const refUrl = params.referenceImage || params.canvasImage;
+        if (refUrl) {
+          input[strategy.imageField] = refUrl;
+        }
+        if (
+          model === "black-forest-labs/flux-kontext-pro" &&
+          params.referenceImage
+        ) {
+          input.aspect_ratio = "match_input_image";
+        }
+        break;
+      }
     }
   }
 

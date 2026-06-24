@@ -3,6 +3,7 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { useMaskBrush } from "../hooks/use-mask-brush";
 import { useShallow } from "zustand/react/shallow";
+import { getModelsForCanvasMode } from "@quicklogo/ai-providers/models";
 
 interface MaskOverlayProps {
   mainCanvas: fabric.Canvas | null;
@@ -12,14 +13,16 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [maskCanvas, setMaskCanvas] = useState<fabric.Canvas | null>(null);
-  const { canvasMode, activeTool, setMaskData, maskData } = useCanvasStore(
-    useShallow((s) => ({
-      canvasMode: s.canvasMode,
-      activeTool: s.activeTool,
-      setMaskData: s.setMaskData,
-      maskData: s.maskData,
-    })),
-  );
+  const { canvasMode, activeTool, setMaskData, maskData, aiModel } =
+    useCanvasStore(
+      useShallow((s) => ({
+        canvasMode: s.canvasMode,
+        activeTool: s.activeTool,
+        setMaskData: s.setMaskData,
+        maskData: s.maskData,
+        aiModel: s.aiModel,
+      })),
+    );
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -74,7 +77,9 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
         maskCanvas.remove(objects[objects.length - 1]);
         maskCanvas.requestRenderAll();
 
-        maskCanvas.fire("path:created", { path: undefined as unknown as fabric.Path }); // trigger re-export
+        maskCanvas.fire("path:created", {
+          path: undefined as unknown as fabric.Path,
+        }); // trigger re-export
       }
     };
 
@@ -86,8 +91,14 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
     };
   }, [maskCanvas, setMaskData]);
 
+  const currentModels = getModelsForCanvasMode(canvasMode);
+  const selectedModelStrategy = currentModels.find(
+    (m) => m.id === aiModel,
+  )?.editingStrategy;
+
   const isInteractive = activeTool !== "hand";
-  const isVisible = canvasMode === "inpaint";
+  const isVisible =
+    canvasMode === "inpaint" && selectedModelStrategy !== "inpaint-with-prompt";
 
   return (
     <div

@@ -183,7 +183,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     }),
   aiPrompt: "",
   setAiPrompt: (prompt) => set({ aiPrompt: prompt }),
-  aiModel: "quick-seedream",
+  aiModel: "quick-ideogram",
   setAiModel: (model) => set({ aiModel: model }),
   aiStrength: 35,
   setAiStrength: (strength) => set({ aiStrength: strength }),

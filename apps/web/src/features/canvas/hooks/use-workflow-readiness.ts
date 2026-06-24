@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useCanvasStore } from "../store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
+import { getModelsForCanvasMode } from "@quicklogo/ai-providers/models";
 
 export type WorkflowState = "Ready" | "Needs Input" | "Coming Soon";
 
@@ -27,6 +28,8 @@ export function useWorkflowReadiness() {
     setCanvasMode,
     setActiveTool,
     activeTool,
+    canvasMode,
+    aiModel,
   } = useCanvasStore(
     useShallow((s) => ({
       selectionType: s.selectionType,
@@ -35,6 +38,8 @@ export function useWorkflowReadiness() {
       setCanvasMode: s.setCanvasMode,
       setActiveTool: s.setActiveTool,
       activeTool: s.activeTool,
+      canvasMode: s.canvasMode,
+      aiModel: s.aiModel,
     })),
   );
 
@@ -44,6 +49,12 @@ export function useWorkflowReadiness() {
     (selectedObject.type === "image" || selectedObject.type === "FabricImage");
 
   const hasMask = !!maskData;
+
+  const currentModels = getModelsForCanvasMode(canvasMode);
+  const selectedModelStrategy = currentModels.find(
+    (m) => m.id === aiModel,
+  )?.editingStrategy;
+  const isMaskless = selectedModelStrategy === "inpaint-with-prompt";
 
   const workflows = useMemo<WorkflowDefinition[]>(() => {
     return [
@@ -65,36 +76,42 @@ export function useWorkflowReadiness() {
         id: "replace-part",
         name: "Modify Area",
         internalId: "inpaint",
-        description:
-          "Add, remove, or change a specific area of the logo using a brush mask.",
-        state: hasMask ? "Ready" : "Needs Input",
-        statusMessage: hasMask
-          ? "✓ Mask detected"
-          : "⚠ Paint a mask to continue",
-        quickAction: hasMask
-          ? undefined
-          : {
-              label: "Start Masking",
-              action: () => {
-                setCanvasMode("inpaint");
-                setActiveTool("brush");
+        description: isMaskless
+          ? "Describe exactly what you want to modify using a text prompt."
+          : "Add, remove, or change a specific area of the logo using a brush mask.",
+        state: hasMask || isMaskless ? "Ready" : "Needs Input",
+        statusMessage: isMaskless
+          ? "✓ Ready to edit"
+          : hasMask
+            ? "✓ Mask detected"
+            : "⚠ Paint a mask to continue",
+        quickAction:
+          hasMask || isMaskless
+            ? undefined
+            : {
+                label: "Start Masking",
+                action: () => {
+                  setCanvasMode("inpaint");
+                  setActiveTool("brush");
+                },
               },
-            },
-        progressSequence: ["Paint Mask", "Describe Changes", "Generate"],
-        currentStepIndex: hasMask ? 1 : 0,
+        progressSequence: isMaskless
+          ? ["Describe Changes", "Generate"]
+          : ["Paint Mask", "Describe Changes", "Generate"],
+        currentStepIndex: isMaskless ? 0 : hasMask ? 1 : 0,
       },
     ];
-  }, [isImageSelected, hasMask, setCanvasMode, setActiveTool]);
+  }, [isImageSelected, hasMask, setCanvasMode, setActiveTool, isMaskless]);
 
   // Context-Aware Recommendations
   let recommendedWorkflowId: string | null = null;
   const readyWorkflows = workflows.filter((w) => w.state === "Ready");
 
   // Determine Recommendation Priority
-  if (isImageSelected && !hasMask) {
+  if (isImageSelected && !hasMask && !isMaskless) {
     recommendedWorkflowId = "improve-image";
-  } else if (activeTool === "brush" || hasMask) {
-    // If they have a mask or are currently brushing
+  } else if (activeTool === "brush" || hasMask || isMaskless) {
+    // If they have a mask or are currently brushing or if maskless
     if (readyWorkflows.filter((w) => w.id !== "replace-part").length === 0) {
       recommendedWorkflowId = "replace-part";
     }

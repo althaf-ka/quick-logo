@@ -60,7 +60,14 @@ export function useCanvasAI(
       return;
     }
 
-    if (state.canvasMode === "inpaint" && !state.maskData) {
+    const modelOptions = getModelsForCanvasMode(state.canvasMode);
+    const selectedModelInfo = modelOptions.find((m) => m.id === state.aiModel);
+
+    if (
+      state.canvasMode === "inpaint" &&
+      !state.maskData &&
+      selectedModelInfo?.editingStrategy !== "inpaint-with-prompt"
+    ) {
       toast.error("Please paint a mask first");
       return;
     }
@@ -171,7 +178,11 @@ export function useCanvasAI(
       setGenerationStatus("uploading");
 
       let maskFile: File | undefined;
-      if (state.canvasMode === "inpaint" && state.maskData) {
+      if (
+        state.canvasMode === "inpaint" &&
+        state.maskData &&
+        selectedModelInfo?.editingStrategy !== "inpaint-with-prompt"
+      ) {
         let finalMaskData = state.maskData;
         // Data-driven mask polarity: invert the mask if the selected model
         // expects inverted polarity (e.g., Ideogram uses black=inpaint)
@@ -340,10 +351,10 @@ export function useCanvasAI(
     initialImageUrl,
   ]);
 
+  const canvasMode = useCanvasStore((s) => s.canvasMode);
   const availableModels = useMemo(() => {
-    const state = useCanvasStore.getState();
-    return getModelsForCanvasMode(state.canvasMode);
-  }, []);
+    return getModelsForCanvasMode(canvasMode);
+  }, [canvasMode]);
 
   const selectedModelInfo = availableModels.find((m) => m.id === aiModel);
   const credits = selectedModelInfo?.credits || 10;
