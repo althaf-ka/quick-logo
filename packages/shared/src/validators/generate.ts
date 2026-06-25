@@ -24,7 +24,6 @@ export const generateConfigSchema = z.object({
     )
     .nullable(),
   referenceImagePreview: z.string().nullable(),
-  referenceStrength: z.number().min(0).max(100),
   magicPrompt: z.boolean(),
 });
 
@@ -51,7 +50,6 @@ export const generateApiConfigSchema = z.object({
     .default("white"),
   customBgColor: z.string().optional().default("#ffffff"),
   referenceImageUrl: z.url().optional(),
-  referenceStrength: z.number().min(0).max(100).optional().default(50),
   magicPrompt: z.boolean().optional().default(true),
   canvasMode: z
     .enum(["edit", "img2img", "inpaint", "text2img"])

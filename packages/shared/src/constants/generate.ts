@@ -28,6 +28,5 @@ export const DEFAULT_CONFIG: GenerateConfig = {
   customBgColor: "#ffffff",
   referenceImage: null,
   referenceImagePreview: null,
-  referenceStrength: 50,
   magicPrompt: true,
 };

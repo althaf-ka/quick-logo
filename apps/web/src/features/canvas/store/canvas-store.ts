@@ -80,8 +80,6 @@ export interface CanvasState {
   setAiPrompt: (prompt: string) => void;
   aiModel: string;
   setAiModel: (model: string) => void;
-  aiStrength: number;
-  setAiStrength: (strength: number) => void;
   isAiGenerating: boolean;
   setIsAiGenerating: (generating: boolean) => void;
   maskData: string | null;
@@ -185,8 +183,6 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   setAiPrompt: (prompt) => set({ aiPrompt: prompt }),
   aiModel: "quick-ideogram",
   setAiModel: (model) => set({ aiModel: model }),
-  aiStrength: 35,
-  setAiStrength: (strength) => set({ aiStrength: strength }),
   isAiGenerating: false,
   setIsAiGenerating: (generating) => set({ isAiGenerating: generating }),
   maskData: null,

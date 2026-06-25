@@ -18,7 +18,6 @@ export interface EditHistoryEntry {
 type EditStatus = "idle" | "generating" | "polling" | "done" | "error";
 
 const DEFAULT_MODEL = "quick-seedream";
-const REFERENCE_STRENGTH = 35;
 
 type ImageHistoryResponse = InferResponseType<
   (typeof api.images)[":id"]["$get"],
@@ -249,7 +248,6 @@ export function useEditForm({
             background: "transparent",
             customBgColor: "#ffffff",
             referenceImageUrl: targetImageUrl,
-            referenceStrength: REFERENCE_STRENGTH,
             magicPrompt: false,
             canvasMode: "edit",
           },

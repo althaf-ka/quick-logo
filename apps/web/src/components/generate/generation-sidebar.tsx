@@ -22,7 +22,7 @@ import {
   ToggleGroupItem,
 } from "@quicklogo/ui/components/toggle-group";
 import { Textarea } from "@quicklogo/ui/components/textarea";
-import { Slider } from "@quicklogo/ui/components/slider";
+
 import { Button } from "@quicklogo/ui/components/button";
 import { Input } from "@quicklogo/ui/components/input";
 import {
@@ -461,31 +461,6 @@ export function GenerationSidebar({
                 >
                   <XIcon weight="bold" className="size-3" />
                 </Button>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-muted-foreground/60 text-[10px] tracking-wider uppercase">
-                    Influence
-                  </Label>
-                  <span className="text-[11px] font-medium tabular-nums">
-                    {config.referenceStrength}%
-                  </span>
-                </div>
-                <Slider
-                  value={[config.referenceStrength]}
-                  onValueChange={(val) => {
-                    const v = Array.isArray(val) ? val[0] : val;
-                    onConfigChange("referenceStrength", v ?? 50);
-                  }}
-                  min={0}
-                  max={100}
-                  step={5}
-                  className="bg-muted-foreground/20 h-1.5"
-                />
-                <div className="text-muted-foreground/40 flex justify-between text-[9px]">
-                  <span>Subtle</span>
-                  <span>Strong</span>
-                </div>
               </div>
             </div>
           ) : (

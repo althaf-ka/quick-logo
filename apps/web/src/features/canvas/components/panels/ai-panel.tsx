@@ -4,12 +4,7 @@ import { Slider } from "@quicklogo/ui/components/slider";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
 import { getModelsForCanvasMode } from "@quicklogo/ai-providers/models";
 import { useState, useEffect } from "react";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@quicklogo/ui/components/accordion";
+
 import {
   ArrowUUpLeftIcon,
   ImagesIcon,
@@ -96,8 +91,6 @@ export function AiPanel({
     setCanvasMode,
     aiModel,
     setAiModel,
-    aiStrength,
-    setAiStrength,
     regionBounds,
     resetAIWorkflow,
     maskBrushSize,
@@ -108,8 +101,6 @@ export function AiPanel({
       setCanvasMode: s.setCanvasMode,
       aiModel: s.aiModel,
       setAiModel: s.setAiModel,
-      aiStrength: s.aiStrength,
-      setAiStrength: s.setAiStrength,
       regionBounds: s.regionBounds,
       resetAIWorkflow: s.resetAIWorkflow,
       maskBrushSize: s.maskBrushSize,
@@ -346,80 +337,21 @@ export function AiPanel({
           )}
 
         {/* Section: Generation Settings */}
-        <Accordion className="w-full">
-          <AccordionItem
-            value="advanced-settings"
-            className="rounded-none border border-white/10"
-          >
-            <AccordionTrigger className="rounded-none border-white/10 px-3 py-3 hover:bg-white/5 hover:no-underline data-[state=open]:border-b">
-              <span className="text-muted-foreground font-mono text-[10px] font-bold tracking-wider uppercase">
-                Generation Settings
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-5 bg-zinc-950/50 p-4">
-              {/* Model selector */}
-              <div>
-                <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
-                  AI Model
-                </label>
-                <ModelSelector
-                  variant="default"
-                  models={currentModels as unknown as ModelOption[]}
-                  value={aiModel}
-                  onChange={setAiModel}
-                  context="edit"
-                />
-              </div>
-
-              {/* Strength slider */}
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label className="text-muted-foreground/50 font-mono text-[10px] font-bold tracking-wider uppercase">
-                    Input Strength
-                  </label>
-                  <span className="font-mono text-xs text-zinc-300 tabular-nums">
-                    {aiStrength}%
-                  </span>
-                </div>
-                <Slider
-                  value={[aiStrength]}
-                  onValueChange={(val) =>
-                    setAiStrength(Array.isArray(val) ? val[0] : (val as number))
-                  }
-                  min={0}
-                  max={100}
-                  step={1}
-                />
-              </div>
-
-              {/* Steps (Placeholder) */}
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label className="text-muted-foreground/50 font-mono text-[10px] font-bold tracking-wider uppercase">
-                    Steps (Coming Soon)
-                  </label>
-                  <span className="font-mono text-xs text-zinc-500 tabular-nums">
-                    30
-                  </span>
-                </div>
-                <Slider value={[30]} disabled min={10} max={50} step={1} />
-              </div>
-
-              {/* Seed (Placeholder) */}
-              <div>
-                <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
-                  Seed (Coming Soon)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  placeholder="Random"
-                  className="w-full rounded-none border border-white/10 bg-zinc-900 px-3 py-2 text-xs text-zinc-500"
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+        <div className="mt-2 flex flex-col gap-5 rounded-none border border-white/10 bg-zinc-950/30 p-4">
+          {/* Model selector */}
+          <div>
+            <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
+              AI Model
+            </label>
+            <ModelSelector
+              variant="default"
+              models={currentModels as unknown as ModelOption[]}
+              value={aiModel}
+              onChange={setAiModel}
+              context="edit"
+            />
+          </div>
+        </div>
 
         {/* Section D: Workflow Status */}
         {isGenerating && (

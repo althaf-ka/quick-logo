@@ -21,7 +21,7 @@ export interface GenerateConfig {
   customBgColor: string;
   referenceImage: File | null;
   referenceImagePreview: string | null;
-  referenceStrength: number;
+  referenceStrength?: number;
   magicPrompt: boolean;
 }
 

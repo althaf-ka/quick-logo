@@ -52,7 +52,6 @@ export async function routePromptAndBuildParams(
 
   if (mapping.capabilities.imageToImage && message.config.referenceImageUrl) {
     params.referenceImage = message.config.referenceImageUrl;
-    params.referenceStrength = message.config.referenceStrength ?? 50;
   }
 
   return {

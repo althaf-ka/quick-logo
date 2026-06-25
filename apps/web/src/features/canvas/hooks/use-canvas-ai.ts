@@ -228,7 +228,6 @@ export function useCanvasAI(
           background: "transparent",
           customBgColor: "#ffffff",
           referenceImageUrl: uploadedRegionUrl || canvasImageUrl || undefined,
-          referenceStrength: state.aiStrength,
           magicPrompt: false,
           canvasMode:
             state.canvasMode as EditApiRequest["config"]["canvasMode"],
