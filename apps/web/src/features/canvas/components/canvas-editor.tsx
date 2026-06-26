@@ -62,7 +62,7 @@ export function CanvasEditor({
     generationStatus,
     generationBounds,
     credits,
-    availableModels,
+    selectedModel,
   } = useCanvasAI(canvas, imageId, isDirty, initialImageUrl);
   useImproveHover(canvas);
 
@@ -74,7 +74,6 @@ export function CanvasEditor({
     maskData,
     selectedObject,
     activeTool,
-    aiModel,
   } = useCanvasStore(
     useShallow((s) => ({
       canvasMode: s.canvasMode,
@@ -84,7 +83,6 @@ export function CanvasEditor({
       maskData: s.maskData,
       selectedObject: s.selectedObject,
       activeTool: s.activeTool,
-      aiModel: s.aiModel,
     })),
   );
 
@@ -386,9 +384,7 @@ export function CanvasEditor({
                 className="absolute bottom-3 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 px-4"
               >
                 {(() => {
-                  const strategy = availableModels.find(
-                    (m) => m.id === aiModel,
-                  )?.editingStrategy;
+                  const strategy = selectedModel?.editingStrategy;
                   let validationError = "";
                   if (
                     canvasMode === "inpaint" &&

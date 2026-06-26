@@ -25,6 +25,15 @@ export async function compositeAIResult(
 
     FabricImageClass.fromURL(resultImageUrl, { crossOrigin: "anonymous" })
       .then((img: fabric.FabricImage) => {
+        // Validate that the loaded image has real dimensions
+        if (!img.width || !img.height || img.width <= 0 || img.height <= 0) {
+          return reject(
+            new Error(
+              "AI result image has invalid dimensions — the image may have failed to load",
+            ),
+          );
+        }
+
         // Find existing AI region selector to remove it
         const regionSelector = canvas
           .getObjects()
@@ -37,8 +46,8 @@ export async function compositeAIResult(
             }
 
             // Scale to fit the region
-            const scaleX = options.regionBounds.width / img.width!;
-            const scaleY = options.regionBounds.height / img.height!;
+            const scaleX = options.regionBounds.width / img.width;
+            const scaleY = options.regionBounds.height / img.height;
 
             img.set({
               left: options.regionBounds.left,
@@ -96,8 +105,17 @@ export async function compositeAIResult(
               return reject(new Error("Artboard bounds required for inpaint"));
             }
 
-            const scaleX = options.artboardBounds.width / img.width!;
-            const scaleY = options.artboardBounds.height / img.height!;
+            const scaleX = options.artboardBounds.width / img.width;
+            const scaleY = options.artboardBounds.height / img.height;
+
+            // Remove the old background image BEFORE assigning the same ID
+            // to the new image — prevents the find() from matching the new object
+            const oldBg = canvas
+              .getObjects()
+              .find((o) => o.id === "obj_initial_image");
+            if (oldBg) {
+              canvas.remove(oldBg);
+            }
 
             img.set({
               id: "obj_initial_image", // Mark as the new main image
@@ -110,14 +128,6 @@ export async function compositeAIResult(
               generationGroupId: options.generationGroupId,
               generatedFromObjectId: options.generatedFromObjectId,
             });
-
-            // Remove the old background image to prevent overlapping
-            const oldBg = canvas
-              .getObjects()
-              .find((o) => o.id === "obj_initial_image");
-            if (oldBg) {
-              canvas.remove(oldBg);
-            }
 
             break;
           }

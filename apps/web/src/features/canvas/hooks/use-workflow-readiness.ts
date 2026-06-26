@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useCanvasStore } from "../store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
-import { getModelsForCanvasMode } from "@quicklogo/ai-providers/models";
+import { useSelectedModel } from "./use-selected-model";
 
 export type WorkflowState = "Ready" | "Needs Input" | "Coming Soon";
 
@@ -28,8 +28,6 @@ export function useWorkflowReadiness() {
     setCanvasMode,
     setActiveTool,
     activeTool,
-    canvasMode,
-    aiModel,
   } = useCanvasStore(
     useShallow((s) => ({
       selectionType: s.selectionType,
@@ -38,8 +36,6 @@ export function useWorkflowReadiness() {
       setCanvasMode: s.setCanvasMode,
       setActiveTool: s.setActiveTool,
       activeTool: s.activeTool,
-      canvasMode: s.canvasMode,
-      aiModel: s.aiModel,
     })),
   );
 
@@ -50,11 +46,7 @@ export function useWorkflowReadiness() {
 
   const hasMask = !!maskData;
 
-  const currentModels = getModelsForCanvasMode(canvasMode);
-  const selectedModelStrategy = currentModels.find(
-    (m) => m.id === aiModel,
-  )?.editingStrategy;
-  const isMaskless = selectedModelStrategy === "inpaint-with-prompt";
+  const { isMaskless } = useSelectedModel();
 
   const workflows = useMemo<WorkflowDefinition[]>(() => {
     return [

@@ -2,7 +2,7 @@ import { useCanvasStore } from "../../store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
 import { Slider } from "@quicklogo/ui/components/slider";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
-import { getModelsForCanvasMode } from "@quicklogo/ai-providers/models";
+import { useSelectedModel } from "../../hooks/use-selected-model";
 import { useState, useEffect } from "react";
 
 import {
@@ -109,7 +109,8 @@ export function AiPanel({
   );
 
   const { workflows } = useWorkflowReadiness();
-  const currentModels = getModelsForCanvasMode(canvasMode);
+  const { models: currentModels, editingStrategy: selectedModelStrategy } =
+    useSelectedModel();
 
   // Automatically switch to a supported model if the current one doesn't support this mode
   useEffect(() => {
@@ -120,10 +121,6 @@ export function AiPanel({
       setAiModel(currentModels[0].id);
     }
   }, [canvasMode, aiModel, currentModels, setAiModel]);
-
-  const selectedModelStrategy = currentModels.find(
-    (m: ModelOption) => m.id === aiModel,
-  )?.editingStrategy;
 
   const [clickedToolId, setClickedToolId] = useState<string | null>(null);
 

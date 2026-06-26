@@ -10,8 +10,15 @@ export function validateImageGenerationInput(
     throw new PipelineError("Prompt cannot be empty", false);
   }
 
-  const isInpaint =
-    message.config.canvasMode === "inpaint" || !!message.config.maskImageUrl;
+  const isInpaint = message.config.canvasMode === "inpaint";
+
+  // Reject conflicting inputs: mask data sent with a non-inpaint mode
+  if (!isInpaint && message.config.maskImageUrl) {
+    throw new PipelineError(
+      "Mask image was provided but canvas mode is not 'inpaint'",
+      false,
+    );
+  }
 
   if (isInpaint) {
     if (!message.config.canvasImageUrl) {

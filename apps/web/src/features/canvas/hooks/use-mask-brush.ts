@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as fabric from "fabric";
+import { useShallow } from "zustand/react/shallow";
 import { useCanvasStore } from "../store/canvas-store";
 import { exportMaskToPng } from "../utils/mask-export";
 
@@ -19,8 +20,6 @@ function syncMaskBrushSettings(
     canvas.isDrawingMode = false;
   }
 }
-
-import { useShallow } from "zustand/react/shallow";
 
 export function useMaskBrush(
   mainCanvas: fabric.Canvas | null,
@@ -75,15 +74,15 @@ export function useMaskBrush(
     };
   }, [mainCanvas, maskCanvas]);
 
-  // Export mask data on brush end
+  // Export mask data on brush end (or after undo)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!maskCanvas || !mainCanvas) return;
 
-    let timeout: NodeJS.Timeout;
-
-    const handlePathCreated = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
+    const handleMaskUpdated = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
         const artboard = mainCanvas
           .getObjects()
           .find((o) => o.id === "__artboard__");
@@ -99,11 +98,16 @@ export function useMaskBrush(
       }, 50);
     };
 
-    maskCanvas.on("path:created", handlePathCreated);
+    maskCanvas.on("path:created", handleMaskUpdated);
+    // Custom event for programmatic triggers (e.g., undo) — not in Fabric's CanvasEvents type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (maskCanvas as any).on("mask:updated", handleMaskUpdated);
 
     return () => {
-      maskCanvas.off("path:created", handlePathCreated);
-      clearTimeout(timeout);
+      maskCanvas.off("path:created", handleMaskUpdated);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (maskCanvas as any).off("mask:updated", handleMaskUpdated);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [maskCanvas, mainCanvas, setMaskData, artboardWidth, artboardHeight]);
 }

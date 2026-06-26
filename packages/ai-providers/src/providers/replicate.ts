@@ -4,6 +4,16 @@ import { createLogger } from "@quicklogo/server-telemetry";
 
 const logger = createLogger("ai-providers");
 
+/** Centralized model identifiers — prevents magic strings and enables IDE auto-complete */
+export const REPLICATE_MODELS = {
+  FLUX_1_1_PRO: "black-forest-labs/flux-1.1-pro",
+  IDEOGRAM_V3: "ideogram-ai/ideogram-v3-turbo",
+  FLUX_KONTEXT: "black-forest-labs/flux-kontext-pro",
+  FLUX_2_PRO: "black-forest-labs/flux-2-pro",
+  IMAGEN_4: "google/imagen-4",
+  FLUX_FILL: "black-forest-labs/flux-fill-pro",
+  SEEDREAM: "bytedance/seedream-4.5",
+} as const;
 /**
  * Defines how a model accepts image modifications.
  * - inpaint-with-mask: Uses a secondary black-and-white mask image to dictate what to edit.
@@ -32,12 +42,12 @@ export interface ModelCapability {
 }
 
 export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
-  "black-forest-labs/flux-1.1-pro": {
+  [REPLICATE_MODELS.FLUX_1_1_PRO]: {
     aspectRatio: true,
     editingStrategy: { type: "remix-image", imageField: "image_prompt" },
     defaultOutputFormat: "png",
   },
-  "ideogram-ai/ideogram-v3-turbo": {
+  [REPLICATE_MODELS.IDEOGRAM_V3]: {
     aspectRatio: true,
     editingStrategy: {
       type: "inpaint-with-mask",
@@ -47,21 +57,21 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     },
     defaultOutputFormat: "",
   },
-  "black-forest-labs/flux-kontext-pro": {
+  [REPLICATE_MODELS.FLUX_KONTEXT]: {
     aspectRatio: true,
     editingStrategy: { type: "remix-image", imageField: "input_image" },
     defaultOutputFormat: "png",
   },
-  "black-forest-labs/flux-2-pro": {
+  [REPLICATE_MODELS.FLUX_2_PRO]: {
     aspectRatio: true,
     editingStrategy: { type: "remix-image", imageField: "input_images" },
     defaultOutputFormat: "png",
   },
-  "google/imagen-4": {
+  [REPLICATE_MODELS.IMAGEN_4]: {
     aspectRatio: true,
     defaultOutputFormat: "png",
   },
-  "black-forest-labs/flux-fill-pro": {
+  [REPLICATE_MODELS.FLUX_FILL]: {
     aspectRatio: false,
     editingStrategy: {
       type: "inpaint-with-mask",
@@ -71,11 +81,11 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     },
     defaultOutputFormat: "png",
   },
-  "bytedance/seedream-4.5": {
+  [REPLICATE_MODELS.SEEDREAM]: {
     aspectRatio: true,
     editingStrategy: {
       type: "inpaint-with-prompt",
-      imageField: "image_urls",
+      imageField: "image_input",
       imageFieldIsArray: true,
       figureNaming: "figure-number",
     },
@@ -166,20 +176,20 @@ export class ReplicateProvider implements AIProvider {
     params: GenerationParams,
   ): void {
     switch (model) {
-      case "ideogram-ai/ideogram-v3-turbo":
+      case REPLICATE_MODELS.IDEOGRAM_V3:
         input.magic_prompt_option = "Auto";
         input.style_type = "Auto";
         break;
-      case "google/imagen-4":
+      case REPLICATE_MODELS.IMAGEN_4:
         input.image_size = "1K";
         break;
-      case "black-forest-labs/flux-fill-pro":
+      case REPLICATE_MODELS.FLUX_FILL:
         input.output_format = "png";
         input.prompt_upsampling = params.magicPrompt !== false;
         break;
-      case "black-forest-labs/flux-1.1-pro":
-      case "black-forest-labs/flux-2-pro":
-      case "black-forest-labs/flux-kontext-pro":
+      case REPLICATE_MODELS.FLUX_1_1_PRO:
+      case REPLICATE_MODELS.FLUX_2_PRO:
+      case REPLICATE_MODELS.FLUX_KONTEXT:
         input.prompt_upsampling = params.magicPrompt !== false;
         break;
     }
@@ -221,10 +231,7 @@ export class ReplicateProvider implements AIProvider {
         if (refUrl) {
           input[strategy.imageField] = refUrl;
         }
-        if (
-          model === "black-forest-labs/flux-kontext-pro" &&
-          params.referenceImage
-        ) {
+        if (model === REPLICATE_MODELS.FLUX_KONTEXT && params.referenceImage) {
           input.aspect_ratio = "match_input_image";
         }
         break;

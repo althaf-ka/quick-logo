@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useRef } from "react";
 import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { useCanvasExport } from "./use-canvas-export";
@@ -14,11 +14,9 @@ import {
   invertMaskDataUrl,
 } from "../utils/mask-export";
 import { compositeAIResult } from "../utils/composite-result";
-import {
-  getModelsForCanvasMode,
-  getModelMaskPolarity,
-} from "@quicklogo/ai-providers/models";
+
 import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
+import { useSelectedModel } from "./use-selected-model";
 import type { EditApiRequest } from "@quicklogo/shared";
 
 export type GenerationStatus =
@@ -37,8 +35,13 @@ export function useCanvasAI(
   isDirty?: boolean,
   initialImageUrl?: string,
 ) {
+  const {
+    models: availableModels,
+    credits,
+    selectedModel,
+  } = useSelectedModel();
+
   const isGenerating = useCanvasStore((s) => s.isAiGenerating);
-  const aiModel = useCanvasStore((s) => s.aiModel);
   const { exportToDataUrl } = useCanvasExport(canvas);
   const queryClient = useQueryClient();
   const [generationStatus, setGenerationStatus] =
@@ -50,6 +53,9 @@ export function useCanvasAI(
     height: number;
   } | null>(null);
 
+  // AbortController ref for cancelling in-flight network requests on unmount or re-generation
+  const abortRef = useRef<AbortController | null>(null);
+
   const handleGenerate = useCallback(async () => {
     if (!canvas || isGenerating) return;
 
@@ -60,21 +66,30 @@ export function useCanvasAI(
       return;
     }
 
-    const modelOptions = getModelsForCanvasMode(state.canvasMode);
-    const selectedModelInfo = modelOptions.find((m) => m.id === state.aiModel);
-
     if (
       state.canvasMode === "inpaint" &&
       !state.maskData &&
-      selectedModelInfo?.editingStrategy !== "inpaint-with-prompt"
+      selectedModel?.editingStrategy !== "inpaint-with-prompt"
     ) {
       toast.error("Please paint a mask first");
       return;
     }
 
     try {
+      // Abort any previous in-flight generation
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+      const { signal } = abortRef.current;
+
       state.setIsAiGenerating(true);
       setGenerationStatus("exporting");
+
+      console.info("[Canvas AI] Generation started", {
+        mode: state.canvasMode,
+        model: state.aiModel,
+        strategy: selectedModel?.editingStrategy,
+        hasMask: !!state.maskData,
+      });
 
       // Export Full Canvas
       let canvasImageUrlPromise: Promise<string>;
@@ -181,12 +196,12 @@ export function useCanvasAI(
       if (
         state.canvasMode === "inpaint" &&
         state.maskData &&
-        selectedModelInfo?.editingStrategy !== "inpaint-with-prompt"
+        selectedModel?.editingStrategy !== "inpaint-with-prompt"
       ) {
         let finalMaskData = state.maskData;
         // Data-driven mask polarity: invert the mask if the selected model
         // expects inverted polarity (e.g., Ideogram uses black=inpaint)
-        const polarity = getModelMaskPolarity(state.aiModel);
+        const polarity = selectedModel?.maskPolarity ?? "standard";
         if (polarity === "inverted") {
           finalMaskData = await invertMaskDataUrl(state.maskData);
         }
@@ -245,11 +260,14 @@ export function useCanvasAI(
 
       setGenerationStatus("polling");
 
-      // Polling logic
+      // Polling logic with abort support
       const MAX_POLL_ATTEMPTS = 60; // 60 × 10s = 10 min timeout
       const poll = async () => {
         let attempts = 0;
         while (attempts < MAX_POLL_ATTEMPTS) {
+          if (signal.aborted) {
+            throw new Error("Generation was cancelled");
+          }
           const pollRes = await api.images[":id"].$get({
             param: { id: newImageId },
           });
@@ -263,7 +281,18 @@ export function useCanvasAI(
             }
           }
           attempts++;
-          await new Promise((resolve) => setTimeout(resolve, 10000));
+          // Abortable sleep
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, 10000);
+            signal.addEventListener(
+              "abort",
+              () => {
+                clearTimeout(timer);
+                reject(new Error("Generation was cancelled"));
+              },
+              { once: true },
+            );
+          });
         }
         throw new Error("Generation timed out — please try again");
       };
@@ -318,22 +347,21 @@ export function useCanvasAI(
       toast.success("AI image generated successfully");
     } catch (err) {
       const error = err as Error & { code?: string };
-      console.error(error);
-      const state = useCanvasStore.getState();
+      console.error("[Canvas AI] Generation failed", error);
       if (
         error instanceof ApiError &&
         error.code === ERROR_CODES.INSUFFICIENT_CREDITS
       ) {
         toast.error("Not enough credits", { description: error.message });
+      } else if (error.message === "Generation was cancelled") {
+        // Silently swallow cancellation — not an error the user needs to see
       } else {
         toast.error(error.message || "Generation failed");
       }
-      // Set error explicitly
-      state.resetAIWorkflow();
+      useCanvasStore.getState().resetAIWorkflow();
       setGenerationStatus("error");
     } finally {
-      const state = useCanvasStore.getState();
-      state.setIsAiGenerating(false);
+      useCanvasStore.getState().setIsAiGenerating(false);
       // Wait a bit before resetting status so UI can show 'done'
       setTimeout(() => {
         setGenerationStatus("idle");
@@ -348,15 +376,8 @@ export function useCanvasAI(
     queryClient,
     isDirty,
     initialImageUrl,
+    selectedModel,
   ]);
-
-  const canvasMode = useCanvasStore((s) => s.canvasMode);
-  const availableModels = useMemo(() => {
-    return getModelsForCanvasMode(canvasMode);
-  }, [canvasMode]);
-
-  const selectedModelInfo = availableModels.find((m) => m.id === aiModel);
-  const credits = selectedModelInfo?.credits || 10;
 
   return {
     handleGenerate,
@@ -365,5 +386,6 @@ export function useCanvasAI(
     generationBounds,
     credits,
     availableModels,
+    selectedModel,
   };
 }

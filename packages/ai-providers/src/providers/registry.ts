@@ -19,6 +19,13 @@ export interface ModelMapping {
     /** Mask polarity: "standard" = white=inpaint, "inverted" = black=inpaint */
     maskPolarity?: "standard" | "inverted";
     apiSchema?: "v1" | "v2";
+    /** Prompt template for inpaint-with-prompt models. Configurable per model. */
+    promptTemplate?: {
+      /** Prefix prepended before the user's prompt (e.g., "In Figure 1,") */
+      prefix: string;
+      /** Suffix appended after the user's prompt */
+      suffix: string;
+    };
   };
   defaultParams: {
     steps?: number;
@@ -109,6 +116,10 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       imageToImage: true,
       inpaint: true,
       editingStrategy: "inpaint-with-prompt",
+      promptTemplate: {
+        prefix: "In Figure 1,",
+        suffix: "Ensure the rest of the image remains exactly the same.",
+      },
     },
     defaultParams: {
       width: 1024,
