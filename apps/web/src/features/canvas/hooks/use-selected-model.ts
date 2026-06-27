@@ -34,8 +34,6 @@ export function useSelectedModel() {
     selectedModel,
     /** Shorthand: the editing strategy of the selected model */
     editingStrategy: selectedModel?.editingStrategy ?? null,
-    /** Shorthand: whether the model uses prompt-based inpainting (no mask needed) */
-    isMaskless: selectedModel?.editingStrategy === "inpaint-with-prompt",
     /** Shorthand: credit cost */
     credits: selectedModel?.credits ?? 10,
   };

@@ -33,13 +33,21 @@ export async function routePromptAndBuildParams(
     const { editingStrategy, promptTemplate } = mapping.capabilities;
 
     if (editingStrategy === "inpaint-with-prompt") {
-      // Use model-specific prompt template, or fall back to a sensible default
-      const prefix = promptTemplate?.prefix ?? "In the image,";
-      const suffix =
-        promptTemplate?.suffix ??
-        "Ensure the rest of the image remains exactly the same.";
+      const hasMask = !!message.config.maskImageUrl;
 
-      if (!finalPrompt.toLowerCase().includes(prefix.toLowerCase())) {
+      const prefix = hasMask
+        ? "Image 1 is the base image. Image 2 is a mask highlighting the target region. Exclusively within that highlighted region in Image 1,"
+        : (promptTemplate?.prefix ?? "In the image,");
+
+      const suffix = hasMask
+        ? "Do not alter the unmasked areas of Image 1."
+        : (promptTemplate?.suffix ??
+          "Ensure the rest of the image remains exactly the same.");
+
+      if (
+        !finalPrompt.toLowerCase().includes("image 1") &&
+        !finalPrompt.toLowerCase().includes("in the image")
+      ) {
         finalPrompt = `${prefix} ${finalPrompt.charAt(0).toLowerCase() + finalPrompt.slice(1)}. ${suffix}`;
       }
     }

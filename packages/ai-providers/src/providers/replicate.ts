@@ -219,10 +219,15 @@ export class ReplicateProvider implements AIProvider {
       case "inpaint-with-prompt": {
         if (params.canvasImage) {
           if (strategy.imageFieldIsArray) {
-            input[strategy.imageField] = [params.canvasImage];
+            const images = [params.canvasImage];
+            if (params.maskImage) {
+              images.push(params.maskImage);
+            }
+            input[strategy.imageField] = images;
           } else {
             input[strategy.imageField] = params.canvasImage;
           }
+          delete input.aspect_ratio;
         }
         break;
       }

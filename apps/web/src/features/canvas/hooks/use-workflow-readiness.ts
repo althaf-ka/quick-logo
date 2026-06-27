@@ -46,7 +46,8 @@ export function useWorkflowReadiness() {
 
   const hasMask = !!maskData;
 
-  const { isMaskless } = useSelectedModel();
+  const { editingStrategy } = useSelectedModel();
+  const isMaskOptional = editingStrategy === "inpaint-with-prompt";
 
   const workflows = useMemo<WorkflowDefinition[]>(() => {
     return [
@@ -68,17 +69,17 @@ export function useWorkflowReadiness() {
         id: "replace-part",
         name: "Modify Area",
         internalId: "inpaint",
-        description: isMaskless
-          ? "Describe exactly what you want to modify using a text prompt."
+        description: isMaskOptional
+          ? "Add a brush mask to specify an area, or describe the changes using a text prompt."
           : "Add, remove, or change a specific area of the logo using a brush mask.",
-        state: hasMask || isMaskless ? "Ready" : "Needs Input",
-        statusMessage: isMaskless
-          ? "✓ Ready to edit"
-          : hasMask
-            ? "✓ Mask detected"
+        state: hasMask || isMaskOptional ? "Ready" : "Needs Input",
+        statusMessage: hasMask
+          ? "✓ Mask detected"
+          : isMaskOptional
+            ? "✓ Ready to edit (mask optional)"
             : "⚠ Paint a mask to continue",
         quickAction:
-          hasMask || isMaskless
+          hasMask || isMaskOptional
             ? undefined
             : {
                 label: "Start Masking",
@@ -87,23 +88,24 @@ export function useWorkflowReadiness() {
                   setActiveTool("brush");
                 },
               },
-        progressSequence: isMaskless
-          ? ["Describe Changes", "Generate"]
-          : ["Paint Mask", "Describe Changes", "Generate"],
-        currentStepIndex: isMaskless ? 0 : hasMask ? 1 : 0,
+        progressSequence:
+          isMaskOptional && !hasMask
+            ? ["Describe Changes", "Generate"]
+            : ["Paint Mask", "Describe Changes", "Generate"],
+        currentStepIndex: isMaskOptional && !hasMask ? 0 : hasMask ? 1 : 0,
       },
     ];
-  }, [isImageSelected, hasMask, setCanvasMode, setActiveTool, isMaskless]);
+  }, [isImageSelected, hasMask, setCanvasMode, setActiveTool, isMaskOptional]);
 
   // Context-Aware Recommendations
   let recommendedWorkflowId: string | null = null;
   const readyWorkflows = workflows.filter((w) => w.state === "Ready");
 
   // Determine Recommendation Priority
-  if (isImageSelected && !hasMask && !isMaskless) {
+  if (isImageSelected && !hasMask && !isMaskOptional) {
     recommendedWorkflowId = "improve-image";
-  } else if (activeTool === "brush" || hasMask || isMaskless) {
-    // If they have a mask or are currently brushing or if maskless
+  } else if (activeTool === "brush" || hasMask || isMaskOptional) {
+    // If they have a mask or are currently brushing or mask is optional
     if (readyWorkflows.filter((w) => w.id !== "replace-part").length === 0) {
       recommendedWorkflowId = "replace-part";
     }

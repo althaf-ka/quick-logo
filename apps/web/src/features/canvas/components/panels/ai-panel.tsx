@@ -109,8 +109,7 @@ export function AiPanel({
   );
 
   const { workflows } = useWorkflowReadiness();
-  const { models: currentModels, editingStrategy: selectedModelStrategy } =
-    useSelectedModel();
+  const { models: currentModels } = useSelectedModel();
 
   // Automatically switch to a supported model if the current one doesn't support this mode
   useEffect(() => {
@@ -269,69 +268,68 @@ export function AiPanel({
           {workflows.map(renderToolButton)}
         </div>
 
-        {/* Render mask tools if inpaint mode and model supports masks */}
-        {canvasMode === "inpaint" &&
-          selectedModelStrategy !== "inpaint-with-prompt" && (
-            <div className="mt-2 flex flex-col gap-4 rounded-none border border-white/10 bg-zinc-950/30 p-4">
-              <h4 className="font-mono text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
-                Mask Settings
-              </h4>
+        {/* Render mask tools if inpaint mode */}
+        {canvasMode === "inpaint" && (
+          <div className="mt-2 flex flex-col gap-4 rounded-none border border-white/10 bg-zinc-950/30 p-4">
+            <h4 className="font-mono text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
+              Mask Settings
+            </h4>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between px-0.5">
-                  <span className="text-[10px] leading-none font-medium tracking-wider text-zinc-400 uppercase">
-                    Brush Size
-                  </span>
-                  <span className="font-mono text-[10px] leading-none text-zinc-500">
-                    {maskBrushSize}
-                  </span>
-                </div>
-                <div className="flex h-4 w-full items-center">
-                  <Slider
-                    value={[maskBrushSize]}
-                    onValueChange={(val) =>
-                      setMaskBrushSize(
-                        Array.isArray(val) ? val[0] : (val as number),
-                      )
-                    }
-                    min={5}
-                    max={100}
-                    step={1}
-                    className="[&_[data-slot=slider-range]]:rounded-none [&_[data-slot=slider-range]]:bg-violet-500 [&_[data-slot=slider-thumb]]:h-4 [&_[data-slot=slider-thumb]]:w-2 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-sm [&_[data-slot=slider-thumb]]:transition-transform [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-white/10"
-                  />
-                </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[10px] leading-none font-medium tracking-wider text-zinc-400 uppercase">
+                  Brush Size
+                </span>
+                <span className="font-mono text-[10px] leading-none text-zinc-500">
+                  {maskBrushSize}
+                </span>
               </div>
-
-              <div className="flex items-center justify-end border-t border-white/10 pt-3">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() =>
-                      window.dispatchEvent(new Event("canvas:mask:undo"))
-                    }
-                    className="flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-white"
-                    title="Undo Stroke"
-                  >
-                    <ArrowUUpLeftIcon size={14} />
-                    <span className="text-[10px] font-medium tracking-wider uppercase">
-                      Undo
-                    </span>
-                  </button>
-                  <button
-                    onClick={() =>
-                      window.dispatchEvent(new Event("canvas:mask:clear"))
-                    }
-                    className="flex items-center gap-1.5 text-red-400 transition-colors hover:text-red-300"
-                    title="Clear Mask"
-                  >
-                    <TrashIcon size={14} />
-                    <span className="text-[10px] font-medium tracking-wider uppercase">
-                      Clear
-                    </span>
-                  </button>
-                </div>
+              <div className="flex h-4 w-full items-center">
+                <Slider
+                  value={[maskBrushSize]}
+                  onValueChange={(val) =>
+                    setMaskBrushSize(
+                      Array.isArray(val) ? val[0] : (val as number),
+                    )
+                  }
+                  min={5}
+                  max={100}
+                  step={1}
+                  className="[&_[data-slot=slider-range]]:rounded-none [&_[data-slot=slider-range]]:bg-violet-500 [&_[data-slot=slider-thumb]]:h-4 [&_[data-slot=slider-thumb]]:w-2 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-sm [&_[data-slot=slider-thumb]]:transition-transform [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-track]]:h-1.5 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-white/10"
+                />
               </div>
             </div>
-          )}
+
+            <div className="flex items-center justify-end border-t border-white/10 pt-3">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() =>
+                    window.dispatchEvent(new Event("canvas:mask:undo"))
+                  }
+                  className="flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-white"
+                  title="Undo Stroke"
+                >
+                  <ArrowUUpLeftIcon size={14} />
+                  <span className="text-[10px] font-medium tracking-wider uppercase">
+                    Undo
+                  </span>
+                </button>
+                <button
+                  onClick={() =>
+                    window.dispatchEvent(new Event("canvas:mask:clear"))
+                  }
+                  className="flex items-center gap-1.5 text-red-400 transition-colors hover:text-red-300"
+                  title="Clear Mask"
+                >
+                  <TrashIcon size={14} />
+                  <span className="text-[10px] font-medium tracking-wider uppercase">
+                    Clear
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Section: Generation Settings */}
         <div className="mt-2 flex flex-col gap-5 rounded-none border border-white/10 bg-zinc-950/30 p-4">

@@ -3,7 +3,6 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { useMaskBrush } from "../hooks/use-mask-brush";
 import { useShallow } from "zustand/react/shallow";
-import { useSelectedModel } from "../hooks/use-selected-model";
 
 interface MaskOverlayProps {
   mainCanvas: fabric.Canvas | null;
@@ -89,11 +88,8 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
     };
   }, [maskCanvas, setMaskData]);
 
-  const { editingStrategy } = useSelectedModel();
-
   const isInteractive = activeTool !== "hand";
-  const isVisible =
-    canvasMode === "inpaint" && editingStrategy !== "inpaint-with-prompt";
+  const isVisible = canvasMode === "inpaint";
 
   return (
     <div

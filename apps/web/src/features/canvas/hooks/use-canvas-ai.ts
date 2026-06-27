@@ -92,39 +92,30 @@ export function useCanvasAI(
       });
 
       // Export Full Canvas
-      let canvasImageUrlPromise: Promise<string>;
-      let canvasImageDataUrl: string | undefined;
+      const canvasImageDataUrl = exportToDataUrl("png");
+      if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
 
-      // Optimization: If the canvas is completely untouched, we can reuse the original image URL!
-      if (isDirty === false && initialImageUrl) {
-        canvasImageUrlPromise = Promise.resolve(initialImageUrl);
-      } else {
-        canvasImageDataUrl = exportToDataUrl("png");
-        if (!canvasImageDataUrl) throw new Error("Failed to export canvas");
-
-        const canvasFile = dataUrlToFile(
-          canvasImageDataUrl,
-          `canvas-${Date.now()}.png`,
-        );
-        canvasImageUrlPromise = uploadFileToImageKit(canvasFile, "anonymous", {
+      const canvasFile = dataUrlToFile(
+        canvasImageDataUrl,
+        `canvas-${Date.now()}.png`,
+      );
+      const canvasImageUrlPromise = uploadFileToImageKit(
+        canvasFile,
+        "anonymous",
+        {
           isTemp: true,
-        });
-      }
+        },
+      );
 
       let targetBounds:
         | { left: number; top: number; width: number; height: number }
         | undefined;
       let activeObjectIdToReplace: string | null = null;
-      let isPristineSourceImage = false;
-
       if (state.canvasMode === "img2img") {
         const activeObj = canvas.getActiveObject();
         if (activeObj && activeObj.id !== "__artboard__") {
           if (!activeObj.id) activeObj.set("id", `obj_${Date.now()}`);
           activeObjectIdToReplace = activeObj.id ?? null;
-          isPristineSourceImage =
-            activeObjectIdToReplace === "obj_initial_image" &&
-            isDirty === false;
 
           state.setActiveAIObjectId(activeObjectIdToReplace);
 
@@ -152,52 +143,43 @@ export function useCanvasAI(
         Promise.resolve(undefined);
 
       if (state.canvasMode === "img2img" && targetBounds) {
-        if (isPristineSourceImage && initialImageUrl) {
-          // Optimization: Skip region export/upload entirely, use the original image!
-          uploadedRegionUrlPromise = Promise.resolve(initialImageUrl);
-        } else {
-          // Save state, discard selection to hide controls, and reset zoom (viewportTransform)
-          // so that absolute coordinates (targetBounds) align perfectly.
-          const active = canvas.getActiveObjects();
-          canvas.discardActiveObject();
-          const vpt = canvas.viewportTransform
-            ? [...canvas.viewportTransform]
-            : null;
-          canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-          canvas.renderAll(); // MUST be synchronous
+        // Save state, discard selection to hide controls, and reset zoom (viewportTransform)
+        // so that absolute coordinates (targetBounds) align perfectly.
+        const active = canvas.getActiveObjects();
+        canvas.discardActiveObject();
+        const vpt = canvas.viewportTransform
+          ? [...canvas.viewportTransform]
+          : null;
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        canvas.renderAll(); // MUST be synchronous
 
-          regionImageDataUrl = canvas.toDataURL({
-            format: "png",
-            left: targetBounds.left,
-            top: targetBounds.top,
-            width: targetBounds.width,
-            height: targetBounds.height,
-            multiplier: 1,
-          });
+        regionImageDataUrl = canvas.toDataURL({
+          format: "png",
+          left: targetBounds.left,
+          top: targetBounds.top,
+          width: targetBounds.width,
+          height: targetBounds.height,
+          multiplier: 1,
+        });
 
-          // Restore state
-          if (vpt) canvas.setViewportTransform(vpt as fabric.TMat2D);
-          if (active && active.length) {
-            if (active.length > 1) {
-              canvas.setActiveObject(
-                new fabric.ActiveSelection(active, { canvas }),
-              );
-            } else {
-              canvas.setActiveObject(active[0]);
-            }
+        // Restore state
+        if (vpt) canvas.setViewportTransform(vpt as fabric.TMat2D);
+        if (active && active.length) {
+          if (active.length > 1) {
+            canvas.setActiveObject(
+              new fabric.ActiveSelection(active, { canvas }),
+            );
+          } else {
+            canvas.setActiveObject(active[0]);
           }
-          canvas.renderAll();
         }
+        canvas.renderAll();
       }
 
       setGenerationStatus("uploading");
 
       let maskFile: File | undefined;
-      if (
-        state.canvasMode === "inpaint" &&
-        state.maskData &&
-        selectedModel?.editingStrategy !== "inpaint-with-prompt"
-      ) {
+      if (state.canvasMode === "inpaint" && state.maskData) {
         let finalMaskData = state.maskData;
         // Data-driven mask polarity: invert the mask if the selected model
         // expects inverted polarity (e.g., Ideogram uses black=inpaint)
@@ -318,6 +300,14 @@ export function useCanvasAI(
         artboardBounds,
         generationGroupId,
         generatedFromObjectId: activeObjectIdToReplace,
+        ...(selectedModel?.editingStrategy === "inpaint-with-prompt" &&
+        state.maskData &&
+        state.canvasMode === "inpaint"
+          ? {
+              maskDataUrl: state.maskData,
+              originalImageUrl: canvasImageUrl || undefined,
+            }
+          : {}),
       });
 
       state.setGeneratedResultUrl(finalImageUrl);
