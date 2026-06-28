@@ -122,9 +122,7 @@ export const MODELS: ModelOption[] = [
     icon: "brain",
     features: ["Highly detailed", "Reference image support", "Versatile"],
     supportsReferenceImage: true,
-    supportsInpaint: true,
     bestForEdits: true,
-    editingStrategy: "inpaint-with-prompt",
   },
   {
     id: "quick-nano-banana",

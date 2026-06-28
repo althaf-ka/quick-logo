@@ -52,11 +52,18 @@ export function buildBasePrompt(
   // contradict the edit intent (e.g. "add green background" + "transparent bg").
   if (message.isEdit) {
     parts.push(basePrompt);
-    parts.push("professional logo, clean design, high quality");
-
+    // Canvas-mode-specific quality suffix
+    const canvasMode = message.config.canvasMode;
+    if (canvasMode === "inpaint") {
+      parts.push("high quality, seamless blend, consistent lighting");
+    } else if (canvasMode === "img2img") {
+      parts.push("high quality, professional result, enhanced details");
+    } else {
+      parts.push("professional logo, clean design, high quality");
+    }
     const negativePrompt = message.config.negativePrompt
-      ? `${message.config.negativePrompt}, blurry, low quality, watermark, text artifacts`
-      : "blurry, low quality, watermark, text artifacts, amateur, distorted, noisy";
+      ? `${message.config.negativePrompt}, blurry, low quality, watermark, text artifacts, cropped, reframed`
+      : "blurry, low quality, watermark, text artifacts, amateur, distorted, noisy, cropped, reframed, different aspect ratio";
 
     return { prompt: parts.join(", "), negativePrompt };
   }
@@ -73,10 +80,7 @@ export function buildBasePrompt(
   const styleVal = style ? STYLE_MODIFIERS[style] : undefined;
   if (styleVal) parts.push(styleVal);
 
-  if (
-    message.config.brandName &&
-    message.config.brandName.trim().length > 0
-  ) {
+  if (message.config.brandName && message.config.brandName.trim().length > 0) {
     parts.push(`incorporating the text "${message.config.brandName.trim()}"`);
   }
 

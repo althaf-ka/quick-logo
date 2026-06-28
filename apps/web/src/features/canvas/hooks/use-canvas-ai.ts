@@ -29,12 +29,7 @@ export type GenerationStatus =
   | "done"
   | "error";
 
-export function useCanvasAI(
-  canvas: fabric.Canvas | null,
-  imageId: string,
-  isDirty?: boolean,
-  initialImageUrl?: string,
-) {
+export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
   const {
     models: availableModels,
     credits,
@@ -225,7 +220,7 @@ export function useCanvasAI(
           background: "transparent",
           customBgColor: "#ffffff",
           referenceImageUrl: uploadedRegionUrl || canvasImageUrl || undefined,
-          magicPrompt: false,
+          magicPrompt: state.canvasMode === "img2img",
           canvasMode:
             state.canvasMode as EditApiRequest["config"]["canvasMode"],
           maskImageUrl: maskImageUrl || undefined,
@@ -364,8 +359,6 @@ export function useCanvasAI(
     exportToDataUrl,
     imageId,
     queryClient,
-    isDirty,
-    initialImageUrl,
     selectedModel,
   ]);
 

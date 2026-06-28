@@ -95,6 +95,7 @@ export function AiPanel({
     resetAIWorkflow,
     maskBrushSize,
     setMaskBrushSize,
+    maskData,
   } = useCanvasStore(
     useShallow((s) => ({
       canvasMode: s.canvasMode,
@@ -105,11 +106,15 @@ export function AiPanel({
       resetAIWorkflow: s.resetAIWorkflow,
       maskBrushSize: s.maskBrushSize,
       setMaskBrushSize: s.setMaskBrushSize,
+      maskData: s.maskData,
     })),
   );
 
   const { workflows } = useWorkflowReadiness();
-  const { models: currentModels } = useSelectedModel();
+  const { models: currentModels, editingStrategy } = useSelectedModel();
+
+  const isMaskOptional = editingStrategy === "inpaint-with-prompt";
+  const hasMask = !!maskData;
 
   // Automatically switch to a supported model if the current one doesn't support this mode
   useEffect(() => {
@@ -140,7 +145,7 @@ export function AiPanel({
     // Simplify names for the grid
     let shortName = workflow.name;
     if (workflow.id === "improve-image") shortName = "Improve";
-    if (workflow.id === "replace-part") shortName = "Modify";
+    if (workflow.id === "replace-part") shortName = "Spot Edit";
 
     return (
       <button
@@ -269,7 +274,7 @@ export function AiPanel({
         </div>
 
         {/* Render mask tools if inpaint mode */}
-        {canvasMode === "inpaint" && (
+        {canvasMode === "inpaint" && (!isMaskOptional || hasMask) && (
           <div className="mt-2 flex flex-col gap-4 rounded-none border border-white/10 bg-zinc-950/30 p-4">
             <h4 className="font-mono text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
               Mask Settings
@@ -332,21 +337,25 @@ export function AiPanel({
         )}
 
         {/* Section: Generation Settings */}
-        <div className="mt-2 flex flex-col gap-5 rounded-none border border-white/10 bg-zinc-950/30 p-4">
-          {/* Model selector */}
-          <div>
-            <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
-              AI Model
-            </label>
-            <ModelSelector
-              variant="default"
-              models={currentModels as unknown as ModelOption[]}
-              value={aiModel}
-              onChange={setAiModel}
-              context="edit"
-            />
+        {activeWorkflow && (
+          <div className="mt-2 flex flex-col gap-5 rounded-none border border-white/10 bg-zinc-950/30 p-4">
+            {/* Model selector */}
+            <div>
+              <label className="text-muted-foreground/50 mb-2 block font-mono text-[10px] font-bold tracking-wider uppercase">
+                AI Model
+              </label>
+              <ModelSelector
+                variant="default"
+                models={currentModels as unknown as ModelOption[]}
+                value={aiModel}
+                onChange={setAiModel}
+                context={
+                  activeWorkflow.id === "replace-part" ? "edit" : "generate"
+                }
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Section D: Workflow Status */}
         {isGenerating && (

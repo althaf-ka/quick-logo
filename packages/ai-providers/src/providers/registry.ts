@@ -22,9 +22,15 @@ export interface ModelMapping {
     /** Prompt template for inpaint-with-prompt models. Configurable per model. */
     promptTemplate?: {
       /** Prefix prepended before the user's prompt (e.g., "In Figure 1,") */
-      prefix: string;
+      prefix?: string;
       /** Suffix appended after the user's prompt */
-      suffix: string;
+      suffix?: string;
+      /** Prefix for img2img mode */
+      img2imgPrefix?: string;
+      /** Suffix for img2img mode */
+      img2imgSuffix?: string;
+      /** Convention for naming images in prompts */
+      figureNaming?: "figure-number" | "image-number";
     };
   };
   defaultParams: {
@@ -85,6 +91,11 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       nativePromptEnhancement: true,
       imageToImage: true,
       inpaint: false,
+      editingStrategy: "remix-image",
+      promptTemplate: {
+        img2imgPrefix: "Based on the provided image,",
+        img2imgSuffix: "Keep the core subject and composition intact.",
+      },
     },
     defaultParams: {
       width: 1024,
@@ -118,7 +129,11 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       editingStrategy: "inpaint-with-prompt",
       promptTemplate: {
         prefix: "In Figure 1,",
-        suffix: "Ensure the rest of the image remains exactly the same.",
+        suffix:
+          "Ensure any existing text, logos, and brand elements remain exactly unchanged. Do not alter the unedited portions of Figure 1.",
+        img2imgPrefix: "Based on Figure 1,",
+        img2imgSuffix: "Keep the core subject and composition intact.",
+        figureNaming: "figure-number",
       },
     },
     defaultParams: {
@@ -134,6 +149,11 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       nativePromptEnhancement: true,
       imageToImage: true,
       inpaint: false,
+      editingStrategy: "remix-image",
+      promptTemplate: {
+        img2imgPrefix: "Based on the provided image,",
+        img2imgSuffix: "Keep the core subject and composition intact.",
+      },
     },
     defaultParams: {
       width: 1024,

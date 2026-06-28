@@ -67,11 +67,11 @@ export function useWorkflowReadiness() {
       },
       {
         id: "replace-part",
-        name: "Modify Area",
+        name: "Spot Edit",
         internalId: "inpaint",
         description: isMaskOptional
-          ? "Add a brush mask to specify an area, or describe the changes using a text prompt."
-          : "Add, remove, or change a specific area of the logo using a brush mask.",
+          ? "Describe what to change in a specific area — the AI figures out which part to edit. Paint a mask for extra precision."
+          : "Paint over the spot you want to change, then describe what should go there.",
         state: hasMask || isMaskOptional ? "Ready" : "Needs Input",
         statusMessage: hasMask
           ? "✓ Mask detected"

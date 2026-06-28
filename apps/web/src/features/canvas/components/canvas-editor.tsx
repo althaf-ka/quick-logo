@@ -63,7 +63,7 @@ export function CanvasEditor({
     generationBounds,
     credits,
     selectedModel,
-  } = useCanvasAI(canvas, imageId, isDirty, initialImageUrl);
+  } = useCanvasAI(canvas, imageId);
   useImproveHover(canvas);
 
   const {
@@ -404,10 +404,10 @@ export function CanvasEditor({
                       targetContext={
                         canvasMode === "inpaint"
                           ? strategy === "inpaint-with-prompt"
-                            ? "AI Logo Edit"
-                            : "Inpaint Mask"
+                            ? "Spot Edit"
+                            : "Spot Edit (Masked)"
                           : canvasMode === "img2img"
-                            ? "Selected Image"
+                            ? "Improve"
                             : undefined
                       }
                       onClearTarget={handleClearTarget}
@@ -417,8 +417,8 @@ export function CanvasEditor({
                       placeholder={
                         canvasMode === "inpaint"
                           ? strategy === "inpaint-with-prompt"
-                            ? "Describe how to modify the logo..."
-                            : "Describe what should fill the masked area..."
+                            ? "Describe what to change — e.g. 'make the background blue, keep the logo'..."
+                            : "Describe what should replace the masked area..."
                           : canvasMode === "img2img"
                             ? "Describe how to improve the selected image..."
                             : "Describe what to generate..."
