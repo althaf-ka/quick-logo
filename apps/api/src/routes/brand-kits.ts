@@ -3,7 +3,6 @@ import { createId } from "@paralleldrive/cuid2";
 import {
   brandKits,
   brandKitRevisions,
-  users,
   images,
   eq,
   lt,
@@ -21,11 +20,8 @@ import {
   getSocialAssetTargetId,
 } from "@quicklogo/shared";
 import { Hono } from "hono";
-import {
-  InsufficientCreditsError,
-  NotFoundError,
-  BadRequestError,
-} from "../lib/errors";
+import { deductCredits } from "../lib/credits";
+import { NotFoundError, BadRequestError } from "../lib/errors";
 import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
@@ -71,13 +67,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       if (data.deliverables.brandPresentation) cost += 3;
       if (data.deliverables.brandGuidelines) cost += 0; // V1: no extra cost
 
-      const [updated] = await db
-        .update(users)
-        .set({ credits: sql`${users.credits} - ${cost}` })
-        .where(sql`${users.id} = ${user.id} AND ${users.credits} >= ${cost}`)
-        .returning({ credits: users.credits });
-
-      if (!updated) throw new InsufficientCreditsError(cost, user.credits);
+      await deductCredits(db, user.id, cost);
 
       const promptSummary = buildBrandContextSummary(data, data.prompt);
 
@@ -239,13 +229,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       }
 
       const cost = 2; // Refinement cost
-      const [updated] = await db
-        .update(users)
-        .set({ credits: sql`${users.credits} - ${cost}` })
-        .where(sql`${users.id} = ${user.id} AND ${users.credits} >= ${cost}`)
-        .returning({ credits: users.credits });
-
-      if (!updated) throw new InsufficientCreditsError(cost, user.credits);
+      await deductCredits(db, user.id, cost);
 
       await c.env.GENERATION_QUEUE.send({
         type: "brand-kit-refine",

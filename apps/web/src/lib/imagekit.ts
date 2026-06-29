@@ -7,7 +7,8 @@ export async function uploadFileToImageKit(
     isTemp?: boolean;
     folder?: string;
     tags?: string[];
-  }
+    signal?: AbortSignal;
+  },
 ): Promise<string> {
   const authRes = await api.upload.auth.$get();
 
@@ -33,7 +34,7 @@ export async function uploadFileToImageKit(
     folder = `/quick-logo/temp`;
   }
   formData.append("folder", folder);
-  
+
   if (options?.tags && options.tags.length > 0) {
     formData.append("tags", options.tags.join(","));
   }
@@ -43,6 +44,7 @@ export async function uploadFileToImageKit(
     {
       method: "POST",
       body: formData,
+      signal: options?.signal,
     },
   );
 

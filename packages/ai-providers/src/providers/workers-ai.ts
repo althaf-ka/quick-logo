@@ -83,10 +83,16 @@ export class WorkersAIProvider implements AIProvider {
 
     if (params.referenceImage) {
       const buffer = await secureFetchImage(params.referenceImage);
+      const uint8Buffer = new Uint8Array(buffer);
+      const format = this.detectFormat(uint8Buffer);
+      let mimeType = "image/png";
+      if (format === "jpeg") mimeType = "image/jpeg";
+      if (format === "webp") mimeType = "image/webp";
+
       form.append(
         "input_image_0",
-        new Blob([buffer], { type: "image/webp" }),
-        "reference.webp",
+        new Blob([uint8Buffer], { type: mimeType }),
+        `reference.${format}`,
       );
     }
 
@@ -131,7 +137,14 @@ export class WorkersAIProvider implements AIProvider {
     if (bytes[0] === 0xff && bytes[1] === 0xd8) {
       return "jpeg";
     }
-    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57) {
+    if (
+      bytes[0] === 0x52 &&
+      bytes[1] === 0x49 &&
+      bytes[8] === 0x57 &&
+      bytes[9] === 0x45 &&
+      bytes[10] === 0x42 &&
+      bytes[11] === 0x50
+    ) {
       return "webp";
     }
     return "png";

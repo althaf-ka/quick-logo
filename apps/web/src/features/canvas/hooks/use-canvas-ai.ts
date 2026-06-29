@@ -99,6 +99,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         "anonymous",
         {
           isTemp: true,
+          signal,
         },
       );
 
@@ -193,7 +194,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         uploadedRegionUrlPromise = uploadFileToImageKit(
           regionFile,
           "anonymous",
-          { isTemp: true },
+          { isTemp: true, signal },
         );
       }
 
@@ -201,7 +202,10 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         await Promise.all([
           canvasImageUrlPromise,
           maskFile
-            ? uploadFileToImageKit(maskFile, "anonymous", { isTemp: true })
+            ? uploadFileToImageKit(maskFile, "anonymous", {
+                isTemp: true,
+                signal,
+              })
             : Promise.resolve(undefined),
           uploadedRegionUrlPromise,
         ]);
@@ -228,7 +232,10 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         },
       };
 
-      const res = await api.canvas["ai-edit"].$post({ json: payload });
+      const res = await api.canvas["ai-edit"].$post(
+        { json: payload },
+        { init: { signal } },
+      );
       if (!res.ok) {
         throw await parseApiError(res);
       }

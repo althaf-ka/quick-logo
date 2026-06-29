@@ -1,10 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
 import { getModelCredits } from "@quicklogo/ai-providers/models";
-import { projects, images, users, eq, sql } from "@quicklogo/db";
+import { projects, images } from "@quicklogo/db";
 import { generateApiRequestSchema } from "@quicklogo/shared";
 import { Hono } from "hono";
-import { InsufficientCreditsError, UserNotFoundError } from "../lib/errors";
+import { deductCredits } from "../lib/credits";
 import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
@@ -21,24 +21,7 @@ const generate = new Hono<{ Bindings: Bindings; Variables: Variables }>().post(
     const creditsPerImage = getModelCredits(config.model);
     const totalCredits = creditsPerImage * config.imageCount;
 
-    const [updated] = await db
-      .update(users)
-      .set({ credits: sql`${users.credits} - ${totalCredits}` })
-      .where(
-        sql`${users.id} = ${user.id} AND ${users.credits} >= ${totalCredits}`,
-      )
-      .returning({ credits: users.credits });
-
-    if (!updated) {
-      const [existing] = await db
-        .select({ credits: users.credits })
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1);
-
-      if (!existing) throw new UserNotFoundError();
-      throw new InsufficientCreditsError(totalCredits, existing.credits);
-    }
+    await deductCredits(db, user.id, totalCredits);
 
     const batchId = createId();
 

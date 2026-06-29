@@ -1,16 +1,12 @@
 import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
 import { getModelCredits } from "@quicklogo/ai-providers/models";
-import { projects, images, users, eq, sql, and } from "@quicklogo/db";
+import { projects, images, eq, and } from "@quicklogo/db";
 import { editApiRequestSchema } from "@quicklogo/shared";
 import { Hono } from "hono";
 import { z } from "zod";
-import {
-  InsufficientCreditsError,
-  UserNotFoundError,
-  NotFoundError,
-  ForbiddenError,
-} from "../lib/errors";
+import { deductCredits } from "../lib/credits";
+import { NotFoundError, ForbiddenError } from "../lib/errors";
 import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
@@ -50,24 +46,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         throw new ForbiddenError();
       }
 
-      const [updated] = await db
-        .update(users)
-        .set({ credits: sql`${users.credits} - ${totalCredits}` })
-        .where(
-          sql`${users.id} = ${user.id} AND ${users.credits} >= ${totalCredits}`,
-        )
-        .returning({ credits: users.credits });
-
-      if (!updated) {
-        const [existing] = await db
-          .select({ credits: users.credits })
-          .from(users)
-          .where(eq(users.id, user.id))
-          .limit(1);
-
-        if (!existing) throw new UserNotFoundError();
-        throw new InsufficientCreditsError(totalCredits, existing.credits);
-      }
+      await deductCredits(db, user.id, totalCredits);
 
       const imagesData = Array.from({ length: config.imageCount }, () => ({
         id: createId(),

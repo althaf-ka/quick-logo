@@ -93,8 +93,11 @@ export function buildBasePrompt(
   }
 
   const bg = message.config.background;
-  const bgVal = bg ? BACKGROUND_MODIFIERS[bg] : undefined;
-  if (bgVal) parts.push(bgVal);
+  if (bg === "custom" && message.config.customBgColor) {
+    parts.push(`on a solid ${message.config.customBgColor} colored background`);
+  } else if (bg && BACKGROUND_MODIFIERS[bg]) {
+    parts.push(BACKGROUND_MODIFIERS[bg]);
+  }
 
   parts.push(
     "professional logo, vector-style, sharp edges, clean design, high quality",
