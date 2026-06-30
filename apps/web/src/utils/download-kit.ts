@@ -1,6 +1,7 @@
 import * as fflate from "fflate";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
 import { toast } from "@quicklogo/ui/components/sonner";
+import { createIcoFromPng } from "./image-utils";
 
 async function fetchAsUint8Array(url: string): Promise<Uint8Array> {
   const res = await fetch(url);
@@ -153,8 +154,24 @@ export async function generateBrandKitZip(
               });
             })
             .then((bytes) => {
-              const filename = `app-icon-${f.size}x${f.size}.png`;
-              zipData[`favicons/${filename}`] = bytes;
+              if (f.size === 16) {
+                zipData[`favicons/favicon-16x16.png`] = bytes;
+              } else if (f.size === 32) {
+                zipData[`favicons/favicon-32x32.png`] = bytes;
+                zipData[`favicons/favicon.ico`] = createIcoFromPng(
+                  bytes,
+                  32,
+                  32,
+                );
+              } else if (f.size === 180) {
+                zipData[`favicons/apple-touch-icon.png`] = bytes;
+              } else if (f.size === 192) {
+                zipData[`favicons/android-chrome-192x192.png`] = bytes;
+              } else if (f.size === 512) {
+                zipData[`favicons/android-chrome-512x512.png`] = bytes;
+              } else {
+                zipData[`favicons/favicon-${f.size}x${f.size}.png`] = bytes;
+              }
             })
             .catch((e) =>
               console.error(`Failed to resize favicon ${f.size}`, e),

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { parseApiError } from "@/lib/api-error";
 import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
+import { compressCanvasState } from "../utils/canvas-compression";
 
 interface CanvasSaveProps {
   canvas: fabric.Canvas | null;
@@ -29,7 +30,9 @@ export function useCanvasSave({
 
   const getCleanState = useCallback((c: fabric.Canvas) => {
     const json = c.toObject(FABRIC_CUSTOM_PROPERTIES);
-    json.objects = json.objects.filter((o: any) => o.id !== "__artboard__");
+    json.objects = json.objects.filter(
+      (o: Record<string, unknown>) => o.id !== "__artboard__",
+    );
     return JSON.stringify(json);
   }, []);
 
@@ -143,9 +146,13 @@ export function useCanvasSave({
 
       const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
       delete json.viewportTransform;
+
+      const jsonStr = JSON.stringify(json);
+      const compressedState = compressCanvasState(jsonStr);
+
       await saveStateMutateAsync({
         id: saved.imageId || imageId,
-        canvasState: JSON.stringify(json),
+        canvasState: compressedState,
       });
 
       if (saveTimeoutRef.current) {

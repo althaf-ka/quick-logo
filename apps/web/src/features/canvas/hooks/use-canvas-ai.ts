@@ -14,8 +14,8 @@ import {
   invertMaskDataUrl,
 } from "../utils/mask-export";
 import { compositeAIResult } from "../utils/composite-result";
-
 import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";
+import { compressCanvasState } from "../utils/canvas-compression";
 import { useSelectedModel } from "./use-selected-model";
 import type { EditApiRequest } from "@quicklogo/shared";
 
@@ -319,9 +319,10 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       try {
         const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);
         delete json.viewportTransform;
+        const compressedState = compressCanvasState(JSON.stringify(json));
         await api.canvas[":id"]["state"].$put({
           param: { id: imageId },
-          json: { canvasState: JSON.stringify(json) },
+          json: { canvasState: compressedState },
         });
         // Dispatch event to clear the dirty flag in useCanvasSave
         window.dispatchEvent(new CustomEvent("canvas:saved"));

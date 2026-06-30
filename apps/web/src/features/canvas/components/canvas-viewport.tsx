@@ -9,6 +9,7 @@ import {
   type CustomFabricObject,
   FABRIC_CUSTOM_PROPERTIES,
 } from "../utils/fabric-properties";
+import { decompressCanvasState } from "../utils/canvas-compression";
 
 export interface CanvasViewportProps {
   canvas: fabric.Canvas | null;
@@ -26,7 +27,8 @@ async function loadCanvasState(
   centerArtboard: () => void,
 ) {
   try {
-    const parsedState = JSON.parse(stateToLoad);
+    const jsonStr = decompressCanvasState(stateToLoad);
+    const parsedState = JSON.parse(jsonStr);
 
     delete parsedState.viewportTransform;
 

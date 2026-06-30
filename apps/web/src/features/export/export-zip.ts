@@ -1,5 +1,6 @@
 import { zipSync, strToU8 } from "fflate";
 import type { BrandKitResultsData } from "../../components/brand-kit/results/brand-kit-results";
+import { createIcoFromPng } from "../../utils/image-utils";
 
 /**
  * Helper to fetch an image and return its Uint8Array buffer
@@ -17,41 +18,44 @@ async function fetchImageBuffer(url: string): Promise<Uint8Array | null> {
 }
 
 /**
+ * Helper to fetch and resize an image
+ */
+async function fetchAndResizeImage(
+  url: string,
+  size: number,
+): Promise<Uint8Array | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(null);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, size, size);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          blob.arrayBuffer().then((ab) => resolve(new Uint8Array(ab)));
+        } else {
+          resolve(null);
+        }
+      }, "image/png");
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+/**
  * Generate a simple SVG block for a color
  */
 function generateColorSwatchSvg(hex: string): string {
   return `<svg width="500" height="500" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="${hex}" />
 </svg>`;
-}
-
-/**
- * Generate a valid .ico file from a PNG buffer
- */
-function createIcoFromPng(
-  pngBuffer: Uint8Array,
-  width: number,
-  height: number,
-): Uint8Array {
-  const icoBuffer = new Uint8Array(22 + pngBuffer.length);
-  const view = new DataView(icoBuffer.buffer);
-
-  view.setUint16(0, 0, true);
-  view.setUint16(2, 1, true);
-  view.setUint16(4, 1, true);
-
-  view.setUint8(6, width >= 256 ? 0 : width);
-  view.setUint8(7, height >= 256 ? 0 : height);
-  view.setUint8(8, 0);
-  view.setUint8(9, 0);
-  view.setUint16(10, 1, true);
-  view.setUint16(12, 32, true);
-  view.setUint32(14, pngBuffer.length, true);
-  view.setUint32(18, 22, true);
-
-  icoBuffer.set(pngBuffer, 22);
-
-  return icoBuffer;
 }
 
 /**
@@ -135,7 +139,7 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
   if (data.favicons) {
     for (const icon of data.favicons) {
       if (icon.url && !icon.url.includes("placehold.co")) {
-        const buffer = await fetchImageBuffer(icon.url);
+        const buffer = await fetchAndResizeImage(icon.url, icon.size);
         if (buffer) {
           if (icon.size === 16) {
             zipData[`favicons/favicon-16x16.png`] = buffer;

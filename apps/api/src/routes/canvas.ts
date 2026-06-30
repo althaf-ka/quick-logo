@@ -91,7 +91,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     zValidator(
       "json",
       z.object({
-        canvasState: z.string(),
+        canvasState: z.string().max(2_000_000),
       }),
     ),
     async (c) => {
