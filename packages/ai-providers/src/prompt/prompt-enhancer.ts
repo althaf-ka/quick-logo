@@ -1,8 +1,89 @@
 import type { GenerateImageMessage } from "@quicklogo/shared";
 import { createLogger } from "@quicklogo/server-telemetry";
 import { buildBasePrompt } from "./prompt-builder";
+import { matchIndustryProfile } from "./industry-profiles";
+import {
+  GENERATE_EXAMPLES,
+  EDIT_EXAMPLES,
+  formatExamples,
+} from "./prompt-examples";
 
 const logger = createLogger("ai-providers");
+
+// ── System Prompts ──────────────────────────────────────────────────────────
+
+const SYSTEM_PROMPT_GENERATE = `You are a senior logo designer translating client briefs into precise AI image generation prompts.
+
+Internally reason through these aspects in order:
+- Subject/symbol: what is the primary icon or mark?
+- Composition: how are elements arranged?
+- Typography: how does the brand name integrate (if provided)?
+- Style: what rendering approach matches the requested style?
+- Color: how are colors applied to specific elements?
+
+Then output ONE natural flowing prompt that covers all of the above.
+
+CRITICAL RULES:
+- Describe a single logo mark — never multiple logos, scenes, or compositions
+- The logo must work at small sizes — avoid tiny details, fine textures, or small text
+- NEVER describe realistic photographs, human faces, hands, landscapes, or 3D scenes
+- NEVER add text the user didn't ask for — only include brand name if one is provided
+- Keep the prompt concise while including enough detail for reliable image generation
+- Output ONLY the prompt — no labels, no numbering, no explanations, no preamble`;
+
+const SYSTEM_PROMPT_EDIT = `You are an expert AI tasked with interpreting edit instructions for an existing logo.
+The user will provide a short instruction on how to modify their current logo.
+Your job is to output a complete, vivid visual description of what the logo should look like AFTER this edit is applied, keeping the original core subject intact.
+
+CRITICAL RULES:
+- ONLY apply the specific changes the user requested
+- If they ask to "make the background green", do NOT change the main subject
+- Preserve the original subject conceptually and only alter what is explicitly mentioned
+- Keep the prompt concise while including enough detail for reliable image generation
+- Output ONLY the rewritten prompt — no explanation, no preamble, no quotes
+- Never mention real brand names or copyrighted characters
+- Always end with: "professional logo, vector-style, sharp edges, clean design"`;
+
+// ── Prompt Sanitizer ────────────────────────────────────────────────────────
+
+/**
+ * Strips common LLM output artifacts that would degrade image model performance.
+ * Handles preambles, fenced code blocks, numbered lists, label prefixes, and
+ * wrapping quotes that LLMs reliably emit despite instructions not to.
+ */
+function sanitizeLLMOutput(text: string): string {
+  let cleaned = text.trim();
+
+  // Strip "Here's the prompt:" / "Final prompt:" style preambles FIRST,
+  // so the code fence regex's ^ anchor can match after preamble removal.
+  cleaned = cleaned.replace(
+    /^(?:(?:here(?:'s| is)|final) (?:the |your |an? )?(?:improved |rewritten |enhanced |detailed )?prompt[:\s]*)/i,
+    "",
+  );
+  cleaned = cleaned.trim();
+
+  // Strip fenced code blocks (```...``` or ```json...```)
+  cleaned = cleaned.replace(/^```(?:\w+)?\s*\n?([\s\S]*?)\n?\s*```$/g, "$1");
+
+  // Strip wrapping quotes
+  cleaned = cleaned.replace(/^["']|["']$/g, "");
+
+  // Strip numbered list prefixes (1. Subject: ...)
+  cleaned = cleaned.replace(/^\d+\.\s*/gm, "");
+
+  // Strip label prefixes (Subject: ..., Style: ...)
+  cleaned = cleaned.replace(
+    /^(?:subject|composition|typography|style|color|output):\s*/gim,
+    "",
+  );
+
+  // Collapse newlines and multiple spaces
+  cleaned = cleaned.replace(/\n+/g, " ").replace(/\s{2,}/g, " ");
+
+  return cleaned.trim();
+}
+
+// ── Prompt Enhancer ─────────────────────────────────────────────────────────
 
 /**
  * Single entry point for prompt construction.
@@ -56,27 +137,14 @@ export class PromptEnhancer {
 - Keep the core un-edited elements intact.`
           : "";
 
-    const systemPrompt = isEdit
-      ? `You are an expert AI tasked with interpreting edit instructions for an existing logo.
-The user will provide a short instruction on how to modify their current logo.
-Your job is to output a complete, vivid visual description of what the logo should look like AFTER this edit is applied, keeping the original core subject intact.
+    // Build system prompt with few-shot examples
+    const baseSystemPrompt = isEdit
+      ? SYSTEM_PROMPT_EDIT
+      : SYSTEM_PROMPT_GENERATE;
 
-Rules:
-- CRITICAL: ONLY apply the specific changes the user requested. If they ask to "make the background green", do NOT change the main subject (e.g., if it's an owl, describe an owl, do not describe a leaf). Preserve the original subject conceptually and only alter what is explicitly mentioned in the edit instruction.
-- Output ONLY the rewritten detailed prompt — no explanation, no preamble, no quotes
-- Keep it under 150 words
-- Be specific about shapes, composition, and visual style
-- Never mention real brand names or copyrighted characters
-- Always end with: "professional logo, vector-style, sharp edges, clean design"${referenceRules}`
-      : `You are an expert prompt engineer for AI logo and brand identity image generation.
-Your only job is to rewrite a simple logo description into a vivid, detailed image generation prompt.
+    const examples = isEdit ? EDIT_EXAMPLES : GENERATE_EXAMPLES;
 
-Rules:
-- Output ONLY the rewritten prompt — no explanation, no preamble, no quotes
-- Keep it under 150 words
-- Be specific about shapes, composition, and visual style
-- Never mention real brand names or copyrighted characters (except the provided Brand Name)
-- Always end with: "professional logo, vector-style, sharp edges, clean design"${referenceRules}`;
+    const systemPrompt = `${baseSystemPrompt}${referenceRules}\n\nEXAMPLES:\n\n${formatExamples(examples)}`;
 
     const userPrompt = isEdit
       ? `Rewrite this instruction into a complete detailed visual description of the final edited logo.
@@ -100,7 +168,7 @@ ${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorpo
           message.config.customColors?.length && !hasReference
             ? `\nCustom colors: ${message.config.customColors.join(", ")}`
             : ""
-        }${hasReference ? "\nCRITICAL: A reference image controls all colors. Do NOT mention any color names." : ""}`;
+        }${hasReference ? "\nCRITICAL: A reference image controls all colors. Do NOT mention any color names." : ""}${this.buildIndustryContext(message.prompt, hasReference)}`;
 
     try {
       const response = await this.ai.run(PromptEnhancer.LLM_MODEL, {
@@ -115,7 +183,7 @@ ${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorpo
           },
         ],
         max_tokens: 250,
-        temperature: hasReference ? 0.4 : 0.7,
+        temperature: hasReference ? 0.2 : 0.25,
       });
 
       const text =
@@ -132,12 +200,37 @@ ${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorpo
         return message.prompt;
       }
 
-      return text;
+      return sanitizeLLMOutput(text);
     } catch (error) {
       logger.error("LLM call failed", error, {
         originalPrompt: message.prompt,
       });
       return message.prompt;
     }
+  }
+
+  /**
+   * Builds industry context hints for the LLM user prompt.
+   * Provides symbol ideas and color suggestions to guide the LLM rewrite.
+   */
+  private buildIndustryContext(prompt: string, hasReference: boolean): string {
+    const industry = matchIndustryProfile(prompt);
+    if (!industry) return "";
+
+    const parts: string[] = [];
+
+    if (industry.symbolSuggestions.length > 0) {
+      parts.push(
+        `\nIndustry symbol ideas (use as inspiration, not mandatory): ${industry.symbolSuggestions.join(", ")}`,
+      );
+    }
+
+    if (!hasReference && industry.colorSuggestions.length > 0) {
+      parts.push(
+        `Industry color direction: ${industry.colorSuggestions.join(", ")}`,
+      );
+    }
+
+    return parts.join("\n");
   }
 }
