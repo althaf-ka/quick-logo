@@ -62,7 +62,6 @@ export function CanvasEditor({
     generationStatus,
     generationBounds,
     credits,
-    selectedModel,
   } = useCanvasAI(canvas, imageId);
   useImproveHover(canvas);
 
@@ -384,13 +383,8 @@ export function CanvasEditor({
                 className="absolute bottom-3 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 px-4"
               >
                 {(() => {
-                  const strategy = selectedModel?.editingStrategy;
                   let validationError = "";
-                  if (
-                    canvasMode === "inpaint" &&
-                    !maskData &&
-                    strategy !== "inpaint-with-prompt"
-                  ) {
+                  if (canvasMode === "inpaint" && !maskData) {
                     validationError = "Please draw a mask first";
                   } else if (canvasMode === "img2img" && !selectedObject) {
                     validationError = "Please select an image first";
@@ -403,9 +397,7 @@ export function CanvasEditor({
                       onSubmit={handleGenerate}
                       targetContext={
                         canvasMode === "inpaint"
-                          ? strategy === "inpaint-with-prompt"
-                            ? "Spot Edit"
-                            : "Spot Edit (Masked)"
+                          ? "Spot Edit (Masked)"
                           : canvasMode === "img2img"
                             ? "Improve"
                             : undefined
@@ -416,9 +408,7 @@ export function CanvasEditor({
                       validationError={validationError}
                       placeholder={
                         canvasMode === "inpaint"
-                          ? strategy === "inpaint-with-prompt"
-                            ? "Describe what to change — e.g. 'make the background blue, keep the logo'..."
-                            : "Describe what should replace the masked area..."
+                          ? "Describe what should replace the masked area..."
                           : canvasMode === "img2img"
                             ? "Describe how to improve the selected image..."
                             : "Describe what to generate..."

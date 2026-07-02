@@ -111,9 +111,9 @@ export function AiPanel({
   );
 
   const { workflows } = useWorkflowReadiness();
-  const { models: currentModels, editingStrategy } = useSelectedModel();
+  const { models: currentModels } = useSelectedModel();
 
-  const isMaskOptional = editingStrategy === "inpaint-with-prompt";
+  const isMaskOptional = false;
   const hasMask = !!maskData;
 
   // Automatically switch to a supported model if the current one doesn't support this mode

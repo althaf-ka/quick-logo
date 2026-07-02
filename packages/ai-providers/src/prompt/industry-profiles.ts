@@ -122,31 +122,27 @@ export const INDUSTRY_PROFILES: Record<string, IndustryProfile> = {
 };
 
 /**
- * Tokenizes a prompt into a Set of individual words for exact matching.
- * Prevents "reconstruction" from matching the "construction" keyword.
- */
-function tokenize(text: string): Set<string> {
-  return new Set(
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter(Boolean),
-  );
-}
-
-/**
  * Matches a user's prompt against industry profiles using word-boundary matching.
  * Scores by number of exact keyword hits. Returns the best match or null.
  */
 export function matchIndustryProfile(prompt: string): IndustryProfile | null {
   // Truncate to prevent performance issues on massive copy-pastes
-  const words = tokenize(prompt.slice(0, 500));
+  const text = prompt.slice(0, 500);
   let bestMatch: IndustryProfile | null = null;
   let bestScore = 0;
 
   for (const [, profile] of Object.entries(INDUSTRY_PROFILES)) {
-    const score = profile.keywords.filter((kw) => words.has(kw)).length;
+    let score = 0;
+    for (const kw of profile.keywords) {
+      // Use regex word boundaries to match exact phrases (e.g. "data flow" or "tech")
+      // Escape any special regex chars in kw just in case, though they are alphanumeric
+      const safeKw = kw.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const regex = new RegExp(`\\b${safeKw}\\b`, "i");
+      if (regex.test(text)) {
+        score++;
+      }
+    }
+
     if (score > bestScore) {
       bestScore = score;
       bestMatch = profile;

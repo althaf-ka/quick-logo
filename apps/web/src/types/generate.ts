@@ -1,7 +1,7 @@
 // ── Core Types ──────────────────────────────────────────────────────────
 
 export type ImageCount = 1 | 2 | 4;
-export type BackgroundType = "transparent" | "white" | "custom";
+export type BackgroundType = "black" | "white" | "custom";
 export type GenerationStatus =
   | "idle"
   | "generating"

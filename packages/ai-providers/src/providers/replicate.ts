@@ -17,7 +17,6 @@ export const REPLICATE_MODELS = {
 /**
  * Defines how a model accepts image modifications.
  * - inpaint-with-mask: Uses a secondary black-and-white mask image to dictate what to edit.
- * - inpaint-with-prompt: Uses natural language (the prompt) to deduce what area of the image to edit.
  * - remix-image: Uses the original image as a structural blueprint to generate a brand new image variation.
  */
 export type EditingStrategy =
@@ -27,13 +26,8 @@ export type EditingStrategy =
       maskField: string;
       polarity: "standard" | "inverted";
     }
-  | {
-      type: "inpaint-with-prompt";
-      imageField: string;
-      imageFieldIsArray: boolean;
-      figureNaming: "figure-number";
-    }
-  | { type: "remix-image"; imageField: string; strengthField?: string };
+  | { type: "remix-image"; imageField: string; strengthField?: string }
+  | { type: "remix-image-array"; imageField: string; strengthField?: string };
 
 export interface ModelCapability {
   aspectRatio: boolean;
@@ -84,10 +78,8 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
   [REPLICATE_MODELS.SEEDREAM]: {
     aspectRatio: true,
     editingStrategy: {
-      type: "inpaint-with-prompt",
+      type: "remix-image-array",
       imageField: "image_input",
-      imageFieldIsArray: true,
-      figureNaming: "figure-number",
     },
     defaultOutputFormat: "png",
   },
@@ -216,26 +208,28 @@ export class ReplicateProvider implements AIProvider {
         }
         break;
       }
-      case "inpaint-with-prompt": {
-        if (params.canvasImage) {
-          if (strategy.imageFieldIsArray) {
-            const images = [params.canvasImage];
-            if (params.maskImage) {
-              images.push(params.maskImage);
-            }
-            input[strategy.imageField] = images;
-          } else {
-            input[strategy.imageField] = params.canvasImage;
-          }
-          delete input.aspect_ratio;
-        }
-        break;
-      }
-      case "remix-image": {
+      case "remix-image":
+      case "remix-image-array": {
         const refUrl = params.referenceImage || params.canvasImage;
         if (refUrl) {
-          input[strategy.imageField] = refUrl;
+          if (strategy.type === "remix-image-array") {
+            input[strategy.imageField] = [refUrl];
+          } else {
+            input[strategy.imageField] = refUrl;
+          }
         }
+
+        if (
+          model === REPLICATE_MODELS.SEEDREAM &&
+          params.width &&
+          params.height
+        ) {
+          input.size = "custom";
+          input.width = params.width;
+          input.height = params.height;
+          delete input.aspect_ratio;
+        }
+
         if (model === REPLICATE_MODELS.FLUX_KONTEXT && params.referenceImage) {
           input.aspect_ratio = "match_input_image";
         }

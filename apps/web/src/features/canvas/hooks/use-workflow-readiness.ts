@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useCanvasStore } from "../store/canvas-store";
 import { useShallow } from "zustand/react/shallow";
-import { useSelectedModel } from "./use-selected-model";
 
 export type WorkflowState = "Ready" | "Needs Input" | "Coming Soon";
 
@@ -46,8 +45,7 @@ export function useWorkflowReadiness() {
 
   const hasMask = !!maskData;
 
-  const { editingStrategy } = useSelectedModel();
-  const isMaskOptional = editingStrategy === "inpaint-with-prompt";
+  const isMaskOptional = false;
 
   const workflows = useMemo<WorkflowDefinition[]>(() => {
     return [

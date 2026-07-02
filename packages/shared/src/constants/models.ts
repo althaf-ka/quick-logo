@@ -36,7 +36,7 @@ export interface ModelOption {
   supportsInpaint?: boolean;
   /** Mask polarity for inpainting. Only relevant when supportsInpaint is true. */
   maskPolarity?: MaskPolarity;
-  editingStrategy?: "inpaint-with-mask" | "inpaint-with-prompt" | "remix-image";
+  editingStrategy?: "inpaint-with-mask" | "remix-image" | "remix-image-array";
 }
 
 export const MODELS: ModelOption[] = [

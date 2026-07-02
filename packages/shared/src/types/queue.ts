@@ -14,7 +14,7 @@ export interface GenerateImageMessage {
     colorPalette?: string;
     customColors?: string[];
     negativePrompt?: string;
-    background?: "transparent" | "white" | "custom";
+    background?: "black" | "white" | "custom";
     customBgColor?: string;
     referenceImageUrl?: string;
     referenceStrength?: number;

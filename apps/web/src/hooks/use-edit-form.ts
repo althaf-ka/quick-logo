@@ -231,22 +231,12 @@ export function useEditForm({
       setErrorState(null);
 
       try {
-        const fetchedBrandName = (fetchResult?.image as Record<string, unknown>)
-          ?.brandName;
-        const brandName =
-          typeof fetchedBrandName === "string" ? fetchedBrandName : "";
-
         const payload: EditApiRequest = {
           prompt: activePrompt,
           sourceImageId: targetImageId,
           config: {
             model,
-            brandName,
             imageCount: 1,
-            style: "",
-            colorPalette: "auto",
-            background: "transparent",
-            customBgColor: "#ffffff",
             referenceImageUrl: targetImageUrl,
             magicPrompt: false,
             canvasMode: "edit",
@@ -270,7 +260,6 @@ export function useEditForm({
       mutateAsync,
       selectedEntry?.id,
       selectedEntry?.url,
-      fetchResult?.image,
     ],
   );
 

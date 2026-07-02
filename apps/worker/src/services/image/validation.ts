@@ -24,10 +24,7 @@ export function validateImageGenerationInput(
     if (!message.config.canvasImageUrl) {
       throw new PipelineError("Inpainting requires a canvas image", false);
     }
-    if (
-      mapping.capabilities.editingStrategy !== "inpaint-with-prompt" &&
-      !message.config.maskImageUrl
-    ) {
+    if (!message.config.maskImageUrl) {
       throw new PipelineError(
         "Inpainting requires a mask image for this model",
         false,

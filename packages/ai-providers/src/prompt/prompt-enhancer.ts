@@ -54,16 +54,20 @@ CRITICAL RULES:
 function sanitizeLLMOutput(text: string): string {
   let cleaned = text.trim();
 
-  // Strip "Here's the prompt:" / "Final prompt:" style preambles FIRST,
-  // so the code fence regex's ^ anchor can match after preamble removal.
+  // 1. Extract fenced code blocks FIRST. This prevents post-ambles from breaking the anchor.
+  const fenceMatch = cleaned.match(/```(?:\w+)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1] || "";
+  }
+
+  cleaned = cleaned.trim();
+
+  // 2. Strip "Here's the prompt:" style preambles (in case there was no code fence, or it was inside it)
   cleaned = cleaned.replace(
     /^(?:(?:here(?:'s| is)|final) (?:the |your |an? )?(?:improved |rewritten |enhanced |detailed )?prompt[:\s]*)/i,
     "",
   );
   cleaned = cleaned.trim();
-
-  // Strip fenced code blocks (```...``` or ```json...```)
-  cleaned = cleaned.replace(/^```(?:\w+)?\s*\n?([\s\S]*?)\n?\s*```$/g, "$1");
 
   // Strip wrapping quotes
   cleaned = cleaned.replace(/^["']|["']$/g, "");
@@ -120,7 +124,7 @@ export class PromptEnhancer {
 
   private async rewriteWithLLM(message: GenerateImageMessage): Promise<string> {
     const style = message.config.style ?? "professional";
-    const palette = message.config.colorPalette ?? "vibrant";
+    const palette = message.config.colorPalette ?? "auto";
     const hasReference = !!message.config.referenceImageUrl;
 
     const isEdit = message.isEdit;

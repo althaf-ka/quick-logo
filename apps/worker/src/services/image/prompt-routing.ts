@@ -28,34 +28,6 @@ export async function routePromptAndBuildParams(
     negativePrompt = enhanced.negativePrompt;
   }
 
-  // Model-agnostic prompt engineering based on editing capabilities
-  if (message.config.canvasMode === "inpaint") {
-    const { editingStrategy, promptTemplate } = mapping.capabilities;
-
-    if (editingStrategy === "inpaint-with-prompt") {
-      const hasMask = !!message.config.maskImageUrl;
-
-      const usesFigure = promptTemplate?.figureNaming === "figure-number";
-      const label = usesFigure ? "Figure" : "Image";
-
-      const prefix = hasMask
-        ? `${label} 1 is the base image. ${label} 2 is a mask highlighting the target region. Exclusively within that highlighted region in ${label} 1,`
-        : (promptTemplate?.prefix ?? "In the image,");
-
-      const suffix = hasMask
-        ? `Do not alter the unmasked areas of ${label} 1.`
-        : (promptTemplate?.suffix ??
-          "Ensure any existing text, logos, and brand elements remain exactly unchanged. Do not alter the unedited portions of the image.");
-
-      if (
-        !finalPrompt.toLowerCase().includes(`${label.toLowerCase()} 1`) &&
-        !finalPrompt.toLowerCase().includes("in the image")
-      ) {
-        finalPrompt = `${prefix} ${finalPrompt.charAt(0).toLowerCase() + finalPrompt.slice(1)}. ${suffix}`;
-      }
-    }
-  }
-
   if (
     message.config.canvasMode === "img2img" &&
     mapping.capabilities.imageToImage

@@ -12,19 +12,12 @@ export interface ModelMapping {
     nativePromptEnhancement: boolean;
     imageToImage: boolean;
     inpaint?: boolean;
-    editingStrategy?:
-      | "inpaint-with-mask"
-      | "inpaint-with-prompt"
-      | "remix-image";
+    editingStrategy?: "inpaint-with-mask" | "remix-image" | "remix-image-array";
     /** Mask polarity: "standard" = white=inpaint, "inverted" = black=inpaint */
     maskPolarity?: "standard" | "inverted";
     apiSchema?: "v1" | "v2";
-    /** Prompt template for inpaint-with-prompt models. Configurable per model. */
+    /** Prompt template config */
     promptTemplate?: {
-      /** Prefix prepended before the user's prompt (e.g., "In Figure 1,") */
-      prefix?: string;
-      /** Suffix appended after the user's prompt */
-      suffix?: string;
       /** Prefix for img2img mode */
       img2imgPrefix?: string;
       /** Suffix for img2img mode */
@@ -125,12 +118,9 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
-      inpaint: true,
-      editingStrategy: "inpaint-with-prompt",
+      inpaint: false,
+      editingStrategy: "remix-image-array",
       promptTemplate: {
-        prefix: "In Figure 1,",
-        suffix:
-          "Ensure any existing text, logos, and brand elements remain exactly unchanged. Do not alter the unedited portions of Figure 1.",
         img2imgPrefix: "Based on Figure 1,",
         img2imgSuffix: "Keep the core subject and composition intact.",
         figureNaming: "figure-number",

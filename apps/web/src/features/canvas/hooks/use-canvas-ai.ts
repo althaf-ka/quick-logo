@@ -61,11 +61,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
       return;
     }
 
-    if (
-      state.canvasMode === "inpaint" &&
-      !state.maskData &&
-      selectedModel?.editingStrategy !== "inpaint-with-prompt"
-    ) {
+    if (state.canvasMode === "inpaint" && !state.maskData) {
       toast.error("Please paint a mask first");
       return;
     }
@@ -217,12 +213,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         sourceImageId: imageId,
         config: {
           model: state.aiModel as EditApiRequest["config"]["model"],
-          brandName: "",
           imageCount: 1,
-          style: "",
-          colorPalette: "auto",
-          background: "transparent",
-          customBgColor: "#ffffff",
           referenceImageUrl: uploadedRegionUrl || canvasImageUrl || undefined,
           magicPrompt: state.canvasMode === "img2img",
           canvasMode:
@@ -302,9 +293,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         artboardBounds,
         generationGroupId,
         generatedFromObjectId: activeObjectIdToReplace,
-        ...(selectedModel?.editingStrategy === "inpaint-with-prompt" &&
-        state.maskData &&
-        state.canvasMode === "inpaint"
+        ...(state.maskData && state.canvasMode === "inpaint"
           ? {
               maskDataUrl: state.maskData,
               originalImageUrl: canvasImageUrl || undefined,

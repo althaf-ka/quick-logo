@@ -109,7 +109,7 @@ const PALETTE_MODIFIERS: Record<string, string> = {
 // ── Background Modifiers ────────────────────────────────────────────────────
 
 const BACKGROUND_MODIFIERS: Record<string, string> = {
-  transparent: "on a transparent background, isolated subject, no background",
+  black: "on a solid black background, isolated subject",
   white: "on a clean white background, isolated, no background elements",
   custom: "on a solid colored background",
 };

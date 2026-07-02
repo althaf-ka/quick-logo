@@ -408,8 +408,8 @@ export function GenerationSidebar({
           <ToggleGroupItem value="white" className="flex-1 text-[11px]">
             White
           </ToggleGroupItem>
-          <ToggleGroupItem value="transparent" className="flex-1 text-[11px]">
-            None
+          <ToggleGroupItem value="black" className="flex-1 text-[11px]">
+            Black
           </ToggleGroupItem>
           <ToggleGroupItem value="custom" className="flex-1 text-[11px]">
             Custom

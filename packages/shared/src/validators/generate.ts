@@ -15,7 +15,7 @@ export const generateConfigSchema = z.object({
     .array(z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/))
     .max(5),
   negativePrompt: z.string().max(500).optional().default(""),
-  background: z.enum(["transparent", "white", "custom"]),
+  background: z.enum(["black", "white", "custom"]),
   customBgColor: z.string(),
   referenceImage: z
     .custom<File>(
@@ -44,10 +44,7 @@ export const generateApiConfigSchema = z.object({
   colorPalette: z.string().optional().default("auto"),
   customColors: z.array(hexColor).max(5).optional(),
   negativePrompt: z.string().max(500).optional(),
-  background: z
-    .enum(["transparent", "white", "custom"])
-    .optional()
-    .default("white"),
+  background: z.enum(["black", "white", "custom"]).optional().default("white"),
   customBgColor: z.string().optional().default("#ffffff"),
   referenceImageUrl: z.url().optional(),
   magicPrompt: z.boolean().optional().default(true),
@@ -64,7 +61,23 @@ export const generateApiRequestSchema = z.object({
   config: generateApiConfigSchema,
 });
 
-export const editApiRequestSchema = generateApiRequestSchema.extend({
+export const editApiConfigSchema = z.object({
+  model: z.enum(modelIds),
+  imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
+  referenceImageUrl: z.url().optional(),
+  magicPrompt: z.boolean().optional().default(true),
+  canvasMode: z
+    .enum(["edit", "img2img", "inpaint", "text2img"])
+    .optional()
+    .default("edit"),
+  maskImageUrl: z.url().optional(),
+  canvasImageUrl: z.url().optional(),
+  negativePrompt: z.string().max(500).optional(),
+});
+
+export const editApiRequestSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required"),
+  config: editApiConfigSchema,
   sourceImageId: z.string().min(1, "Source image ID is required"),
 });
 
