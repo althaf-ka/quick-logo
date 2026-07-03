@@ -119,6 +119,8 @@ export class ReplicateProvider implements AIProvider {
     const strategy = caps.editingStrategy;
 
     if (!strategy) return;
+    if (mode === "img2img" && !strategy.type.startsWith("remix")) return;
+    if (mode === "inpaint" && strategy.type !== "inpaint-with-mask") return;
     if (mode !== "inpaint" && mode !== "img2img") return;
 
     switch (strategy.type) {

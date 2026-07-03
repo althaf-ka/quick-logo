@@ -1,6 +1,7 @@
 import type { GenerateImageMessage } from "@quicklogo/shared";
 import {
   matchIndustryProfile,
+  INDUSTRY_PROFILES,
   type IndustryProfile,
 } from "./industry-profiles";
 
@@ -118,9 +119,10 @@ const BACKGROUND_MODIFIERS: Record<string, string> = {
 
 const REFERENCE_INSTRUCTIONS: Record<string, string> = {
   strong:
-    "Closely match the exact color palette, typography style, composition, and overall visual identity from image 0.",
-  moderate: "Match the color scheme, style, and visual elements from image 0.",
-  subtle: "Take subtle visual inspiration from image 0.",
+    "Closely match the exact color palette, typography style, composition, and overall visual identity from the provided reference image.",
+  moderate:
+    "Match the color scheme, style, and visual elements from the provided reference image.",
+  subtle: "Take subtle visual inspiration from the provided reference image.",
 };
 
 function getReferenceLevel(
@@ -266,7 +268,20 @@ export function buildBasePrompt(
 
   // Industry context — injected here so ALL models benefit (including those
   // with native prompt enhancement that skip the LLM rewrite path)
-  const industry = matchIndustryProfile(message.prompt);
+  let industry: IndustryProfile | null = null;
+
+  if (message.config.industry) {
+    const matchedProfile =
+      INDUSTRY_PROFILES[message.config.industry.toLowerCase()];
+    if (matchedProfile) {
+      industry = matchedProfile;
+    }
+  }
+
+  if (!industry) {
+    industry = matchIndustryProfile(message.prompt);
+  }
+
   if (industry && !hasReference) {
     parts.push(`style cues: ${industry.visualCues.slice(0, 3).join(", ")}`);
   }

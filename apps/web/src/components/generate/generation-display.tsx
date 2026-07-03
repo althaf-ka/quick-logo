@@ -56,26 +56,26 @@ function EmptyState({
   onSuggestionClick?: (s: string) => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="bg-primary/10 flex size-16 items-center justify-center">
-        <SparkleIcon weight="duotone" className="text-primary size-8" />
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+      <div className="bg-primary/10 flex size-14 items-center justify-center">
+        <SparkleIcon weight="duotone" className="text-primary size-7" />
       </div>
 
-      <div className="space-y-2">
-        <h3 className="text-base font-semibold tracking-tight">
+      <div className="space-y-1.5">
+        <h3 className="text-sm font-semibold tracking-tight">
           Create your logo
         </h3>
-        <p className="text-muted-foreground max-w-sm text-sm">
+        <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
           Describe the logo you want and we&apos;ll generate it for you.
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex w-full max-w-xs flex-col gap-1.5">
         {PROMPT_SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion}
             onClick={() => onSuggestionClick?.(suggestion)}
-            className="bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground cursor-pointer border px-4 py-2.5 text-xs transition-colors"
+            className="bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground border-border/50 cursor-pointer border px-3 py-2 text-[11px] transition-colors"
           >
             &ldquo;{suggestion}&rdquo;
           </button>

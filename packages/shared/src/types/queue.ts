@@ -24,6 +24,7 @@ export interface GenerateImageMessage {
     canvasMode?: "edit" | "img2img" | "inpaint" | "text2img";
     maskImageUrl?: string;
     canvasImageUrl?: string;
+    industry?: string;
   };
 }
 

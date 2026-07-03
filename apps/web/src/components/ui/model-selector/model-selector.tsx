@@ -18,6 +18,13 @@ import {
   ShuffleIcon,
   CaretDownIcon,
   StarIcon,
+  ApertureIcon,
+  TextAaIcon,
+  PaletteIcon,
+  MagicWandIcon,
+  PaintBrushIcon,
+  SwatchesIcon,
+  DiamondIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 
@@ -26,6 +33,14 @@ const MODEL_ICONS = {
   brain: BrainIcon,
   crown: CrownIcon,
   shuffle: ShuffleIcon,
+  aperture: ApertureIcon,
+  typography: TextAaIcon,
+  palette: PaletteIcon,
+  magic: MagicWandIcon,
+  star: StarIcon,
+  brush: PaintBrushIcon,
+  swatches: SwatchesIcon,
+  diamond: DiamondIcon,
 } as const;
 
 interface ModelSelectorProps {

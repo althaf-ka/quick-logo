@@ -1,7 +1,11 @@
 import type { GenerateImageMessage } from "@quicklogo/shared";
 import { createLogger } from "@quicklogo/server-telemetry";
 import { buildBasePrompt } from "./prompt-builder";
-import { matchIndustryProfile } from "./industry-profiles";
+import {
+  matchIndustryProfile,
+  INDUSTRY_PROFILES,
+  type IndustryProfile,
+} from "./industry-profiles";
 import {
   GENERATE_EXAMPLES,
   EDIT_EXAMPLES,
@@ -185,7 +189,7 @@ ${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorpo
           message.config.customColors?.length && !hasReference
             ? `\nCustom colors: ${message.config.customColors.join(", ")}`
             : ""
-        }${hasReference ? "\nCRITICAL: A reference image controls all colors. Do NOT mention any color names." : ""}${this.buildIndustryContext(message.prompt, hasReference)}`;
+        }${hasReference ? "\nCRITICAL: A reference image controls all colors. Do NOT mention any color names." : ""}${this.buildIndustryContext(message, hasReference)}`;
 
     try {
       const response = await this.ai.run(PromptEnhancer.LLM_MODEL, {
@@ -230,21 +234,59 @@ ${message.config.brandName ? `Brand Name: "${message.config.brandName}" (Incorpo
    * Builds industry context hints for the LLM user prompt.
    * Provides symbol ideas and color suggestions to guide the LLM rewrite.
    */
-  private buildIndustryContext(prompt: string, hasReference: boolean): string {
-    const industry = matchIndustryProfile(prompt);
+  private buildIndustryContext(
+    message: GenerateImageMessage,
+    hasReference: boolean,
+  ): string {
+    let industry: IndustryProfile | null = null;
+
+    if (message.config.industry) {
+      const matchedProfile =
+        INDUSTRY_PROFILES[message.config.industry.toLowerCase()];
+      if (matchedProfile) {
+        industry = matchedProfile;
+      }
+    }
+
+    if (!industry) {
+      industry = matchIndustryProfile(message.prompt);
+    }
+
     if (!industry) return "";
 
     const parts: string[] = [];
 
+    if (message.config.industry) {
+      parts.push(
+        `\nIndustry Context: The user explicitly requested a logo for the "${message.config.industry}" industry.`,
+      );
+    } else {
+      parts.push(
+        `\nIndustry Context: Based on the prompt, the industry appears to be related to our "${industry.keywords[0]}" profile.`,
+      );
+    }
+
+    if (industry.visualCues.length > 0) {
+      parts.push(
+        `Industry visual aesthetic: ${industry.visualCues.join(", ")}`,
+      );
+    }
+
     if (industry.symbolSuggestions.length > 0) {
       parts.push(
-        `\nIndustry symbol ideas (use as inspiration, not mandatory): ${industry.symbolSuggestions.join(", ")}`,
+        `Industry symbol ideas (use as inspiration, not mandatory): ${industry.symbolSuggestions.join(", ")}`,
       );
     }
 
     if (!hasReference && industry.colorSuggestions.length > 0) {
       parts.push(
         `Industry color direction: ${industry.colorSuggestions.join(", ")}`,
+      );
+    }
+
+    if (industry.avoid.length > 0) {
+      parts.push(
+        `CRITICAL - AVOID these aesthetics for this industry: ${industry.avoid.join(", ")}`,
       );
     }
 

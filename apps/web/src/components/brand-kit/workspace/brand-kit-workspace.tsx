@@ -207,10 +207,6 @@ export function BrandKitWorkspace({
                       : undefined
                   }
                   onClearTarget={() => bk.setTargetSection(null)}
-                  {...(!bk.isFromPlatform && {
-                    brandName: bk.brandName,
-                    onBrandNameChange: bk.setBrandName,
-                  })}
                   showConfigTrigger={isCompact}
                   onConfigTrigger={() => {
                     if (document.activeElement instanceof HTMLElement) {

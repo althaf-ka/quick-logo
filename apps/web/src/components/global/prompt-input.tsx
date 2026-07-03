@@ -17,6 +17,7 @@ import {
   WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
+import { IndustryPicker } from "./industry-picker";
 
 interface PromptInputProps {
   value: string;
@@ -40,6 +41,8 @@ interface PromptInputProps {
   modelContext?: ModelContext;
   brandName?: string;
   onBrandNameChange?: (value: string) => void;
+  industry?: string;
+  onIndustryChange?: (value: string) => void;
   className?: string;
   contextPrompt?: string;
   allowEmptySubmit?: boolean;
@@ -71,6 +74,8 @@ export function PromptInput({
   onModelChange,
   brandName,
   onBrandNameChange,
+  industry,
+  onIndustryChange,
   className,
   contextPrompt,
   modelContext = "generate",
@@ -83,9 +88,9 @@ export function PromptInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isCompact = size === "compact";
 
-  const maxHeight = isCompact ? 100 : 140;
-  const minHeight = isCompact ? 36 : 56;
-  const rows = isCompact ? 1 : 2;
+  const maxHeight = isCompact ? 100 : 200;
+  const minHeight = isCompact ? 36 : 72;
+  const rows = isCompact ? 1 : 3;
 
   const [localValue, setLocalValue] = useState(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -184,23 +189,35 @@ export function PromptInput({
           ) : null}
 
           {onBrandNameChange && !isCompact && !targetContext ? (
-            <div className="bg-muted/5 border-border/40 focus-within:bg-muted/10 flex h-10 items-center gap-3 border-b px-3 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <span className="text-muted-foreground/50 text-[10px] font-bold tracking-wider uppercase select-none">
-                  Brand Name:
-                </span>
-                <div className="bg-border h-4 w-px" />
+            <div className="bg-muted/5 border-border/40 flex flex-col items-stretch border-b transition-colors sm:h-10 sm:flex-row sm:items-center">
+              <div className="border-border/40 flex h-10 w-full items-center gap-3 border-b px-3 sm:flex-1 sm:border-b-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground/50 shrink-0 text-left text-[10px] font-bold tracking-wider uppercase select-none">
+                    Brand Name:
+                  </span>
+                  <div className="bg-border h-4 w-px shrink-0" />
+                </div>
+                <input
+                  type="text"
+                  value={brandName || ""}
+                  onChange={(e) => onBrandNameChange(e.target.value)}
+                  maxLength={50}
+                  className="text-foreground h-full w-full flex-1 bg-transparent text-xs font-normal outline-none"
+                  disabled={isLoading}
+                />
               </div>
-              <input
-                type="text"
-                value={brandName || ""}
-                onChange={(e) => onBrandNameChange(e.target.value)}
-                maxLength={50}
-                className="text-foreground h-full w-full flex-1 bg-transparent text-sm outline-none"
-                disabled={isLoading}
-              />
+              {onIndustryChange ? (
+                <div className="border-border/40 hidden w-full sm:flex sm:w-auto sm:min-w-[240px] sm:border-l">
+                  <IndustryPicker
+                    value={industry || ""}
+                    onChange={onIndustryChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
+
           <textarea
             ref={textareaRef}
             value={localValue}

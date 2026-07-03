@@ -210,7 +210,8 @@ export function useGenerateForm() {
           prompt: activePrompt,
           config: {
             ...cleanConfig,
-            canvasMode: "edit",
+            industry: cleanConfig.industry ?? "",
+            canvasMode: finalReferenceUrl ? "img2img" : "text2img",
             ...(finalReferenceUrl && { referenceImageUrl: finalReferenceUrl }),
           },
         };

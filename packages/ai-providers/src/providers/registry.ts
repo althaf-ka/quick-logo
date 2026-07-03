@@ -179,6 +179,36 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       height: 1024,
     },
   },
+  "quick-flux-kontext": {
+    provider: "replicate",
+    inputType: "json",
+    backendModel: "black-forest-labs/flux-kontext-pro",
+    capabilities: {
+      nativePromptEnhancement: false,
+      imageToImage: true,
+      inpaint: false,
+      editingStrategy: "remix-image",
+    },
+    defaultParams: {
+      width: 1024,
+      height: 1024,
+    },
+  },
+  "quick-flux-2-pro": {
+    provider: "replicate",
+    inputType: "json",
+    backendModel: "black-forest-labs/flux-2-pro",
+    capabilities: {
+      nativePromptEnhancement: false,
+      imageToImage: true,
+      inpaint: false,
+      editingStrategy: "remix-image",
+    },
+    defaultParams: {
+      width: 1024,
+      height: 1024,
+    },
+  },
 };
 
 const MODEL_REGISTRY_BY_ID: Partial<Record<string, ModelMapping>> =

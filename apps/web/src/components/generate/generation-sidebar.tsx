@@ -17,14 +17,23 @@ import {
   ComboboxItem,
 } from "@quicklogo/ui/components/combobox";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
+import { IndustryPicker } from "@/components/global/industry-picker";
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@quicklogo/ui/components/toggle-group";
+import { Input } from "@quicklogo/ui/components/input";
 import { Textarea } from "@quicklogo/ui/components/textarea";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@quicklogo/ui/components/drawer";
+import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
 
 import { Button } from "@quicklogo/ui/components/button";
-import { Input } from "@quicklogo/ui/components/input";
 import {
   Dialog,
   DialogContent,
@@ -115,6 +124,7 @@ export function GenerationSidebar({
   className,
   disabled,
 }: GenerationSidebarProps) {
+  const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newColor, setNewColor] = useState("#6366f1");
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
@@ -133,10 +143,9 @@ export function GenerationSidebar({
     ? selectedModel.nativeStyles!.map((s) => ({ id: s.id, name: s.label }))
     : STYLES;
   const configKey = isNative ? "nativeStyle" : "style";
-  const activeStyleId = isNative ? config.nativeStyle || "NONE" : config.style;
-  const activeStyle =
-    currentStyles.find((s) => s.id === activeStyleId) ||
-    (isNative ? currentStyles[0] : null);
+  let activeStyleId = isNative ? config.nativeStyle : config.style;
+  if (activeStyleId === "NONE") activeStyleId = "";
+  const activeStyle = currentStyles.find((s) => s.id === activeStyleId) || null;
 
   return (
     <div
@@ -163,6 +172,19 @@ export function GenerationSidebar({
           className="h-8 text-xs"
         />
       </ConfigField>
+
+      <div className="sm:hidden">
+        <ConfigField
+          label="Industry"
+          tooltip="Help the AI generate better visual concepts."
+        >
+          <IndustryPicker
+            value={config.industry || ""}
+            onChange={(val) => onConfigChange("industry", val)}
+            variant="sidebar"
+          />
+        </ConfigField>
+      </div>
 
       <ConfigField
         label="Model"
@@ -204,14 +226,11 @@ export function GenerationSidebar({
               <span className="flex-1 text-xs font-medium">
                 {activeStyle.name}
               </span>
-              {!isNative ||
-              (isNative &&
-                activeStyle.id !== "NONE" &&
-                activeStyle.id !== "") ? (
+              {activeStyle.id !== "" ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onConfigChange(configKey, isNative ? "NONE" : "");
+                    onConfigChange(configKey, "");
                   }}
                   className="text-muted-foreground/50 hover:text-destructive flex size-5 shrink-0 items-center justify-center rounded transition-colors"
                 >
@@ -220,56 +239,111 @@ export function GenerationSidebar({
               ) : null}
             </>
           ) : (
-            <span className="flex-1 text-xs font-medium">Select style</span>
+            <span className="flex-1 text-xs font-medium">
+              Auto (AI Chooses)
+            </span>
           )}
         </div>
 
-        <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Choose Style</DialogTitle>
-              <DialogDescription>Select a visual style</DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-4 gap-2 py-2">
-              {currentStyles.map((style, index) => {
-                const isSelected = activeStyleId === style.id;
-                return (
-                  <button
-                    key={style.id}
-                    onClick={() => {
-                      onConfigChange(
-                        configKey as "style" | "nativeStyle",
-                        style.id,
-                      );
-                      setStyleDialogOpen(false);
-                    }}
-                    className={cn(
-                      "group/s flex cursor-pointer flex-col items-center gap-1.5 border p-2 transition-all duration-150",
-                      isSelected
-                        ? "border-primary bg-primary/5 ring-primary/20 ring-1"
-                        : "border-border hover:border-primary/40 hover:bg-muted/30",
-                    )}
-                  >
-                    <div
+        {isMobile ? (
+          <Drawer
+            open={styleDialogOpen}
+            onOpenChange={setStyleDialogOpen}
+            nested
+          >
+            <DrawerContent className="max-h-[85vh]">
+              <DrawerHeader>
+                <DrawerTitle>Choose Style</DrawerTitle>
+                <DrawerDescription>Select a visual style</DrawerDescription>
+              </DrawerHeader>
+              <div className="grid grid-cols-4 gap-2 overflow-y-auto px-4 py-2">
+                {currentStyles.map((style, index) => {
+                  const isSelected = activeStyleId === style.id;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => {
+                        onConfigChange(
+                          configKey as "style" | "nativeStyle",
+                          style.id,
+                        );
+                        setStyleDialogOpen(false);
+                      }}
                       className={cn(
-                        "flex aspect-square w-full items-center justify-center bg-linear-to-br transition-transform duration-150 group-hover/s:scale-[1.03]",
-                        STYLE_GRADIENTS[style.id] ||
-                          GRADIENT_LIST[index % GRADIENT_LIST.length],
+                        "group/s flex cursor-pointer flex-col items-center gap-1.5 border p-2 transition-all duration-150",
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                          : "border-border hover:border-primary/40 hover:bg-muted/30",
                       )}
                     >
-                      <span className="text-xl font-black text-white/90 drop-shadow-sm">
-                        {style.name.charAt(0)}
+                      <div
+                        className={cn(
+                          "flex aspect-square w-full items-center justify-center bg-linear-to-br transition-transform duration-150 group-hover/s:scale-[1.03]",
+                          STYLE_GRADIENTS[style.id] ||
+                            GRADIENT_LIST[index % GRADIENT_LIST.length],
+                        )}
+                      >
+                        <span className="text-xl font-bold text-white drop-shadow-sm">
+                          {style.name.charAt(0)}
+                        </span>
+                      </div>
+                      <span className="w-full truncate text-center text-[10px] font-medium">
+                        {style.name}
                       </span>
-                    </div>
-                    <span className="text-[10px] font-medium">
-                      {style.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </DialogContent>
-        </Dialog>
+                    </button>
+                  );
+                })}
+              </div>
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Choose Style</DialogTitle>
+                <DialogDescription>Select a visual style</DialogDescription>
+              </DialogHeader>
+              <div className="grid max-h-[70vh] grid-cols-4 gap-2 overflow-y-auto py-2">
+                {currentStyles.map((style, index) => {
+                  const isSelected = activeStyleId === style.id;
+                  return (
+                    <button
+                      key={style.id}
+                      onClick={() => {
+                        onConfigChange(
+                          configKey as "style" | "nativeStyle",
+                          style.id,
+                        );
+                        setStyleDialogOpen(false);
+                      }}
+                      className={cn(
+                        "group/s flex cursor-pointer flex-col items-center gap-1.5 border p-2 transition-all duration-150",
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                          : "border-border hover:border-primary/40 hover:bg-muted/30",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "flex aspect-square w-full items-center justify-center bg-linear-to-br transition-transform duration-150 group-hover/s:scale-[1.03]",
+                          STYLE_GRADIENTS[style.id] ||
+                            GRADIENT_LIST[index % GRADIENT_LIST.length],
+                        )}
+                      >
+                        <span className="text-xl font-bold text-white drop-shadow-sm">
+                          {style.name.charAt(0)}
+                        </span>
+                      </div>
+                      <span className="w-full truncate text-center text-[10px] font-medium">
+                        {style.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </ConfigField>
 
       <Separator />
@@ -456,7 +530,7 @@ export function GenerationSidebar({
         ) : null}
       </ConfigField>
 
-      {selectedModel?.supportsReferenceImage !== false ? (
+      {selectedModel?.supportsReferenceImage ? (
         <ConfigField
           label="Reference"
           tooltip="Upload an image to guide the AI's visual direction."

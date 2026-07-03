@@ -21,6 +21,7 @@ export const DEFAULT_CONFIG: GenerateConfig = {
   model: MODEL_IDS[0],
   style: "",
   nativeStyle: "",
+  industry: "",
   brandName: "",
   imageCount: 1,
   colorPalette: "auto",

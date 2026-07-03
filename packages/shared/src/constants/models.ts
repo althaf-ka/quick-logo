@@ -9,6 +9,8 @@ export const MODEL_IDS = [
   "quick-gpt-image-2",
   "quick-imagen",
   "quick-flux-fill",
+  "quick-flux-kontext",
+  "quick-flux-2-pro",
 ] as const;
 
 export type ModelId = (typeof MODEL_IDS)[number];
@@ -28,7 +30,19 @@ export interface ModelOption {
   name: string;
   description: string;
   credits: number;
-  icon: "lightning" | "brain" | "crown" | "shuffle";
+  icon:
+    | "lightning"
+    | "brain"
+    | "crown"
+    | "shuffle"
+    | "aperture"
+    | "typography"
+    | "palette"
+    | "magic"
+    | "star"
+    | "brush"
+    | "swatches"
+    | "diamond";
   features: string[];
   supportsReferenceImage: boolean;
   label: string;
@@ -62,7 +76,7 @@ export const MODELS: ModelOption[] = [
     description: "Higher resolution, detailed output",
     friendlyDescription: "Sharp details with higher resolution output",
     credits: 5,
-    icon: "brain",
+    icon: "aperture",
     features: ["HD output", "Better details"],
     supportsReferenceImage: false,
   },
@@ -96,14 +110,13 @@ export const MODELS: ModelOption[] = [
     description: "Industry-leading typography and detailed illustration model.",
     friendlyDescription: "Best for logos that need perfect text and lettering",
     credits: 8,
-    icon: "crown",
+    icon: "typography",
     features: ["Cinematic", "High detail", "Professional typography"],
     supportsReferenceImage: false,
     supportsInpaint: true,
     maskPolarity: "inverted",
     editingStrategy: "inpaint-with-mask",
     nativeStyles: [
-      { id: "NONE", label: "Auto" },
       { id: "FLAT_VECTOR", label: "Flat Vector" },
       { id: "ICONIC", label: "Iconic" },
       { id: "MINIMAL_ILLUSTRATION", label: "Minimal" },
@@ -120,7 +133,7 @@ export const MODELS: ModelOption[] = [
     description: "Lightning fast model configured for serene renders",
     friendlyDescription: "Fast and artistic - great for unique visual styles",
     credits: 6,
-    icon: "lightning",
+    icon: "palette",
     features: ["Custom Style", "Fast render", "Contrast-tuned"],
     supportsReferenceImage: true,
   },
@@ -133,7 +146,7 @@ export const MODELS: ModelOption[] = [
     friendlyDescription:
       "Highly detailed - best results when editing existing logos",
     credits: 8,
-    icon: "brain",
+    icon: "magic",
     features: ["Highly detailed", "Reference image support", "Versatile"],
     supportsReferenceImage: true,
     bestForEdits: true,
@@ -156,7 +169,7 @@ export const MODELS: ModelOption[] = [
     description: "Google's Imagen 4 flagship model for stunning realism.",
     friendlyDescription: "Highly realistic and top-tier generation quality",
     credits: 8,
-    icon: "crown",
+    icon: "star",
     features: ["High quality", "Realism", "Flagship"],
     supportsReferenceImage: false,
   },
@@ -169,12 +182,36 @@ export const MODELS: ModelOption[] = [
     friendlyDescription:
       "Best for modifying specific areas of an image with a mask",
     credits: 8,
-    icon: "brain",
+    icon: "brush",
     features: ["Inpainting", "Outpainting", "Precision edits"],
     supportsReferenceImage: false,
     supportsInpaint: true,
     maskPolarity: "standard",
     editingStrategy: "inpaint-with-mask",
+  },
+  {
+    id: "quick-flux-kontext",
+    name: "Flux Kontext",
+    label: "Style Matcher",
+    description: "Highly capable model for matching styles from a reference.",
+    friendlyDescription:
+      "Perfect for matching the style of your uploaded reference image",
+    credits: 6,
+    icon: "swatches",
+    features: ["Reference image", "Style transfer", "High fidelity"],
+    supportsReferenceImage: true,
+  },
+  {
+    id: "quick-flux-2-pro",
+    name: "Flux 2 Pro",
+    label: "Professional",
+    description:
+      "High-end professional image generation with full remix support.",
+    friendlyDescription: "Professional-grade generation with remix support",
+    credits: 8,
+    icon: "diamond",
+    features: ["Best quality", "Remix Support", "Production-ready"],
+    supportsReferenceImage: true,
   },
 ];
 

@@ -14,6 +14,7 @@ export interface GenerateConfig {
   style: string;
   nativeStyle: string;
   brandName: string;
+  industry?: string;
   imageCount: ImageCount;
   colorPalette: string;
   customColors: string[];
