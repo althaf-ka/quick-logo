@@ -71,6 +71,7 @@ function GeneratePage() {
           config={config}
           onConfigChange={updateConfig}
           onReferenceImageChange={handleReferenceImage}
+          disabled={isGenerating}
         />
       ) : null}
 
@@ -81,6 +82,7 @@ function GeneratePage() {
           config={config}
           onConfigChange={updateConfig}
           onReferenceImageChange={handleReferenceImage}
+          disabled={isGenerating}
         />
       ) : null}
     </div>

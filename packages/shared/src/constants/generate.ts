@@ -8,6 +8,7 @@ export {
   getModelsForContext,
   getModelsForCanvasMode,
   getModelMaskPolarity,
+  DEFAULT_BRAND_KIT_MODEL_ID,
 } from "./models";
 export type {
   ModelContext,
@@ -19,6 +20,7 @@ export type {
 export const DEFAULT_CONFIG: GenerateConfig = {
   model: MODEL_IDS[0],
   style: "",
+  nativeStyle: "",
   brandName: "",
   imageCount: 1,
   colorPalette: "auto",

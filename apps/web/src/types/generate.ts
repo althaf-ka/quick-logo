@@ -12,6 +12,7 @@ export type GenerationStatus =
 export interface GenerateConfig {
   model: string;
   style: string;
+  nativeStyle: string;
   brandName: string;
   imageCount: ImageCount;
   colorPalette: string;

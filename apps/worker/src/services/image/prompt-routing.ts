@@ -26,6 +26,10 @@ export async function routePromptAndBuildParams(
     finalPrompt = enhanced.finalPrompt;
     enhancedPromptText = enhanced.enhancedPrompt;
     negativePrompt = enhanced.negativePrompt;
+  } else {
+    const modifiers = promptEnhancer.applyModifiersOnly(message);
+    finalPrompt = modifiers.finalPrompt;
+    negativePrompt = modifiers.negativePrompt;
   }
 
   if (
@@ -69,6 +73,12 @@ export async function routePromptAndBuildParams(
     maskImage: message.config.maskImageUrl,
     canvasImage: message.config.canvasImageUrl,
     canvasMode: message.config.canvasMode,
+    providerOptions: {
+      ...mapping.defaultParams.providerOptions,
+      ...(message.config.nativeStyle && {
+        nativeStyle: message.config.nativeStyle,
+      }),
+    },
   };
 
   if (mapping.capabilities.imageToImage && message.config.referenceImageUrl) {

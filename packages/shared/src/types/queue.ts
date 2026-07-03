@@ -11,6 +11,7 @@ export interface GenerateImageMessage {
     model: string;
     imageCount: number;
     style?: string;
+    nativeStyle?: string;
     colorPalette?: string;
     customColors?: string[];
     negativePrompt?: string;

@@ -1,89 +1,23 @@
 import Replicate, { type Prediction } from "replicate";
 import type { AIProvider, GenerationParams, GenerationResult } from "../types";
 import { createLogger } from "@quicklogo/server-telemetry";
+import { REPLICATE_ADAPTERS } from "../adapters";
+import {
+  REPLICATE_MODELS,
+  MODEL_CAPABILITIES,
+  type ModelCapability,
+} from "./models";
+
+export { REPLICATE_MODELS };
 
 const logger = createLogger("ai-providers");
 
-/** Centralized model identifiers — prevents magic strings and enables IDE auto-complete */
-export const REPLICATE_MODELS = {
-  FLUX_1_1_PRO: "black-forest-labs/flux-1.1-pro",
-  IDEOGRAM_V3: "ideogram-ai/ideogram-v3-turbo",
-  FLUX_KONTEXT: "black-forest-labs/flux-kontext-pro",
-  FLUX_2_PRO: "black-forest-labs/flux-2-pro",
-  IMAGEN_4: "google/imagen-4",
-  FLUX_FILL: "black-forest-labs/flux-fill-pro",
-  SEEDREAM: "bytedance/seedream-4.5",
-} as const;
-/**
- * Defines how a model accepts image modifications.
- * - inpaint-with-mask: Uses a secondary black-and-white mask image to dictate what to edit.
- * - remix-image: Uses the original image as a structural blueprint to generate a brand new image variation.
- */
-export type EditingStrategy =
-  | {
-      type: "inpaint-with-mask";
-      imageField: string;
-      maskField: string;
-      polarity: "standard" | "inverted";
-    }
-  | { type: "remix-image"; imageField: string; strengthField?: string }
-  | { type: "remix-image-array"; imageField: string; strengthField?: string };
-
-export interface ModelCapability {
-  aspectRatio: boolean;
-  editingStrategy?: EditingStrategy;
-  defaultOutputFormat: string;
+class ReplicateParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReplicateParseError";
+  }
 }
-
-export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
-  [REPLICATE_MODELS.FLUX_1_1_PRO]: {
-    aspectRatio: true,
-    editingStrategy: { type: "remix-image", imageField: "image_prompt" },
-    defaultOutputFormat: "png",
-  },
-  [REPLICATE_MODELS.IDEOGRAM_V3]: {
-    aspectRatio: true,
-    editingStrategy: {
-      type: "inpaint-with-mask",
-      imageField: "image",
-      maskField: "mask",
-      polarity: "inverted",
-    },
-    defaultOutputFormat: "",
-  },
-  [REPLICATE_MODELS.FLUX_KONTEXT]: {
-    aspectRatio: true,
-    editingStrategy: { type: "remix-image", imageField: "input_image" },
-    defaultOutputFormat: "png",
-  },
-  [REPLICATE_MODELS.FLUX_2_PRO]: {
-    aspectRatio: true,
-    editingStrategy: { type: "remix-image", imageField: "input_images" },
-    defaultOutputFormat: "png",
-  },
-  [REPLICATE_MODELS.IMAGEN_4]: {
-    aspectRatio: true,
-    defaultOutputFormat: "png",
-  },
-  [REPLICATE_MODELS.FLUX_FILL]: {
-    aspectRatio: false,
-    editingStrategy: {
-      type: "inpaint-with-mask",
-      imageField: "image",
-      maskField: "mask",
-      polarity: "standard",
-    },
-    defaultOutputFormat: "png",
-  },
-  [REPLICATE_MODELS.SEEDREAM]: {
-    aspectRatio: true,
-    editingStrategy: {
-      type: "remix-image-array",
-      imageField: "image_input",
-    },
-    defaultOutputFormat: "png",
-  },
-} as const;
 
 interface AspectRatioEntry {
   readonly ratio: number;
@@ -156,7 +90,9 @@ export class ReplicateProvider implements AIProvider {
     this.applyReferenceImage(model, caps, input, params);
 
     if (params.providerOptions) {
-      Object.assign(input, params.providerOptions);
+      const options = { ...params.providerOptions };
+      delete options.nativeStyle;
+      Object.assign(input, options);
     }
 
     return input;
@@ -167,23 +103,9 @@ export class ReplicateProvider implements AIProvider {
     input: Record<string, unknown>,
     params: GenerationParams,
   ): void {
-    switch (model) {
-      case REPLICATE_MODELS.IDEOGRAM_V3:
-        input.magic_prompt_option = "Auto";
-        input.style_type = "Auto";
-        break;
-      case REPLICATE_MODELS.IMAGEN_4:
-        input.image_size = "1K";
-        break;
-      case REPLICATE_MODELS.FLUX_FILL:
-        input.output_format = "png";
-        input.prompt_upsampling = params.magicPrompt !== false;
-        break;
-      case REPLICATE_MODELS.FLUX_1_1_PRO:
-      case REPLICATE_MODELS.FLUX_2_PRO:
-      case REPLICATE_MODELS.FLUX_KONTEXT:
-        input.prompt_upsampling = params.magicPrompt !== false;
-        break;
+    const adapter = REPLICATE_ADAPTERS[model];
+    if (adapter) {
+      adapter.applyParams(input, params);
     }
   }
 
@@ -249,7 +171,7 @@ export class ReplicateProvider implements AIProvider {
     }
 
     if (!fileOutput) {
-      throw new Error(
+      throw new ReplicateParseError(
         `Replicate returned empty output: ${JSON.stringify(output)}`,
       );
     }
@@ -265,8 +187,10 @@ export class ReplicateProvider implements AIProvider {
       return this.downloadImage(fileOutput);
     }
 
-    throw new Error(
-      `Unexpected output type from Replicate: ${typeof fileOutput}`,
+    throw new ReplicateParseError(
+      `Unexpected output type from Replicate: typeof=${typeof fileOutput}, val=${JSON.stringify(
+        fileOutput,
+      )}`,
     );
   }
 
@@ -331,7 +255,6 @@ export class ReplicateProvider implements AIProvider {
         identifier,
         {
           input,
-          wait: { mode: "block", timeout: 60 },
         },
         (prediction: Prediction) => {
           if (
@@ -362,7 +285,12 @@ export class ReplicateProvider implements AIProvider {
       // Attempt to extract status code from Replicate ApiError
       const status = (error as { response?: { status?: number } })?.response
         ?.status;
-      const isRetryable = status ? status === 429 || status >= 500 : true;
+      const isRetryable =
+        error instanceof ReplicateParseError
+          ? false
+          : status
+            ? status === 429 || status >= 500
+            : true;
 
       return {
         success: false,

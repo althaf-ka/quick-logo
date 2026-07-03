@@ -147,12 +147,16 @@ function DotIndicators({
 
 function ResultsView({
   results,
-  imageCount,
   onCardClick,
+  onDownload,
+  onEditWithAI,
+  onOpenInCanvas,
 }: {
   results: GeneratedLogo[];
-  imageCount: ImageCount;
   onCardClick: (logo: GeneratedLogo) => void;
+  onDownload: (logo: GeneratedLogo) => void;
+  onEditWithAI: (logo: GeneratedLogo) => void;
+  onOpenInCanvas: (logo: GeneratedLogo) => void;
 }) {
   const isMobile = useIsMobile();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
@@ -171,11 +175,17 @@ function ResultsView({
     };
   }, [carouselApi, onSelect]);
 
-  if (imageCount === 1 && results.length === 1) {
+  if (results.length === 1) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-xs">
-          <LogoCard logo={results[0]} onClick={onCardClick} />
+        <div className="w-full max-w-md">
+          <LogoCard
+            logo={results[0]}
+            onClick={onCardClick}
+            onDownload={onDownload}
+            onEditWithAI={onEditWithAI}
+            onOpenInCanvas={onOpenInCanvas}
+          />
         </div>
       </div>
     );
@@ -184,11 +194,17 @@ function ResultsView({
   if (isMobile) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-4">
-        <Carousel className="w-full max-w-xs" setApi={setCarouselApi}>
+        <Carousel className="w-full max-w-sm" setApi={setCarouselApi}>
           <CarouselContent>
             {results.map((logo) => (
               <CarouselItem key={logo.id}>
-                <LogoCard logo={logo} onClick={onCardClick} />
+                <LogoCard
+                  logo={logo}
+                  onClick={onCardClick}
+                  onDownload={onDownload}
+                  onEditWithAI={onEditWithAI}
+                  onOpenInCanvas={onOpenInCanvas}
+                />
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -200,9 +216,16 @@ function ResultsView({
 
   return (
     <div className="flex flex-1 items-center justify-center p-6">
-      <div className="grid w-full max-w-lg grid-cols-2 gap-3">
+      <div className="grid w-full max-w-2xl grid-cols-2 gap-4">
         {results.map((logo) => (
-          <LogoCard key={logo.id} logo={logo} onClick={onCardClick} />
+          <LogoCard
+            key={logo.id}
+            logo={logo}
+            onClick={onCardClick}
+            onDownload={onDownload}
+            onEditWithAI={onEditWithAI}
+            onOpenInCanvas={onOpenInCanvas}
+          />
         ))}
       </div>
     </div>
@@ -213,10 +236,16 @@ function PollingView({
   results,
   imageCount,
   onCardClick,
+  onDownload,
+  onEditWithAI,
+  onOpenInCanvas,
 }: {
   results: GeneratedLogo[];
   imageCount: ImageCount;
   onCardClick: (logo: GeneratedLogo) => void;
+  onDownload: (logo: GeneratedLogo) => void;
+  onEditWithAI: (logo: GeneratedLogo) => void;
+  onOpenInCanvas: (logo: GeneratedLogo) => void;
 }) {
   const skeletonsNeeded = Math.max(0, imageCount - results.length);
   const statusLabel = getGeneratingLabel(
@@ -227,12 +256,19 @@ function PollingView({
   const renderGrid = () => (
     <div
       className={cn(
-        "grid w-full max-w-lg gap-3",
-        imageCount === 1 ? "max-w-xs grid-cols-1" : "grid-cols-2",
+        "grid w-full gap-4",
+        imageCount === 1 ? "max-w-md grid-cols-1" : "max-w-2xl grid-cols-2",
       )}
     >
       {results.map((logo) => (
-        <LogoCard key={logo.id} logo={logo} onClick={onCardClick} />
+        <LogoCard
+          key={logo.id}
+          logo={logo}
+          onClick={onCardClick}
+          onDownload={onDownload}
+          onEditWithAI={onEditWithAI}
+          onOpenInCanvas={onOpenInCanvas}
+        />
       ))}
       {Array.from({ length: skeletonsNeeded }, (_, i) => (
         <Skeleton
@@ -268,6 +304,17 @@ export function GenerationDisplay({
     });
   };
 
+  const handleDownload = async (logo: GeneratedLogo) => {
+    await downloadImage(logo.url, `quicklogo-${logo.id}.png`);
+  };
+
+  const handleEditWithAI = (logo: GeneratedLogo) => {
+    navigate({
+      to: "/edit/$imageId",
+      params: { imageId: logo.id },
+    });
+  };
+
   const content = (() => {
     switch (status) {
       case "idle":
@@ -280,6 +327,9 @@ export function GenerationDisplay({
             results={results}
             imageCount={imageCount}
             onCardClick={setPreviewLogo}
+            onDownload={handleDownload}
+            onEditWithAI={handleEditWithAI}
+            onOpenInCanvas={handleCanvasOpen}
           />
         );
       case "error":
@@ -293,8 +343,10 @@ export function GenerationDisplay({
         return (
           <ResultsView
             results={results}
-            imageCount={imageCount}
             onCardClick={setPreviewLogo}
+            onDownload={handleDownload}
+            onEditWithAI={handleEditWithAI}
+            onOpenInCanvas={handleCanvasOpen}
           />
         );
       default:
@@ -312,15 +364,8 @@ export function GenerationDisplay({
         onOpenChange={(open) => {
           if (!open) setPreviewLogo(null);
         }}
-        onDownload={async (logo) => {
-          await downloadImage(logo.url, `quicklogo-${logo.id}.png`);
-        }}
-        onEditWithAI={(logo) => {
-          navigate({
-            to: "/edit/$imageId",
-            params: { imageId: logo.id },
-          });
-        }}
+        onDownload={handleDownload}
+        onEditWithAI={handleEditWithAI}
         onOpenInCanvas={handleCanvasOpen}
       />
     </div>

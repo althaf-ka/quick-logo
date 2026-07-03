@@ -17,6 +17,7 @@ interface MobileControlsSheetProps {
     value: GenerateConfig[K],
   ) => void;
   onReferenceImageChange?: (file: File | null) => void;
+  disabled?: boolean;
 }
 
 export function MobileControlsSheet({
@@ -25,6 +26,7 @@ export function MobileControlsSheet({
   config,
   onConfigChange,
   onReferenceImageChange,
+  disabled,
 }: MobileControlsSheetProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -41,6 +43,7 @@ export function MobileControlsSheet({
             onConfigChange={onConfigChange}
             onReferenceImageChange={onReferenceImageChange}
             className="w-full border-0"
+            disabled={disabled}
           />
         </div>
       </DrawerContent>

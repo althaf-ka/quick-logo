@@ -8,6 +8,7 @@ import {
   buildBusinessCardGenerationParams,
   buildBackdropGenerationParams,
 } from "@quicklogo/ai-providers/prompt";
+import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { generateWithFallback } from "../../core/pipeline-helpers";
@@ -50,7 +51,7 @@ export async function generateLogoVariations({
     return reusableUrls;
   }
 
-  const mapping = getModelMapping("quick-nano-banana");
+  const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
   const typesToGenerate = types || ["dark-mode", "icon-only"];
@@ -119,7 +120,7 @@ export async function generateSocialMediaAssets({
   masterBannerUrl?: string;
   facebookBannerUrl?: string;
 }> {
-  const mapping = getModelMapping("quick-nano-banana");
+  const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
   let socialProfileUrl: string | undefined;
@@ -268,7 +269,7 @@ export async function generateBrandedBackdrops({
   context?: ValidatedBrandContext;
   targetItemId?: string;
 }): Promise<{ feedUrl?: string; storyUrl?: string }> {
-  const mapping = getModelMapping("quick-nano-banana");
+  const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
   let feedUrl: string | undefined;
@@ -371,7 +372,7 @@ export async function generateBusinessCardAssets({
   context?: ValidatedBrandContext;
   targetItemId?: string;
 }): Promise<{ frontUrl?: string; backUrl?: string }> {
-  const mapping = getModelMapping("quick-nano-banana");
+  const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
   let frontUrl: string | undefined;

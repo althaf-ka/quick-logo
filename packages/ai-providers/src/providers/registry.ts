@@ -131,15 +131,15 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
       height: 1024,
     },
   },
-  "quick-nano-banana": {
+  "quick-gpt-image-2": {
     provider: "replicate",
     inputType: "json",
-    backendModel: "black-forest-labs/flux-2-pro",
+    backendModel: "openai/gpt-image-2",
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
       inpaint: false,
-      editingStrategy: "remix-image",
+      editingStrategy: "remix-image-array",
       promptTemplate: {
         img2imgPrefix: "Based on the provided image,",
         img2imgSuffix: "Keep the core subject and composition intact.",

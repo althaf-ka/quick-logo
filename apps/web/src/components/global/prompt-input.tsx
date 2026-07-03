@@ -83,9 +83,9 @@ export function PromptInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isCompact = size === "compact";
 
-  const maxHeight = isCompact ? 100 : 160;
-  const minHeight = isCompact ? 36 : 72;
-  const rows = isCompact ? 1 : 3;
+  const maxHeight = isCompact ? 100 : 140;
+  const minHeight = isCompact ? 36 : 56;
+  const rows = isCompact ? 1 : 2;
 
   const [localValue, setLocalValue] = useState(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -143,7 +143,7 @@ export function PromptInput({
 
   return (
     <div className={cn("shrink-0 px-4 pt-2 pb-3", className)}>
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto w-full max-w-3xl">
         <div
           className="border-input bg-card focus-within:border-primary/25 flex flex-col overflow-hidden rounded-none border shadow-sm transition-colors"
           title={contextPrompt}
@@ -187,7 +187,7 @@ export function PromptInput({
             <div className="bg-muted/5 border-border/40 focus-within:bg-muted/10 flex h-10 items-center gap-3 border-b px-3 transition-colors">
               <div className="flex items-center gap-2.5">
                 <span className="text-muted-foreground/50 text-[10px] font-bold tracking-wider uppercase select-none">
-                  Brand:
+                  Brand Name:
                 </span>
                 <div className="bg-border h-4 w-px" />
               </div>

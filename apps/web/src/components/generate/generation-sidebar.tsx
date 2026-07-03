@@ -95,6 +95,8 @@ const STYLE_GRADIENTS: Record<string, string> = {
   vintage: "from-yellow-600 to-amber-800",
 };
 
+const GRADIENT_LIST = Object.values(STYLE_GRADIENTS);
+
 interface GenerationSidebarProps {
   config: GenerateConfig;
   onConfigChange: <K extends keyof GenerateConfig>(
@@ -103,6 +105,7 @@ interface GenerationSidebarProps {
   ) => void;
   onReferenceImageChange?: (file: File | null) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function GenerationSidebar({
@@ -110,15 +113,12 @@ export function GenerationSidebar({
   onConfigChange,
   onReferenceImageChange,
   className,
+  disabled,
 }: GenerationSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newColor, setNewColor] = useState("#6366f1");
   const [styleDialogOpen, setStyleDialogOpen] = useState(false);
 
-  const selectedStyle = useMemo(
-    () => STYLES.find((s) => s.id === config.style),
-    [config.style],
-  );
   const selectedPalette = useMemo(
     () => COLOR_PALETTES.find((p) => p.id === config.colorPalette),
     [config.colorPalette],
@@ -128,12 +128,23 @@ export function GenerationSidebar({
     [config.model],
   );
 
+  const isNative = !!selectedModel?.nativeStyles;
+  const currentStyles = isNative
+    ? selectedModel.nativeStyles!.map((s) => ({ id: s.id, name: s.label }))
+    : STYLES;
+  const configKey = isNative ? "nativeStyle" : "style";
+  const activeStyleId = isNative ? config.nativeStyle || "NONE" : config.style;
+  const activeStyle =
+    currentStyles.find((s) => s.id === activeStyleId) ||
+    (isNative ? currentStyles[0] : null);
+
   return (
     <div
       className={cn(
         "bg-background flex w-[300px] shrink-0 flex-col gap-5 overflow-y-auto border-l p-4",
         "[&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent",
         "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/60",
+        disabled && "pointer-events-none opacity-60",
         className,
       )}
     >
@@ -176,30 +187,41 @@ export function GenerationSidebar({
           onClick={() => setStyleDialogOpen(true)}
           className="group hover:border-primary/40 hover:bg-muted/30 flex w-full cursor-pointer items-center gap-3 border px-3 py-2 text-left transition-colors"
         >
-          {selectedStyle ? (
-            <div
-              className={cn(
-                "flex size-7 shrink-0 items-center justify-center bg-linear-to-br text-[10px] font-bold text-white transition-transform duration-150 group-hover:scale-105",
-                STYLE_GRADIENTS[selectedStyle.id],
-              )}
-            >
-              {selectedStyle.name.charAt(0)}
-            </div>
-          ) : null}
-          <span className="flex-1 text-xs font-medium">
-            {selectedStyle?.name ?? "Select style"}
-          </span>
-          {selectedStyle ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onConfigChange("style", "");
-              }}
-              className="text-muted-foreground/50 hover:text-destructive flex size-5 shrink-0 items-center justify-center rounded transition-colors"
-            >
-              <XIcon weight="bold" className="size-3" />
-            </button>
-          ) : null}
+          {activeStyle ? (
+            <>
+              <div
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center bg-linear-to-br text-[10px] font-bold text-white transition-transform duration-150 group-hover:scale-105",
+                  STYLE_GRADIENTS[activeStyle.id] ||
+                    GRADIENT_LIST[
+                      currentStyles.findIndex((s) => s.id === activeStyle.id) %
+                        GRADIENT_LIST.length
+                    ],
+                )}
+              >
+                {activeStyle.name.charAt(0)}
+              </div>
+              <span className="flex-1 text-xs font-medium">
+                {activeStyle.name}
+              </span>
+              {!isNative ||
+              (isNative &&
+                activeStyle.id !== "NONE" &&
+                activeStyle.id !== "") ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onConfigChange(configKey, isNative ? "NONE" : "");
+                  }}
+                  className="text-muted-foreground/50 hover:text-destructive flex size-5 shrink-0 items-center justify-center rounded transition-colors"
+                >
+                  <XIcon weight="bold" className="size-3" />
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <span className="flex-1 text-xs font-medium">Select style</span>
+          )}
         </div>
 
         <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
@@ -209,13 +231,16 @@ export function GenerationSidebar({
               <DialogDescription>Select a visual style</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-4 gap-2 py-2">
-              {STYLES.map((style) => {
-                const isSelected = config.style === style.id;
+              {currentStyles.map((style, index) => {
+                const isSelected = activeStyleId === style.id;
                 return (
                   <button
                     key={style.id}
                     onClick={() => {
-                      onConfigChange("style", style.id);
+                      onConfigChange(
+                        configKey as "style" | "nativeStyle",
+                        style.id,
+                      );
                       setStyleDialogOpen(false);
                     }}
                     className={cn(
@@ -228,7 +253,8 @@ export function GenerationSidebar({
                     <div
                       className={cn(
                         "flex aspect-square w-full items-center justify-center bg-linear-to-br transition-transform duration-150 group-hover/s:scale-[1.03]",
-                        STYLE_GRADIENTS[style.id],
+                        STYLE_GRADIENTS[style.id] ||
+                          GRADIENT_LIST[index % GRADIENT_LIST.length],
                       )}
                     >
                       <span className="text-xl font-black text-white/90 drop-shadow-sm">
@@ -248,7 +274,7 @@ export function GenerationSidebar({
 
       <Separator />
 
-      <ConfigField label="Images">
+      <ConfigField label="Logos">
         <ToggleGroup
           value={[String(config.imageCount)]}
           onValueChange={(val) => {

@@ -8,6 +8,7 @@ const modelIds = [...MODEL_IDS] as [string, ...string[]];
 export const generateConfigSchema = z.object({
   model: z.enum(modelIds),
   style: z.string(),
+  nativeStyle: z.string().optional().default(""),
   brandName: z.string().max(100).optional().default(""),
   imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]),
   colorPalette: z.string(),
@@ -41,6 +42,7 @@ export const generateApiConfigSchema = z.object({
   brandName: z.string().max(100).optional().default(""),
   imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
   style: z.string().optional().default(""),
+  nativeStyle: z.string().optional().default(""),
   colorPalette: z.string().optional().default("auto"),
   customColors: z.array(hexColor).max(5).optional(),
   negativePrompt: z.string().max(500).optional(),

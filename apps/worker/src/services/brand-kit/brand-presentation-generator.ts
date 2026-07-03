@@ -3,6 +3,7 @@ import {
   createProvider,
 } from "@quicklogo/ai-providers/providers";
 import { buildBrandPresentationGenerationParams } from "@quicklogo/ai-providers/prompt";
+import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { generateWithFallback } from "../../core/pipeline-helpers";
@@ -46,7 +47,7 @@ export async function generateBrandPresentationImage({
   selectedVibes?: string[];
   brandPersonality?: string;
 }): Promise<string> {
-  const mapping = getModelMapping("quick-nano-banana");
+  const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
   // Get visual description of the logo to feed into the image generator's text prompt

@@ -122,6 +122,19 @@ export class PromptEnhancer {
     };
   }
 
+  /** Apply style/bg/color/brand modifiers to the prompt — no LLM rewrite */
+  applyModifiersOnly(message: GenerateImageMessage): {
+    finalPrompt: string;
+    negativePrompt: string;
+  } {
+    const hasReference = !!message.config.referenceImageUrl;
+    const built = buildBasePrompt(message, message.prompt, hasReference);
+    return {
+      finalPrompt: built.prompt,
+      negativePrompt: built.negativePrompt,
+    };
+  }
+
   private async rewriteWithLLM(message: GenerateImageMessage): Promise<string> {
     const style = message.config.style ?? "professional";
     const palette = message.config.colorPalette ?? "auto";

@@ -6,13 +6,15 @@ export const MODEL_IDS = [
   "quick-ideogram",
   "quick-leo-fast",
   "quick-seedream",
-  "quick-nano-banana",
+  "quick-gpt-image-2",
   "quick-imagen",
   "quick-flux-fill",
 ] as const;
 
 export type ModelId = (typeof MODEL_IDS)[number];
 export type ModelContext = "generate" | "edit";
+
+export const DEFAULT_BRAND_KIT_MODEL_ID: ModelId = "quick-gpt-image-2";
 
 /**
  * Defines mask color convention for inpainting models.
@@ -37,6 +39,8 @@ export interface ModelOption {
   /** Mask polarity for inpainting. Only relevant when supportsInpaint is true. */
   maskPolarity?: MaskPolarity;
   editingStrategy?: "inpaint-with-mask" | "remix-image" | "remix-image-array";
+  /** If defined, replaces generic STYLES with model-native style options */
+  nativeStyles?: { id: string; label: string }[];
 }
 
 export const MODELS: ModelOption[] = [
@@ -98,6 +102,16 @@ export const MODELS: ModelOption[] = [
     supportsInpaint: true,
     maskPolarity: "inverted",
     editingStrategy: "inpaint-with-mask",
+    nativeStyles: [
+      { id: "NONE", label: "Auto" },
+      { id: "FLAT_VECTOR", label: "Flat Vector" },
+      { id: "ICONIC", label: "Iconic" },
+      { id: "MINIMAL_ILLUSTRATION", label: "Minimal" },
+      { id: "GEO_MINIMALIST", label: "Geometric" },
+      { id: "BAUHAUS", label: "Bauhaus" },
+      { id: "ART_DECO", label: "Art Deco" },
+      { id: "MONOCHROME", label: "Monochrome" },
+    ],
   },
   {
     id: "quick-leo-fast",
@@ -125,15 +139,14 @@ export const MODELS: ModelOption[] = [
     bestForEdits: true,
   },
   {
-    id: "quick-nano-banana",
-    name: "Nano Banana",
-    label: "Playful",
-    description: "Ultra-fast, playful model for minimalist concepts.",
-    friendlyDescription:
-      "Ultra-fast and playful - perfect for minimal logo concepts",
-    credits: 8,
-    icon: "lightning",
-    features: ["Ultra-fast", "Playful", "Minimalist"],
+    id: "quick-gpt-image-2",
+    name: "GPT Image 2",
+    label: "Professional",
+    description: "Professional model supporting image edits and remixing.",
+    friendlyDescription: "Professional generation and reliable image remixing",
+    credits: 4,
+    icon: "brain",
+    features: ["Professional", "Remix Support", "Low Cost Variant"],
     supportsReferenceImage: true,
   },
   {
