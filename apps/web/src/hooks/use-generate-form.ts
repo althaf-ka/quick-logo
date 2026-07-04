@@ -110,6 +110,30 @@ export function useGenerateForm() {
 
     if (batchData) {
       const isProcessing = batchData.status === "processing";
+
+      const hasCompleted = batchData.projects.some(
+        (p) => p.latestImage?.status === "completed",
+      );
+      const hasFailed = batchData.projects.some(
+        (p) => p.latestImage?.status === "failed",
+      );
+
+      if (!isProcessing) {
+        if (!hasCompleted && hasFailed) {
+          setStatus("error");
+          setLocalError(
+            "Generation failed. Please check the projects page for details.",
+          );
+          queryClient.invalidateQueries({ queryKey: ["projects"] });
+          setActiveBatchId(null);
+          return;
+        } else if (hasFailed) {
+          toast.error("Some images failed to generate", {
+            description: "Check your projects page for details",
+          });
+        }
+      }
+
       setStatus(isProcessing ? "polling" : "done");
 
       // Map API projects to GeneratedLogo format for display

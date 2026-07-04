@@ -47,7 +47,6 @@ function GeneratePage() {
           imageCount={config.imageCount}
           error={error}
           onRetry={handleRetry}
-          onSuggestionClick={setPrompt}
         />
 
         <PromptInput

@@ -31,6 +31,8 @@ export interface GenerateImageMessage {
 export interface GenerateBrandKitMessage extends StructuredBrandContext {
   type: "brand-kit-generate";
   brandKitId: string;
+  userId: string;
+  creditsUsed: number;
   sourceImageId?: string;
   customLogoUrl?: string;
   brandName: string;
@@ -51,7 +53,10 @@ export interface GenerateBrandKitMessage extends StructuredBrandContext {
 
 export interface RefineBrandKitMessage {
   type: "brand-kit-refine";
+  refinementId: string;
   brandKitId: string;
+  userId: string;
+  creditsUsed: number;
   sectionId:
     | "logo-variations"
     | "color-palette"

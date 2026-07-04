@@ -37,6 +37,8 @@ import { api } from "@/lib/api";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { parseApiError } from "@/lib/api-error";
 
+import { formatGenerationError } from "@/lib/format-error";
+
 const CHECKER_BG = {
   backgroundImage:
     "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
@@ -52,7 +54,8 @@ interface Project {
   latestThumbnail: string | null;
   createdAt: string | Date;
   expiresAt: string | Date;
-  status: "generating" | "completed";
+  status: "generating" | "completed" | "failed";
+  errorMessage?: string | null;
 }
 
 interface ProjectPreviewDialogProps {
@@ -156,7 +159,22 @@ export function ProjectPreviewDialog({
 
         <div className="relative w-full" style={CHECKER_BG}>
           <div className="flex aspect-square w-full items-center justify-center">
-            {project.latestThumbnail ? (
+            {project.status === "failed" ? (
+              <div className="flex flex-col items-center gap-3 p-6 text-center">
+                <WarningIcon
+                  className="text-destructive/80 size-12"
+                  weight="duotone"
+                />
+                <p className="text-destructive font-mono text-sm font-black uppercase">
+                  Generation Failed
+                </p>
+                {project.errorMessage && (
+                  <p className="text-muted-foreground max-w-[85%] font-mono text-xs leading-relaxed">
+                    {formatGenerationError(project.errorMessage)}
+                  </p>
+                )}
+              </div>
+            ) : project.latestThumbnail ? (
               <img
                 src={project.latestThumbnail}
                 alt="Project preview"
@@ -167,59 +185,61 @@ export function ProjectPreviewDialog({
             )}
           </div>
 
-          <div className="absolute top-3 left-3">
-            <button
-              type="button"
-              onClick={() => setStorageOpen((v) => !v)}
-              className={cn(
-                "group flex cursor-pointer items-center gap-2 px-3 py-2 backdrop-blur-md",
-                "font-mono text-[10px] font-black tracking-widest uppercase",
-                "border transition-all duration-200",
-                isExpired
-                  ? "border-red-500/40 bg-red-500/80 text-white hover:bg-red-500/90"
-                  : isExpiringSoon
-                    ? "animate-pulse border-amber-400/40 bg-amber-500/80 text-white"
-                    : isWarning
-                      ? "border-amber-400/30 bg-black/70 text-amber-400 hover:bg-black/80"
-                      : "border-white/10 bg-black/60 text-white/80 hover:bg-black/75 hover:text-white",
-                storageOpen && "ring-1 ring-white/20",
-              )}
-            >
-              <span
+          {project.status !== "failed" && (
+            <div className="absolute top-3 left-3">
+              <button
+                type="button"
+                onClick={() => setStorageOpen((v) => !v)}
                 className={cn(
-                  "flex size-4 shrink-0 items-center justify-center rounded-full",
+                  "group flex cursor-pointer items-center gap-2 px-3 py-2 backdrop-blur-md",
+                  "font-mono text-[10px] font-black tracking-widest uppercase",
+                  "border transition-all duration-200",
                   isExpired
-                    ? "bg-white/20"
-                    : isWarning
-                      ? "bg-amber-400/20"
-                      : "bg-white/10",
+                    ? "border-red-500/40 bg-red-500/80 text-white hover:bg-red-500/90"
+                    : isExpiringSoon
+                      ? "animate-pulse border-amber-400/40 bg-amber-500/80 text-white"
+                      : isWarning
+                        ? "border-amber-400/30 bg-black/70 text-amber-400 hover:bg-black/80"
+                        : "border-white/10 bg-black/60 text-white/80 hover:bg-black/75 hover:text-white",
+                  storageOpen && "ring-1 ring-white/20",
                 )}
               >
-                {isWarning ? (
-                  <WarningIcon weight="fill" className="size-2.5" />
-                ) : (
-                  <ClockIcon weight="bold" className="size-2.5" />
-                )}
-              </span>
-              {isExpired ? "Expired" : `${daysLeft} days`}
-              <span
-                className={cn(
-                  "ml-0.5 flex items-center gap-0.5 font-mono text-[8px] tracking-normal normal-case transition-colors",
-                  isWarning ? "text-amber-300/60" : "text-white/30",
-                  "group-hover:text-white/60",
-                )}
-              >
-                storage
-                <CaretUpIcon
-                  weight="bold"
+                <span
                   className={cn(
-                    "size-2 transition-transform duration-300",
-                    storageOpen ? "rotate-0" : "rotate-180",
+                    "flex size-4 shrink-0 items-center justify-center rounded-full",
+                    isExpired
+                      ? "bg-white/20"
+                      : isWarning
+                        ? "bg-amber-400/20"
+                        : "bg-white/10",
                   )}
-                />
-              </span>
-            </button>
-          </div>
+                >
+                  {isWarning ? (
+                    <WarningIcon weight="fill" className="size-2.5" />
+                  ) : (
+                    <ClockIcon weight="bold" className="size-2.5" />
+                  )}
+                </span>
+                {isExpired ? "Expired" : `${daysLeft} days`}
+                <span
+                  className={cn(
+                    "ml-0.5 flex items-center gap-0.5 font-mono text-[8px] tracking-normal normal-case transition-colors",
+                    isWarning ? "text-amber-300/60" : "text-white/30",
+                    "group-hover:text-white/60",
+                  )}
+                >
+                  storage
+                  <CaretUpIcon
+                    weight="bold"
+                    className={cn(
+                      "size-2 transition-transform duration-300",
+                      storageOpen ? "rotate-0" : "rotate-180",
+                    )}
+                  />
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Created date — bottom left */}
           <div className="absolute bottom-3 left-3">
@@ -330,43 +350,45 @@ export function ProjectPreviewDialog({
           </div>
         </div>
 
-        <div className="border-border/50 grid grid-cols-4 border-t">
-          <ActionCell
-            icon={<PencilIcon weight="bold" className="size-3.5" />}
-            label="Edit with AI"
-            disabled={!project.latestImageId}
-            onClick={() => {
-              onEditWithAI?.(project);
-              onOpenChange(false);
-            }}
-            variant="primary"
-          />
-          <ActionCell
-            icon={<FrameCornersIcon weight="bold" className="size-3.5" />}
-            label="Canvas"
-            disabled={!project.latestImageId}
-            onClick={() => {
-              onOpenInCanvas?.(project);
-              onOpenChange(false);
-            }}
-            className="border-border/50 border-x"
-          />
-          <ActionCell
-            icon={<DownloadIcon weight="bold" className="size-3.5" />}
-            label="Download"
-            onClick={() => onDownload?.(project)}
-            className="border-border/50 border-x"
-          />
-          <ActionCell
-            icon={<PaletteIcon weight="bold" className="size-3.5" />}
-            label="Brand Kit"
-            disabled={!project.latestImageId}
-            onClick={() => {
-              onOpenBrandKit?.(project);
-              onOpenChange(false);
-            }}
-          />
-        </div>
+        {project.status !== "failed" && (
+          <div className="border-border/50 grid grid-cols-4 border-t">
+            <ActionCell
+              icon={<PencilIcon weight="bold" className="size-3.5" />}
+              label="Edit with AI"
+              disabled={!project.latestImageId}
+              onClick={() => {
+                onEditWithAI?.(project);
+                onOpenChange(false);
+              }}
+              variant="primary"
+            />
+            <ActionCell
+              icon={<FrameCornersIcon weight="bold" className="size-3.5" />}
+              label="Canvas"
+              disabled={!project.latestImageId}
+              onClick={() => {
+                onOpenInCanvas?.(project);
+                onOpenChange(false);
+              }}
+              className="border-border/50 border-x"
+            />
+            <ActionCell
+              icon={<DownloadIcon weight="bold" className="size-3.5" />}
+              label="Download"
+              onClick={() => onDownload?.(project)}
+              className="border-border/50 border-x"
+            />
+            <ActionCell
+              icon={<PaletteIcon weight="bold" className="size-3.5" />}
+              label="Brand Kit"
+              disabled={!project.latestImageId}
+              onClick={() => {
+                onOpenBrandKit?.(project);
+                onOpenChange(false);
+              }}
+            />
+          </div>
+        )}
 
         <div className="border-border/50 flex items-center justify-end border-t px-4 py-2.5">
           <AlertDialog>

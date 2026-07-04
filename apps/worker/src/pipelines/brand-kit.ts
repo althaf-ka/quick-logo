@@ -420,10 +420,7 @@ export class BrandKitPipeline {
       this.logger.error("Brand kit generation failed completely", error, {
         brandKitId,
       });
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      await this.repository.updateStatus(brandKitId, "failed", errorMessage);
+      throw error;
     }
   }
 
@@ -464,6 +461,7 @@ export class BrandKitPipeline {
         brandKitId,
         sectionId,
       });
+      throw error;
     }
   }
 }

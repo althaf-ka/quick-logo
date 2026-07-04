@@ -288,8 +288,8 @@ export function IndustryPicker({
     disabled,
     className:
       variant === "inline"
-        ? "ring-offset-background placeholder:text-muted-foreground flex h-10 w-full items-center justify-between rounded-none border-none bg-transparent px-3 text-sm shadow-sm outline-none focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:border-l"
-        : "group hover:border-primary/40 hover:bg-muted/30 flex w-full cursor-pointer items-center gap-3 border px-3 py-2 text-left transition-colors rounded-none outline-none focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        ? "cursor-pointer ring-offset-background placeholder:text-muted-foreground flex h-10 w-full items-center justify-between rounded-none border-none bg-transparent px-3 text-sm shadow-sm outline-none focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:border-l"
+        : "group bg-card hover:bg-muted/30 hover:border-primary/40 flex w-full cursor-pointer items-center gap-3 border px-3 py-2 text-left transition-colors focus-visible:ring-primary/50 focus-visible:ring-1 outline-none disabled:cursor-not-allowed disabled:opacity-50",
   };
 
   const renderContent = () => (

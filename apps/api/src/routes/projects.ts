@@ -41,6 +41,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           projectId: images.projectId,
           imageId: images.id,
           status: images.status,
+          errorMessage: images.errorMessage,
         })
         .from(images)
         .innerJoin(
@@ -63,6 +64,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           expiresAt: projects.expiresAt,
           latestImageId: latestImage.imageId,
           imageStatus: latestImage.status,
+          errorMessage: latestImage.errorMessage,
         })
         .from(projects)
         .leftJoin(latestImage, eq(latestImage.projectId, projects.id))
@@ -84,10 +86,13 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         latestImageId: row.latestImageId,
         createdAt: row.createdAt,
         expiresAt: row.expiresAt,
+        errorMessage: row.errorMessage,
         status:
           row.imageStatus === "pending" || row.imageStatus === "processing"
             ? ("generating" as const)
-            : ("completed" as const),
+            : row.imageStatus === "failed"
+              ? ("failed" as const)
+              : ("completed" as const),
       }));
 
       return c.json({

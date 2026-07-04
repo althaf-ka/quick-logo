@@ -23,6 +23,7 @@ export const images = sqliteTable("image", {
     .default("pending"),
   errorMessage: text("error_message"),
   creditsUsed: integer("credits_used").notNull(),
+  refundedAt: integer("refunded_at", { mode: "timestamp" }),
   thumbnail: text("thumbnail"),
   imageId: text("imageId"),
   createdAt: integer("created_at", { mode: "timestamp" })

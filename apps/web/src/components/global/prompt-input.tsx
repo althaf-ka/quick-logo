@@ -8,7 +8,7 @@ import {
 } from "@quicklogo/ui/components/tooltip";
 import { ModelSelector } from "@/components/ui/model-selector/model-selector";
 import {
-  SparkleIcon,
+  MagicWandIcon,
   GearIcon,
   LightningIcon,
   ArrowUpIcon,
@@ -279,7 +279,7 @@ export function PromptInput({
                       />
                     }
                   >
-                    <SparkleIcon
+                    <MagicWandIcon
                       weight={magicPrompt ? "fill" : "regular"}
                       className="size-4"
                     />

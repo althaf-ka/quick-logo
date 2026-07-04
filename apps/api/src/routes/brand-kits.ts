@@ -69,11 +69,14 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         socials: data.socials,
         contact: data.contact,
         guidelines: data.guidelines,
+        creditsUsed: cost,
       });
 
       await c.env.GENERATION_QUEUE.send({
         type: "brand-kit-generate",
         brandKitId,
+        userId: user.id,
+        creditsUsed: cost,
         ...data,
         prompt: promptSummary,
         brandName: data.brandName || "",
@@ -208,10 +211,14 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
       const cost = 2; // Refinement cost
       await deductCredits(db, user.id, cost);
+      const refinementId = createId();
 
       await c.env.GENERATION_QUEUE.send({
         type: "brand-kit-refine",
+        refinementId,
         brandKitId: id,
+        userId: user.id,
+        creditsUsed: cost,
         ...data,
       });
 

@@ -37,6 +37,8 @@ export const brandKits = sqliteTable("brand_kit", {
     .notNull()
     .default("pending"),
   errorMessage: text("error_message"),
+  creditsUsed: integer("credits_used").notNull().default(0),
+  refundedAt: integer("refunded_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

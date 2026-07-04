@@ -1,6 +1,10 @@
 import { createDb } from "@quicklogo/db";
-import { updateImageStatus } from "./services/image/image-repository";
-import type { QueueMessage } from "@quicklogo/shared";
+import {
+  failBrandKitGenerationAndRefundCredits,
+  failImageAndRefundCredits,
+  refundBrandKitRefinementCredits,
+} from "./services/image/image-repository";
+import type { GenerateImageMessage, QueueMessage } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
 import { ImageGenerationPipeline } from "./pipelines/image-generation";
 import { BrandKitPipeline } from "./pipelines/brand-kit";
@@ -9,6 +13,21 @@ import { processDlqBatch } from "./dlq-consumer";
 import { PipelineError } from "./core/errors";
 import { extractImageId } from "./core/message-utils";
 import type { Env } from "./types";
+
+function getRuntimeMessageType(body: QueueMessage): string | undefined {
+  const type = (body as { type?: unknown }).type;
+  return typeof type === "string" ? type : undefined;
+}
+
+function isRuntimeImageMessage(
+  body: QueueMessage,
+): body is GenerateImageMessage {
+  const type = getRuntimeMessageType(body);
+  return (
+    (type === undefined || type === "image") &&
+    typeof (body as { imageId?: unknown }).imageId === "string"
+  );
+}
 
 export default {
   async queue(batch: MessageBatch<QueueMessage>, env: Env): Promise<void> {
@@ -35,8 +54,15 @@ export default {
           await brandKitPipeline.processGeneration(body);
         } else if (body.type === "brand-kit-refine") {
           await brandKitPipeline.processRefinement(body);
-        } else {
+        } else if (isRuntimeImageMessage(body)) {
           await imageGenerationPipeline.process(body);
+        } else {
+          logger.error(`Unknown queue message type. Acknowledging message.`, {
+            type: getRuntimeMessageType(body),
+            messageId: message.id,
+          });
+          message.ack();
+          continue;
         }
         message.ack();
       } catch (error) {
@@ -48,17 +74,43 @@ export default {
           logger.error(`Non-retryable error. Acknowledging message.`, error, {
             type: message.body?.type,
           });
-          const imageId = extractImageId(message.body);
-          if (imageId) {
-            const errorMessage =
-              error instanceof Error ? error.message : "Non-retryable error";
-            try {
-              await updateImageStatus(db, imageId, "failed", errorMessage);
-            } catch (dbError) {
-              logger.error(`Failed to update image status`, dbError, {
-                imageId,
+          const errorMessage =
+            error instanceof Error ? error.message : "Non-retryable error";
+
+          try {
+            if (message.body.type === "brand-kit-generate") {
+              await failBrandKitGenerationAndRefundCredits(
+                db,
+                message.body.brandKitId,
+                errorMessage,
+              );
+            } else if (message.body.type === "brand-kit-refine") {
+              await refundBrandKitRefinementCredits(db, {
+                refinementId: message.body.refinementId,
+                userId: message.body.userId,
+                creditsUsed: message.body.creditsUsed,
               });
+            } else if (isRuntimeImageMessage(message.body)) {
+              const imageId = extractImageId(message.body);
+              if (imageId) {
+                await failImageAndRefundCredits(db, imageId, errorMessage);
+              }
+            } else {
+              logger.error(
+                `Unknown non-retryable queue message type. Acknowledging message.`,
+                {
+                  type: getRuntimeMessageType(message.body),
+                  messageId: message.id,
+                },
+              );
             }
+          } catch (dbError) {
+            logger.error(
+              `Failed to handle non-retryable error updates`,
+              dbError,
+            );
+            message.retry({ delaySeconds: 30 });
+            continue;
           }
           message.ack();
           continue;

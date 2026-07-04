@@ -16,7 +16,7 @@ import {
   type CarouselApi,
 } from "@quicklogo/ui/components/carousel";
 import { useIsMobile } from "@quicklogo/ui/hooks/use-mobile";
-import { SparkleIcon, ArrowClockwiseIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon, PaletteIcon } from "@phosphor-icons/react";
 import { Button } from "@quicklogo/ui/components/button";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { downloadImage } from "@/lib/download";
@@ -28,14 +28,7 @@ interface GenerationDisplayProps {
   imageCount: ImageCount;
   error?: string | null;
   onRetry?: () => void;
-  onSuggestionClick?: (suggestion: string) => void;
 }
-
-const PROMPT_SUGGESTIONS = [
-  "A minimal owl logo for a tech startup",
-  "A bold lettermark logo for a fitness brand",
-  "A vintage emblem for a coffee shop",
-];
 
 function getGeneratingLabel(
   imageCount: ImageCount,
@@ -50,36 +43,21 @@ function getGeneratingLabel(
   return "Generating logos...";
 }
 
-function EmptyState({
-  onSuggestionClick,
-}: {
-  onSuggestionClick?: (s: string) => void;
-}) {
+function EmptyState() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
-      <div className="bg-primary/10 flex size-14 items-center justify-center">
-        <SparkleIcon weight="duotone" className="text-primary size-7" />
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+      <div className="bg-primary/10 flex size-16 items-center justify-center">
+        <PaletteIcon weight="duotone" className="text-primary size-8" />
       </div>
 
-      <div className="space-y-1.5">
-        <h3 className="text-sm font-semibold tracking-tight">
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold tracking-tight">
           Create your logo
         </h3>
-        <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
-          Describe the logo you want and we&apos;ll generate it for you.
+        <p className="text-muted-foreground max-w-sm text-sm">
+          Describe your brand below to generate a logo. You can unlock your full
+          brand kit afterwards.
         </p>
-      </div>
-
-      <div className="flex w-full max-w-xs flex-col gap-1.5">
-        {PROMPT_SUGGESTIONS.map((suggestion) => (
-          <button
-            key={suggestion}
-            onClick={() => onSuggestionClick?.(suggestion)}
-            className="bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground border-border/50 cursor-pointer border px-3 py-2 text-[11px] transition-colors"
-          >
-            &ldquo;{suggestion}&rdquo;
-          </button>
-        ))}
       </div>
     </div>
   );
@@ -293,7 +271,6 @@ export function GenerationDisplay({
   imageCount,
   error,
   onRetry,
-  onSuggestionClick,
 }: GenerationDisplayProps) {
   const navigate = useNavigate();
   const [previewLogo, setPreviewLogo] = useState<GeneratedLogo | null>(null);
@@ -318,7 +295,7 @@ export function GenerationDisplay({
   const content = (() => {
     switch (status) {
       case "idle":
-        return <EmptyState onSuggestionClick={onSuggestionClick} />;
+        return <EmptyState />;
       case "generating":
         return <LoadingState imageCount={imageCount} />;
       case "polling":

@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import type { InferResponseType } from "@quicklogo/api-client";
 import { api } from "@/lib/api";
+import { formatGenerationError } from "@/lib/format-error";
 
 export type ProjectItem = InferResponseType<
   (typeof api.projects.index)["$get"],
@@ -24,6 +25,7 @@ export const ProjectCard = memo(function ProjectCard({
   onClick,
 }: ProjectCardProps) {
   const isGenerating = project.status === "generating";
+  const isFailed = project.status === "failed";
 
   const [now] = useState(() => Date.now());
   const daysLeft = Math.ceil(
@@ -55,11 +57,14 @@ export const ProjectCard = memo(function ProjectCard({
             className={cn(
               "size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]",
               isGenerating && "blur-sm grayscale",
+              isFailed && "opacity-50 grayscale",
             )}
           />
         ) : (
           <div className="flex size-full items-center justify-center">
-            <SpinnerGapIcon className="text-muted-foreground/20 size-6 animate-spin" />
+            {!isFailed && (
+              <SpinnerGapIcon className="text-muted-foreground/20 size-6 animate-spin" />
+            )}
           </div>
         )}
 
@@ -75,9 +80,21 @@ export const ProjectCard = memo(function ProjectCard({
               Generating
             </span>
           </div>
+        ) : isFailed ? (
+          <div className="bg-destructive/10 absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-4 text-center backdrop-blur-[2px]">
+            <WarningIcon className="text-destructive size-7" weight="duotone" />
+            <span className="text-destructive font-mono text-[9px] font-black tracking-[0.1em] uppercase">
+              Failed
+            </span>
+            {project.errorMessage ? (
+              <span className="text-destructive/80 mt-1 line-clamp-3 text-[10px] leading-tight">
+                {formatGenerationError(project.errorMessage)}
+              </span>
+            ) : null}
+          </div>
         ) : null}
 
-        {!isGenerating ? (
+        {!isGenerating && !isFailed ? (
           <div className="absolute top-2.5 right-2.5">
             <div
               className={cn(

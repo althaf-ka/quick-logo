@@ -169,7 +169,7 @@ export function GenerationSidebar({
           value={config.brandName || ""}
           onChange={(e) => onConfigChange("brandName", e.target.value)}
           placeholder="e.g. Acme Corp"
-          className="h-8 text-xs"
+          className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 h-8 text-xs transition-colors focus-visible:ring-1"
         />
       </ConfigField>
 
@@ -207,7 +207,7 @@ export function GenerationSidebar({
             }
           }}
           onClick={() => setStyleDialogOpen(true)}
-          className="group hover:border-primary/40 hover:bg-muted/30 flex w-full cursor-pointer items-center gap-3 border px-3 py-2 text-left transition-colors"
+          className="group bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 flex w-full cursor-pointer items-center gap-3 border px-3 py-2 text-left transition-colors outline-none focus-visible:ring-1"
         >
           {activeStyle ? (
             <>
@@ -239,9 +239,7 @@ export function GenerationSidebar({
               ) : null}
             </>
           ) : (
-            <span className="flex-1 text-xs font-medium">
-              Auto (AI Chooses)
-            </span>
+            <span className="flex-1 text-xs font-medium">Auto</span>
           )}
         </div>
 
@@ -363,7 +361,7 @@ export function GenerationSidebar({
             <ToggleGroupItem
               key={n}
               value={String(n)}
-              className="flex-1 text-xs"
+              className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 data-[state=on]:bg-primary/10 flex-1 text-xs transition-colors focus-visible:ring-1"
             >
               {n}
             </ToggleGroupItem>
@@ -383,7 +381,7 @@ export function GenerationSidebar({
         >
           <ComboboxInput
             placeholder="Select palette..."
-            className="cursor-pointer [&_input]:cursor-pointer [&_input]:capitalize! [&_input]:caret-transparent"
+            className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-within:ring-primary/50 cursor-pointer transition-colors focus-within:ring-1 [&_input]:cursor-pointer [&_input]:capitalize! [&_input]:caret-transparent"
           />
           <ComboboxContent>
             <ComboboxList>
@@ -505,13 +503,22 @@ export function GenerationSidebar({
           variant="outline"
           className="w-full"
         >
-          <ToggleGroupItem value="white" className="flex-1 text-[11px]">
+          <ToggleGroupItem
+            value="white"
+            className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 data-[state=on]:bg-primary/10 flex-1 text-[11px] transition-colors focus-visible:ring-1"
+          >
             White
           </ToggleGroupItem>
-          <ToggleGroupItem value="black" className="flex-1 text-[11px]">
+          <ToggleGroupItem
+            value="black"
+            className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 data-[state=on]:bg-primary/10 flex-1 text-[11px] transition-colors focus-visible:ring-1"
+          >
             Black
           </ToggleGroupItem>
-          <ToggleGroupItem value="custom" className="flex-1 text-[11px]">
+          <ToggleGroupItem
+            value="custom"
+            className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 data-[state=on]:bg-primary/10 flex-1 text-[11px] transition-colors focus-visible:ring-1"
+          >
             Custom
           </ToggleGroupItem>
         </ToggleGroup>
@@ -566,7 +573,7 @@ export function GenerationSidebar({
           ) : (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="group border-muted-foreground/20 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary flex w-full cursor-pointer flex-col items-center gap-2 border border-dashed py-5 transition-all"
+              className="group border-muted-foreground/20 text-muted-foreground hover:border-primary/40 hover:bg-muted/30 hover:text-primary bg-card focus-visible:ring-primary/50 flex w-full cursor-pointer flex-col items-center gap-2 border border-dashed py-5 transition-all outline-none focus-visible:ring-1"
             >
               <UploadIcon
                 weight="bold"
@@ -589,7 +596,7 @@ export function GenerationSidebar({
           onChange={(e) => onConfigChange("negativePrompt", e.target.value)}
           placeholder="e.g., no text, no gradients, no 3D"
           rows={2}
-          className="min-h-0 resize-none text-xs"
+          className="bg-card hover:bg-muted/30 hover:border-primary/40 focus-visible:ring-primary/50 min-h-0 resize-none text-xs transition-colors focus-visible:ring-1"
         />
       </ConfigField>
     </div>
