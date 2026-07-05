@@ -233,7 +233,7 @@ export function buildBasePrompt(
   // For canvas edits (img2img/inpaint), the user's instruction is the primary
   // directive. Skip automatic style/palette/background modifiers that can
   // contradict the edit intent (e.g. "add green background" + "transparent bg").
-  if (message.isEdit) {
+  if (message.config.canvasMode && message.config.canvasMode !== "text2img") {
     parts.push(basePrompt);
     // Canvas-mode-specific quality suffix
     const canvasMode = message.config.canvasMode;

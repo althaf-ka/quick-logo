@@ -212,7 +212,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
         prompt: state.aiPrompt,
         sourceImageId: imageId,
         config: {
-          model: state.aiModel as EditApiRequest["config"]["model"],
+          model: state.aiModel,
           imageCount: 1,
           referenceImageUrl: uploadedRegionUrl || canvasImageUrl || undefined,
           magicPrompt: state.canvasMode === "img2img",
@@ -220,6 +220,8 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
             state.canvasMode as EditApiRequest["config"]["canvasMode"],
           maskImageUrl: maskImageUrl || undefined,
           canvasImageUrl: canvasImageUrl || undefined,
+          style: "",
+          nativeStyle: "",
         },
       };
 

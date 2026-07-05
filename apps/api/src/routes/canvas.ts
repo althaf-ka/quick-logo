@@ -70,7 +70,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             projectId: img.projectId,
             userId: user.id,
             prompt,
-            isEdit: true,
             config,
           },
         })),

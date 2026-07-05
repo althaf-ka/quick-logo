@@ -240,6 +240,8 @@ export function useEditForm({
             referenceImageUrl: targetImageUrl,
             magicPrompt: false,
             canvasMode: "edit",
+            style: "",
+            nativeStyle: "",
           },
         };
 

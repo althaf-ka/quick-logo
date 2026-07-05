@@ -136,6 +136,7 @@ export const MODELS: ModelOption[] = [
     icon: "palette",
     features: ["Custom Style", "Fast render", "Contrast-tuned"],
     supportsReferenceImage: true,
+    editingStrategy: "remix-image",
   },
   {
     id: "quick-seedream",
@@ -150,6 +151,7 @@ export const MODELS: ModelOption[] = [
     features: ["Highly detailed", "Reference image support", "Versatile"],
     supportsReferenceImage: true,
     bestForEdits: true,
+    editingStrategy: "remix-image-array",
   },
   {
     id: "quick-gpt-image-2",
@@ -161,6 +163,7 @@ export const MODELS: ModelOption[] = [
     icon: "brain",
     features: ["Professional", "Remix Support", "Low Cost Variant"],
     supportsReferenceImage: true,
+    editingStrategy: "remix-image-array",
   },
   {
     id: "quick-imagen",
@@ -200,6 +203,7 @@ export const MODELS: ModelOption[] = [
     icon: "swatches",
     features: ["Reference image", "Style transfer", "High fidelity"],
     supportsReferenceImage: true,
+    editingStrategy: "remix-image",
   },
   {
     id: "quick-flux-2-pro",
@@ -212,6 +216,7 @@ export const MODELS: ModelOption[] = [
     icon: "diamond",
     features: ["Best quality", "Remix Support", "Production-ready"],
     supportsReferenceImage: true,
+    editingStrategy: "remix-image",
   },
 ];
 

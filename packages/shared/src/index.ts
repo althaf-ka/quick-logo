@@ -8,7 +8,7 @@ export * from "./constants/billing";
 export * from "./constants/error-codes";
 export * from "./constants/typography";
 export * from "./constants/favicon";
-
+export * from "./constants/models";
 export * from "./types/index";
 export * from "./utils/brand-kit-context";
 export * from "./utils/social-targets";

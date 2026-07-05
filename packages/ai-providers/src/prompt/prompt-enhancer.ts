@@ -144,7 +144,9 @@ export class PromptEnhancer {
     const palette = message.config.colorPalette ?? "auto";
     const hasReference = !!message.config.referenceImageUrl;
 
-    const isEdit = message.isEdit;
+    const isEdit =
+      message.config.canvasMode !== undefined &&
+      message.config.canvasMode !== "text2img";
 
     const referenceRules =
       hasReference && !isEdit

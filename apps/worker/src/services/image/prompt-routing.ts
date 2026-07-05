@@ -54,11 +54,14 @@ export async function routePromptAndBuildParams(
         promptTemplate?.img2imgSuffix ??
         "Keep the core subject and composition intact.";
 
-      if (
-        !finalPrompt.toLowerCase().includes(`${label.toLowerCase()}`) &&
-        !finalPrompt.toLowerCase().includes("based on") &&
-        !finalPrompt.toLowerCase().includes("the image")
-      ) {
+      // Use a stricter regex to ensure they are actually referencing the source image,
+      // rather than just using common words like "stick figure" or "based on true events".
+      const hasExplicitReference =
+        /\b(?:based on|using|preserve|keep)(?:\s+(?:the|this|provided))?\s+(?:image|figure|picture|original)\b/i.test(
+          finalPrompt,
+        );
+
+      if (!hasExplicitReference) {
         finalPrompt = `${prefix} ${finalPrompt.charAt(0).toLowerCase() + finalPrompt.slice(1)}. ${suffix}`;
       }
     }

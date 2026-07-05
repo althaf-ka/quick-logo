@@ -79,7 +79,7 @@ export const generateApiConfigSchema = z
   })
   .refine(
     (data) => {
-      if (data.referenceImageUrl) {
+      if (data.referenceImageUrl || data.canvasMode === "img2img") {
         const model = MODELS.find((m) => m.id === data.model);
         return model?.supportsReferenceImage === true;
       }
@@ -87,7 +87,20 @@ export const generateApiConfigSchema = z
     },
     {
       message: "The selected model does not support reference images.",
-      path: ["referenceImageUrl"],
+      path: ["model"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.canvasMode === "inpaint") {
+        const model = MODELS.find((m) => m.id === data.model);
+        return model?.supportsInpaint === true;
+      }
+      return true;
+    },
+    {
+      message: "The selected model does not support inpainting.",
+      path: ["model"],
     },
   );
 
@@ -96,19 +109,48 @@ export const generateApiRequestSchema = z.object({
   config: generateApiConfigSchema,
 });
 
-export const editApiConfigSchema = z.object({
-  model: z.enum(modelIds),
-  imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
-  referenceImageUrl: z.url().optional(),
-  magicPrompt: z.boolean().optional().default(true),
-  canvasMode: z
-    .enum(["edit", "img2img", "inpaint", "text2img"])
-    .optional()
-    .default("edit"),
-  maskImageUrl: z.url().optional(),
-  canvasImageUrl: z.url().optional(),
-  negativePrompt: z.string().max(500).optional(),
-});
+export const editApiConfigSchema = z
+  .object({
+    model: z.enum(modelIds),
+    imageCount: z.union([z.literal(1), z.literal(2), z.literal(4)]).default(1),
+    referenceImageUrl: z.url().optional(),
+    magicPrompt: z.boolean().optional().default(true),
+    canvasMode: z
+      .enum(["edit", "img2img", "inpaint", "text2img"])
+      .optional()
+      .default("edit"),
+    maskImageUrl: z.url().optional(),
+    canvasImageUrl: z.url().optional(),
+    negativePrompt: z.string().max(500).optional(),
+    style: z.string().optional().default(""),
+    nativeStyle: z.string().optional().default(""),
+  })
+  .refine(
+    (data) => {
+      if (data.referenceImageUrl || data.canvasMode === "img2img") {
+        const model = MODELS.find((m) => m.id === data.model);
+        return model?.supportsReferenceImage === true;
+      }
+      return true;
+    },
+    {
+      message: "The selected model does not support reference images.",
+      path: ["model"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.canvasMode === "inpaint") {
+        const model = MODELS.find((m) => m.id === data.model);
+        return model?.supportsInpaint === true;
+      }
+      return true;
+    },
+    {
+      message: "The selected model does not support inpainting.",
+      path: ["model"],
+    },
+  );
 
 export const editApiRequestSchema = z.object({
   prompt: z.string().min(1, "Prompt is required"),
