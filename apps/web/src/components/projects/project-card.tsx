@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@quicklogo/ui/lib/utils";
 import {
@@ -26,14 +26,6 @@ export const ProjectCard = memo(function ProjectCard({
 }: ProjectCardProps) {
   const isGenerating = project.status === "generating";
   const isFailed = project.status === "failed";
-
-  const [now] = useState(() => Date.now());
-  const daysLeft = Math.ceil(
-    (new Date(project.expiresAt).getTime() - now) / 86_400_000,
-  );
-  const isExpired = daysLeft <= 0;
-  const isExpiringSoon = daysLeft <= 3 && !isExpired;
-  const isWarning = daysLeft <= 7 && !isExpired;
 
   return (
     <button
@@ -91,29 +83,6 @@ export const ProjectCard = memo(function ProjectCard({
                 {formatGenerationError(project.errorMessage)}
               </span>
             ) : null}
-          </div>
-        ) : null}
-
-        {!isGenerating && !isFailed ? (
-          <div className="absolute top-2.5 right-2.5">
-            <div
-              className={cn(
-                "flex items-center gap-1 px-2 py-1",
-                "font-mono text-[9px] font-black tracking-widest uppercase backdrop-blur-md",
-                isExpired
-                  ? "bg-red-500/90 text-white"
-                  : isExpiringSoon
-                    ? "animate-pulse bg-amber-500/90 text-white"
-                    : isWarning
-                      ? "bg-black/60 text-amber-400"
-                      : "bg-black/50 text-white/80",
-              )}
-            >
-              {isWarning && !isExpiringSoon ? (
-                <WarningIcon weight="bold" className="size-2.5 shrink-0" />
-              ) : null}
-              {isExpired ? "Expired" : `${daysLeft}d`}
-            </div>
           </div>
         ) : null}
 

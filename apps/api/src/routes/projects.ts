@@ -1,18 +1,15 @@
 import { zValidator } from "@hono/zod-validator";
-import { projects, images, users, eq, lt, desc, and, sql } from "@quicklogo/db";
+import { projects, images, eq, lt, desc, and, sql } from "@quicklogo/db";
 import { createLogger } from "@quicklogo/server-telemetry";
 import { listQuerySchema } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
 import { Hono } from "hono";
-import { InsufficientCreditsError, NotFoundError } from "../lib/errors";
+import { NotFoundError } from "../lib/errors";
 import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
 
 const logger = createLogger("api");
-
-const EXTEND_COST = 10;
-const EXTEND_DAYS = 30;
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -61,7 +58,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           referenceImgUrl: projects.referenceImgUrl,
           referenceImgId: projects.referenceImgId,
           createdAt: projects.createdAt,
-          expiresAt: projects.expiresAt,
           latestImageId: latestImage.imageId,
           imageStatus: latestImage.status,
           errorMessage: latestImage.errorMessage,
@@ -85,7 +81,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         referenceImgUrl: row.referenceImgUrl,
         latestImageId: row.latestImageId,
         createdAt: row.createdAt,
-        expiresAt: row.expiresAt,
         errorMessage: row.errorMessage,
         status:
           row.imageStatus === "pending" || row.imageStatus === "processing"
@@ -139,47 +134,6 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     await db.delete(projects).where(eq(projects.id, id));
 
     return c.json({ success: true });
-  })
-
-  .post("/:id/extend", requireAuth, async (c) => {
-    const db = c.get("db");
-    const user = c.get("user");
-    const { id } = c.req.param();
-
-    const [project] = await db
-      .select({ id: projects.id, expiresAt: projects.expiresAt })
-      .from(projects)
-      .where(and(eq(projects.id, id), eq(projects.userId, user.id)))
-      .limit(1);
-
-    if (!project) {
-      throw new NotFoundError("Project");
-    }
-
-    const [updated] = await db
-      .update(users)
-      .set({ credits: sql`${users.credits} - ${EXTEND_COST}` })
-      .where(
-        and(eq(users.id, user.id), sql`${users.credits} >= ${EXTEND_COST}`),
-      )
-      .returning({ credits: users.credits });
-
-    if (!updated) {
-      throw new InsufficientCreditsError(EXTEND_COST, 0);
-    }
-
-    const newExpiry = new Date(project.expiresAt);
-    newExpiry.setDate(newExpiry.getDate() + EXTEND_DAYS);
-
-    await db
-      .update(projects)
-      .set({ expiresAt: newExpiry })
-      .where(eq(projects.id, id));
-
-    return c.json({
-      expiresAt: newExpiry.toISOString(),
-      credits: updated.credits,
-    });
   });
 
 export default app;

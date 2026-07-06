@@ -48,7 +48,6 @@ export interface GenerationProject {
   name: string;
   latestThumbnail: string | null;
   createdAt: Date;
-  expiresAt: Date;
   images: GeneratedImage[];
 }
 

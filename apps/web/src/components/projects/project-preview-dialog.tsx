@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -7,18 +6,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@quicklogo/ui/components/dialog";
-import { Button } from "@quicklogo/ui/components/button";
 import {
   DownloadIcon,
   PencilIcon,
   FrameCornersIcon,
-  ClockIcon,
   SpinnerGapIcon,
   WarningIcon,
-  LightningIcon,
-  CheckIcon,
   TrashIcon,
-  CaretUpIcon,
   PaletteIcon,
 } from "@phosphor-icons/react";
 import {
@@ -46,14 +40,11 @@ const CHECKER_BG = {
   backgroundPosition: "0 0, 0 8px, 8px -8px, -8px 0px",
 } as const;
 
-const EXTEND_COST = 10;
-
 interface Project {
   id: string;
   latestImageId: string | null;
   latestThumbnail: string | null;
   createdAt: string | Date;
-  expiresAt: string | Date;
   status: "generating" | "completed" | "failed";
   errorMessage?: string | null;
 }
@@ -79,42 +70,7 @@ export function ProjectPreviewDialog({
   onOpenBrandKit,
   onDeleted,
 }: ProjectPreviewDialogProps) {
-  const [storageOpen, setStorageOpen] = useState(false);
-  const [extended, setExtended] = useState(false);
   const queryClient = useQueryClient();
-
-  const [now] = useState(() => Date.now());
-
-  const daysLeft = useMemo(
-    () =>
-      project
-        ? Math.ceil((new Date(project.expiresAt).getTime() - now) / 86_400_000)
-        : 0,
-    [project, now],
-  );
-
-  const isExpired = daysLeft <= 0;
-  const isExpiringSoon = daysLeft <= 3 && !isExpired;
-  const isWarning = daysLeft <= 7 && !isExpired;
-
-  const extendMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.projects[":id"].extend.$post({
-        param: { id: project!.id },
-      });
-      if (!res.ok) {
-        throw await parseApiError(res);
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      setExtended(true);
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      toast.success("Storage extended by 30 days");
-    },
-    onError: (err: Error) => toast.error(err.message ?? "Extension failed"),
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -136,18 +92,11 @@ export function ProjectPreviewDialog({
 
   if (!project) return null;
 
-  const newExpiry = addDays(new Date(project.expiresAt), 30);
-
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
         onOpenChange(v);
-        if (!v)
-          setTimeout(() => {
-            setStorageOpen(false);
-            setExtended(false);
-          }, 200);
       }}
     >
       <DialogContent className="border-border/60 bg-background gap-0 overflow-hidden border p-0 shadow-2xl sm:max-w-sm">
@@ -185,168 +134,11 @@ export function ProjectPreviewDialog({
             )}
           </div>
 
-          {project.status !== "failed" && (
-            <div className="absolute top-3 left-3">
-              <button
-                type="button"
-                onClick={() => setStorageOpen((v) => !v)}
-                className={cn(
-                  "group flex cursor-pointer items-center gap-2 px-3 py-2 backdrop-blur-md",
-                  "font-mono text-[10px] font-black tracking-widest uppercase",
-                  "border transition-all duration-200",
-                  isExpired
-                    ? "border-red-500/40 bg-red-500/80 text-white hover:bg-red-500/90"
-                    : isExpiringSoon
-                      ? "animate-pulse border-amber-400/40 bg-amber-500/80 text-white"
-                      : isWarning
-                        ? "border-amber-400/30 bg-black/70 text-amber-400 hover:bg-black/80"
-                        : "border-white/10 bg-black/60 text-white/80 hover:bg-black/75 hover:text-white",
-                  storageOpen && "ring-1 ring-white/20",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded-full",
-                    isExpired
-                      ? "bg-white/20"
-                      : isWarning
-                        ? "bg-amber-400/20"
-                        : "bg-white/10",
-                  )}
-                >
-                  {isWarning ? (
-                    <WarningIcon weight="fill" className="size-2.5" />
-                  ) : (
-                    <ClockIcon weight="bold" className="size-2.5" />
-                  )}
-                </span>
-                {isExpired ? "Expired" : `${daysLeft} days`}
-                <span
-                  className={cn(
-                    "ml-0.5 flex items-center gap-0.5 font-mono text-[8px] tracking-normal normal-case transition-colors",
-                    isWarning ? "text-amber-300/60" : "text-white/30",
-                    "group-hover:text-white/60",
-                  )}
-                >
-                  storage
-                  <CaretUpIcon
-                    weight="bold"
-                    className={cn(
-                      "size-2 transition-transform duration-300",
-                      storageOpen ? "rotate-0" : "rotate-180",
-                    )}
-                  />
-                </span>
-              </button>
-            </div>
-          )}
-
           {/* Created date — bottom left */}
           <div className="absolute bottom-3 left-3">
             <span className="font-mono text-[9px] font-black tracking-wider text-white/40 uppercase">
               {format(new Date(project.createdAt), "MMM d, yyyy")}
             </span>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "grid transition-all duration-300 ease-in-out",
-            storageOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-          )}
-        >
-          <div className="overflow-hidden">
-            <div className="border-border/50 border-b">
-              <div className="space-y-3 p-4">
-                <div
-                  className={cn(
-                    "flex items-center gap-2 border px-3 py-2.5",
-                    isExpired
-                      ? "border-destructive/30 bg-destructive/5"
-                      : isWarning
-                        ? "border-amber-500/30 bg-amber-500/5"
-                        : "border-border/40 bg-muted/10",
-                  )}
-                >
-                  <WarningIcon
-                    weight="duotone"
-                    className={cn(
-                      "size-3 shrink-0",
-                      isExpired
-                        ? "text-destructive"
-                        : isWarning
-                          ? "text-amber-500"
-                          : "text-muted-foreground/30",
-                    )}
-                  />
-                  <p className="text-muted-foreground/60 font-mono text-[10px]">
-                    {isExpired
-                      ? "This project has expired and been removed."
-                      : `Expires ${format(new Date(project.expiresAt), "MMM d, yyyy")} · ${daysLeft}d left`}
-                  </p>
-                </div>
-
-                {!isExpired ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="border-border/40 border p-3">
-                      <p className="text-muted-foreground/40 font-mono text-[9px] font-black tracking-widest uppercase">
-                        Now
-                      </p>
-                      <p className="mt-1.5 font-mono text-sm font-black">
-                        {format(new Date(project.expiresAt), "MMM d")}
-                      </p>
-                      <p className="text-muted-foreground/40 font-mono text-[9px]">
-                        {format(new Date(project.expiresAt), "yyyy")}
-                      </p>
-                    </div>
-                    <div
-                      className={cn(
-                        "border p-3 transition-colors duration-300",
-                        extended
-                          ? "border-foreground/30 bg-foreground/5"
-                          : "border-border/40 border-dashed",
-                      )}
-                    >
-                      <p className="text-muted-foreground/40 font-mono text-[9px] font-black tracking-widest uppercase">
-                        +30 days
-                      </p>
-                      <p className="mt-1.5 font-mono text-sm font-black">
-                        {format(newExpiry, "MMM d")}
-                      </p>
-                      <p className="text-primary font-mono text-[9px]">
-                        {format(newExpiry, "yyyy")}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-
-                {!isExpired ? (
-                  <Button
-                    className="h-9 w-full rounded-none font-mono text-[9px] font-black tracking-widest uppercase"
-                    onClick={() => extendMutation.mutate()}
-                    disabled={extendMutation.isPending || extended}
-                    variant={extended ? "outline" : "default"}
-                  >
-                    {extendMutation.isPending ? (
-                      <>
-                        <SpinnerGapIcon className="size-3.5 animate-spin" />
-                        Processing...
-                      </>
-                    ) : extended ? (
-                      <>
-                        <CheckIcon weight="bold" className="size-3.5" />
-                        Extended
-                      </>
-                    ) : (
-                      <>
-                        <LightningIcon weight="fill" className="size-3" />
-                        Extend 30 days — {EXTEND_COST} credits
-                      </>
-                    )}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
           </div>
         </div>
 

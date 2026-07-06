@@ -84,7 +84,6 @@ function ProjectsPage() {
           {status === "success" && projects.length > 0
             ? `${projects.length} project${projects.length !== 1 ? "s" : ""}`
             : "Your generated logos"}
-          {" · stored for 30 days"}
         </p>
       </div>
 

@@ -16,11 +16,4 @@ export const projects = sqliteTable("project", {
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
-  expiresAt: integer("expires_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => {
-      const d = new Date();
-      d.setDate(d.getDate() + 30);
-      return d;
-    }),
 });
