@@ -26,10 +26,17 @@ import {
   generateSocialMediaAssets,
   generateBusinessCardAssets,
   generateBrandedBackdrops,
+  buildSocialMediaAssetList,
+  SOCIAL_MEDIA_ASSET_COUNT,
 } from "../services/brand-kit/asset-generator";
 import { generateBrandPresentationImage } from "../services/brand-kit/brand-presentation-generator";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
-import { FAVICON_SIZES } from "@quicklogo/shared";
+import {
+  FAVICON_SIZES,
+  BRAND_KIT_SECTION_COSTS,
+  computeSectionRefund,
+} from "@quicklogo/shared";
+import { refundCreditsOnce } from "../services/image/image-repository";
 
 export class BrandKitPipeline {
   private repository: BrandKitRepository;
@@ -76,6 +83,35 @@ export class BrandKitPipeline {
     });
 
     this.logger.info(`Starting brand kit pipeline`, { brandKitId });
+
+    // Idempotency guard: a redelivered queue message must not regenerate a kit
+    // that already finished (which would duplicate revisions and re-refund).
+    const existingKit = await this.repository.getBrandKit(brandKitId);
+    if (existingKit?.status === "completed") {
+      this.logger.info("Brand kit already completed; skipping regeneration", {
+        brandKitId,
+      });
+      return;
+    }
+
+    // Accumulates per-section refunds for assets that fell back (issue #3).
+    let refundCredits = 0;
+    const failedSections: string[] = [];
+    const accountFailure = (
+      section: keyof typeof BRAND_KIT_SECTION_COSTS,
+      failed: number,
+      total: number,
+    ) => {
+      const refund = computeSectionRefund(
+        BRAND_KIT_SECTION_COSTS[section],
+        failed,
+        total,
+      );
+      if (refund > 0) {
+        refundCredits += refund;
+        failedSections.push(section);
+      }
+    };
 
     await this.repository.updateStatus(brandKitId, "processing");
 
@@ -189,7 +225,7 @@ export class BrandKitPipeline {
           );
         }
 
-        const presentationImageUrl = actualLogoUrl
+        const presentationUrl = actualLogoUrl
           ? await generateBrandPresentationImage({
               ai: this.ai,
               env: this.env,
@@ -209,7 +245,13 @@ export class BrandKitPipeline {
               selectedVibes: message.selectedVibes,
               brandPersonality: message.brandPersonality,
             })
-          : "https://placehold.co/1376x768/000/FFF?text=Brand+Presentation";
+          : undefined;
+
+        accountFailure("brandPresentation", presentationUrl ? 0 : 1, 1);
+
+        const presentationImageUrl =
+          presentationUrl ??
+          "https://placehold.co/1536x1024/000/FFF?text=Brand+Presentation";
 
         brandPresentationOutput = {
           tagline,
@@ -274,6 +316,19 @@ export class BrandKitPipeline {
           : null;
       }
 
+      // Refund accounting for logo/favicon (both derive from darkAndIconUrls).
+      if (deliverables?.logoVariations) {
+        const failed = actualLogoUrl
+          ? (darkAndIconUrls?.darkModeUrl ? 0 : 1) +
+            (darkAndIconUrls?.iconOnlyUrl ? 0 : 1)
+          : 2;
+        accountFailure("logoVariations", failed, 2);
+      }
+      if (deliverables?.favicon) {
+        const failed = actualLogoUrl && darkAndIconUrls?.iconOnlyUrl ? 0 : 1;
+        accountFailure("favicon", failed, 1);
+      }
+
       if (deliverables?.logoVariations) {
         finalResultsJSON.logoVariations = [
           {
@@ -316,48 +371,15 @@ export class BrandKitPipeline {
             })
           : null;
 
-        finalResultsJSON.socialMedia = [
-          {
-            platform: "Instagram",
-            type: "Profile",
-            dimensions: "1080x1080",
-            url:
-              socialMediaUrls?.socialProfileUrl ??
-              "https://placehold.co/1080x1080/000/FFF?text=IG",
-          },
-          {
-            platform: "Twitter",
-            type: "Header",
-            dimensions: "1500x500",
-            url:
-              socialMediaUrls?.masterBannerUrl ??
-              "https://placehold.co/1500x500/000/FFF?text=TW",
-          },
-          {
-            platform: "LinkedIn",
-            type: "Header",
-            dimensions: "1584x396",
-            url:
-              socialMediaUrls?.masterBannerUrl ??
-              "https://placehold.co/1584x396/000/FFF?text=LI",
-          },
-          {
-            platform: "Facebook",
-            type: "Header",
-            dimensions: "820x360",
-            url:
-              socialMediaUrls?.facebookBannerUrl ??
-              "https://placehold.co/820x360/000/FFF?text=FB",
-          },
-          {
-            platform: "YouTube",
-            type: "Channel Art",
-            dimensions: "2560x1440",
-            url:
-              socialMediaUrls?.masterBannerUrl ??
-              "https://placehold.co/2560x1440/000/FFF?text=YT",
-          },
-        ];
+        // No logo → whole section couldn't run: all assets count as failed.
+        accountFailure(
+          "socialMedia",
+          socialMediaUrls ? socialMediaUrls.failed : SOCIAL_MEDIA_ASSET_COUNT,
+          socialMediaUrls ? socialMediaUrls.total : SOCIAL_MEDIA_ASSET_COUNT,
+        );
+
+        finalResultsJSON.socialMedia =
+          buildSocialMediaAssetList(socialMediaUrls);
       }
       if (deliverables?.brandedBackdrops) {
         const backdropUrls = actualLogoUrl
@@ -372,13 +394,14 @@ export class BrandKitPipeline {
             })
           : null;
 
+        // Branded backdrops are not charged (free), so no refund accounting.
         finalResultsJSON.brandedBackdrops = {
           feedUrl:
             backdropUrls?.feedUrl ??
-            "https://placehold.co/1080x1080/000/FFF?text=Feed",
+            "https://placehold.co/1024x1024/000/FFF?text=Feed",
           storyUrl:
             backdropUrls?.storyUrl ??
-            "https://placehold.co/1080x1920/000/FFF?text=Story",
+            "https://placehold.co/1024x1536/000/FFF?text=Story",
         };
       }
       if (deliverables?.businessCard) {
@@ -394,13 +417,19 @@ export class BrandKitPipeline {
             })
           : null;
 
+        accountFailure(
+          "businessCard",
+          businessCardUrls ? businessCardUrls.failed : 2,
+          businessCardUrls ? businessCardUrls.total : 2,
+        );
+
         finalResultsJSON.businessCard = {
           frontUrl:
             businessCardUrls?.frontUrl ??
-            "https://placehold.co/1376x768/000/FFF?text=Front",
+            "https://placehold.co/1536x1024/000/FFF?text=Front",
           backUrl:
             businessCardUrls?.backUrl ??
-            "https://placehold.co/1376x768/FFF/000?text=Back",
+            "https://placehold.co/1536x1024/FFF/000?text=Back",
         };
       }
       if (deliverables?.favicon) {
@@ -413,7 +442,38 @@ export class BrandKitPipeline {
         }));
       }
 
-      await this.repository.saveInitialGeneration(brandKitId, finalResultsJSON);
+      // Partial-failure refund (issue #3). Idempotent via a per-kit refundId so
+      // a queue retry can never double-refund. Status stays "completed"; the
+      // reason is surfaced via errorMessage (no schema/migration needed).
+      let refundedAt: Date | undefined;
+      let errorMessage: string | null = null;
+      if (refundCredits > 0) {
+        const didRefund = await refundCreditsOnce(this.db, {
+          refundId: `brand-kit-partial:${brandKitId}`,
+          userId: message.userId,
+          credits: refundCredits,
+          reason: "brand_kit_partial_failure",
+        });
+        if (didRefund) refundedAt = new Date();
+        errorMessage = `Some assets failed to generate (${failedSections.join(
+          ", ",
+        )}); ${refundCredits} credit${refundCredits === 1 ? "" : "s"} refunded.`;
+        this.logger.warn("Brand kit completed with failed assets", {
+          brandKitId,
+          refundCredits,
+          failedSections,
+          didRefund,
+        });
+      }
+
+      await this.repository.saveInitialGeneration(
+        brandKitId,
+        finalResultsJSON,
+        {
+          errorMessage,
+          refundedAt,
+        },
+      );
 
       this.logger.info(`Completed brandKitId=${brandKitId}`);
     } catch (error) {

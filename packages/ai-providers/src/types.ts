@@ -14,6 +14,7 @@ export interface GenerationParams {
   maskImage?: string;
   canvasImage?: string;
   canvasMode?: "edit" | "img2img" | "inpaint" | "text2img";
+  signal?: AbortSignal;
 }
 
 export interface GenerationResult {

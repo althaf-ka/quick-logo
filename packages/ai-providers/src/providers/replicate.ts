@@ -49,12 +49,24 @@ export class ReplicateProvider implements AIProvider {
     });
   }
 
-  private getAspectRatio(width: number, height: number): string {
+  private getAspectRatio(
+    width: number,
+    height: number,
+    supported?: readonly string[],
+  ): string {
     const targetRatio = width / height;
-    let closestLabel = "1:1";
+    // Restrict to the model's supported ratios when declared, so we never emit
+    // a label the API would reject (e.g. gpt-image-2 only allows 1:1/3:2/2:3).
+    const candidates =
+      supported && supported.length > 0
+        ? ASPECT_RATIOS.filter((entry) => supported.includes(entry.label))
+        : ASPECT_RATIOS;
+    const pool = candidates.length > 0 ? candidates : ASPECT_RATIOS;
+
+    let closestLabel = pool[0]?.label ?? "1:1";
     let minDiff = Infinity;
 
-    for (const entry of ASPECT_RATIOS) {
+    for (const entry of pool) {
       const diff = Math.abs(targetRatio - entry.ratio);
       if (diff < minDiff) {
         minDiff = diff;
@@ -79,7 +91,11 @@ export class ReplicateProvider implements AIProvider {
     }
 
     if (caps.aspectRatio && params.width && params.height) {
-      input.aspect_ratio = this.getAspectRatio(params.width, params.height);
+      input.aspect_ratio = this.getAspectRatio(
+        params.width,
+        params.height,
+        caps.supportedAspectRatios,
+      );
     }
 
     if (caps.defaultOutputFormat) {
@@ -121,7 +137,15 @@ export class ReplicateProvider implements AIProvider {
     if (!strategy) return;
     if (mode === "img2img" && !strategy.type.startsWith("remix")) return;
     if (mode === "inpaint" && strategy.type !== "inpaint-with-mask") return;
-    if (mode !== "inpaint" && mode !== "img2img") return;
+
+    // Safety net: If no canvasMode is explicitly set but we have a reference image
+    // and the model supports remixing, implicitly attach the image to avoid dropping it.
+    const isImplicitRemix =
+      !mode &&
+      strategy.type.startsWith("remix") &&
+      (params.referenceImage || params.canvasImage);
+
+    if (mode !== "inpaint" && mode !== "img2img" && !isImplicitRemix) return;
 
     switch (strategy.type) {
       case "inpaint-with-mask": {
@@ -164,6 +188,7 @@ export class ReplicateProvider implements AIProvider {
 
   private async extractImage(
     output: unknown,
+    signal?: AbortSignal,
   ): Promise<{ imageData: Uint8Array; format: GenerationResult["format"] }> {
     let fileOutput: unknown;
     if (Array.isArray(output)) {
@@ -186,7 +211,7 @@ export class ReplicateProvider implements AIProvider {
     }
 
     if (typeof fileOutput === "string" && fileOutput.startsWith("http")) {
-      return this.downloadImage(fileOutput);
+      return this.downloadImage(fileOutput, signal);
     }
 
     throw new ReplicateParseError(
@@ -209,8 +234,9 @@ export class ReplicateProvider implements AIProvider {
 
   private async downloadImage(
     url: string,
+    signal?: AbortSignal,
   ): Promise<{ imageData: Uint8Array; format: GenerationResult["format"] }> {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
     if (!response.ok) {
       throw new Error(
         `Failed to download image from Replicate: ${response.status}`,
@@ -257,6 +283,7 @@ export class ReplicateProvider implements AIProvider {
         identifier,
         {
           input,
+          signal: params.signal,
         },
         (prediction: Prediction) => {
           if (
@@ -268,7 +295,10 @@ export class ReplicateProvider implements AIProvider {
         },
       );
 
-      const { imageData, format } = await this.extractImage(output);
+      const { imageData, format } = await this.extractImage(
+        output,
+        params.signal,
+      );
 
       return {
         success: true,

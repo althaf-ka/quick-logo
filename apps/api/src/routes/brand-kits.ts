@@ -18,6 +18,7 @@ import {
   buildBrandContextSummary,
   listQuerySchema,
   getSocialAssetTargetId,
+  computeBrandKitCost,
 } from "@quicklogo/shared";
 import deepEqual from "fast-deep-equal";
 import { Hono } from "hono";
@@ -37,13 +38,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const user = c.get("user");
       const data = c.req.valid("json");
 
-      let cost = 5;
-      if (data.deliverables.logoVariations) cost += 2;
-      if (data.deliverables.socialMedia) cost += 3;
-      if (data.deliverables.businessCard) cost += 2;
-      if (data.deliverables.favicon) cost += 1;
-      if (data.deliverables.brandPresentation) cost += 3;
-      if (data.deliverables.brandGuidelines) cost += 0; // V1: no extra cost
+      const cost = computeBrandKitCost(data.deliverables);
 
       await deductCredits(db, user.id, cost);
 

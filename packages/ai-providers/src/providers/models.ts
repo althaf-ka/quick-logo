@@ -23,6 +23,13 @@ export interface ModelCapability {
   aspectRatio: boolean;
   editingStrategy?: EditingStrategy;
   defaultOutputFormat: string;
+  /**
+   * Aspect-ratio labels this model actually accepts. When set, requested
+   * dimensions are clamped to the closest supported ratio (a model that only
+   * offers 1:1/3:2/2:3 must not be sent 16:9). When omitted, the full ratio
+   * table is used.
+   */
+  supportedAspectRatios?: readonly string[];
 }
 
 export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
@@ -80,5 +87,7 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
       imageField: "input_images",
     },
     defaultOutputFormat: "webp",
+    // Replicate's gpt-image-2 only accepts these three ratios.
+    supportedAspectRatios: ["1:1", "3:2", "2:3"],
   },
 } as const;

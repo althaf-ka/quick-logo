@@ -1,5 +1,5 @@
 import ImageKit, { toFile } from "@imagekit/nodejs";
-import type { StorageProvider } from "./types";
+import type { StorageProvider, UploadOptions } from "./types";
 
 export class ImageKitProvider implements StorageProvider {
   private readonly client: ImageKit;
@@ -27,16 +27,21 @@ export class ImageKitProvider implements StorageProvider {
   async upload(
     path: string,
     data: Uint8Array,
+    options?: UploadOptions,
   ): Promise<{ url: string; fileId: string; thumbnail: string }> {
     try {
       const { folder, fileName } = this.splitPath(path);
       const file = await toFile(data, fileName);
 
+      // When overwriting, disable unique filenames so the deterministic
+      // folder+name is reused (ImageKit overwrites the existing object),
+      // preventing orphaned duplicates on retries.
       const result = await this.client.files.upload({
         file,
         fileName: fileName,
         folder: folder,
-        useUniqueFileName: true,
+        useUniqueFileName: !options?.overwrite,
+        ...(options?.overwrite && { overwriteFile: true }),
       });
 
       if (!result.url || !result.fileId || !result.thumbnailUrl) {

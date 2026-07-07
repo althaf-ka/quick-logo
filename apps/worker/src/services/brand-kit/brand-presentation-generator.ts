@@ -6,7 +6,7 @@ import { buildBrandPresentationGenerationParams } from "@quicklogo/ai-providers/
 import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
-import { generateWithFallback } from "../../core/pipeline-helpers";
+import { runAssetOrNull } from "../../core/pipeline-helpers";
 import { analyzeLogoStyle } from "./vision-analysis";
 import { createLogger } from "@quicklogo/server-telemetry";
 
@@ -46,7 +46,7 @@ export async function generateBrandPresentationImage({
   targetAudience?: string;
   selectedVibes?: string[];
   brandPersonality?: string;
-}): Promise<string> {
+}): Promise<string | undefined> {
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
@@ -71,10 +71,12 @@ export async function generateBrandPresentationImage({
     }
   }
 
-  const url = await generateWithFallback(
-    async () => {
-      const result = await provider.generate(
-        buildBrandPresentationGenerationParams({
+  // Returns undefined on failure/timeout so the caller can fall back and record
+  // the failure for partial-refund accounting.
+  return runAssetOrNull(
+    async (signal) => {
+      const result = await provider.generate({
+        ...buildBrandPresentationGenerationParams({
           brandName,
           backendModel: mapping.backendModel,
           defaultParams: mapping.defaultParams,
@@ -89,7 +91,8 @@ export async function generateBrandPresentationImage({
           brandPersonality,
           fallbackPrompt: brandDescription,
         }),
-      );
+        signal,
+      });
       if (!result.success || !result.imageData) {
         throw new Error(
           result.error ??
@@ -99,13 +102,11 @@ export async function generateBrandPresentationImage({
       const uploaded = await storage.upload(
         `quick-logo/brand-kits/${brandKitId}/brand-presentation.${result.format ?? "png"}`,
         result.imageData,
+        { overwrite: true },
       );
       return uploaded.url;
     },
-    sourceLogoUrl,
     LOGO_VARIATION_TIMEOUT_MS,
     "asset-generator",
   );
-
-  return url;
 }

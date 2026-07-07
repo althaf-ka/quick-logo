@@ -48,18 +48,50 @@ export class BrandKitRepository {
   async saveInitialGeneration(
     brandKitId: string,
     results: Record<string, any>,
+    opts?: { errorMessage?: string | null; refundedAt?: Date },
   ) {
+    // Idempotent: on a queue retry we must not create a second active revision.
+    // Reuse the existing initial_generation revision if present, and ensure only
+    // one active revision remains.
+    const existing = await this.db.query.brandKitRevisions.findFirst({
+      where: and(
+        eq(brandKitRevisions.brandKitId, brandKitId),
+        eq(brandKitRevisions.triggerType, "initial_generation"),
+      ),
+    });
+
+    const revisionStatement = existing
+      ? this.db
+          .update(brandKitRevisions)
+          .set({ isActive: true, results })
+          .where(eq(brandKitRevisions.id, existing.id))
+      : this.db.insert(brandKitRevisions).values({
+          brandKitId,
+          isActive: true,
+          revisionNumber: 1,
+          triggerType: "initial_generation",
+          results,
+        });
+
     await this.db.batch([
-      this.db.insert(brandKitRevisions).values({
-        brandKitId,
-        isActive: true,
-        revisionNumber: 1,
-        triggerType: "initial_generation",
-        results,
-      }),
+      this.db
+        .update(brandKitRevisions)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(brandKitRevisions.brandKitId, brandKitId),
+            eq(brandKitRevisions.isActive, true),
+            eq(brandKitRevisions.triggerType, "initial_generation"),
+          ),
+        ),
+      revisionStatement,
       this.db
         .update(brandKits)
-        .set({ status: "completed" })
+        .set({
+          status: "completed",
+          errorMessage: opts?.errorMessage ?? null,
+          ...(opts?.refundedAt && { refundedAt: opts.refundedAt }),
+        })
         .where(eq(brandKits.id, brandKitId)),
     ]);
   }

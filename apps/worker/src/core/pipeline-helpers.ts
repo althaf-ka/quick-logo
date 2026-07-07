@@ -47,29 +47,30 @@ export async function withTimeout<T>(
 }
 
 /**
- * Executes a Promise-based operation with a timeout and fallback value using AbortController.
- * Logs if the operation fails or times out.
+ * Runs a Promise-based operation with a timeout, returning `undefined` on
+ * failure or timeout instead of throwing. Unlike a silent fallback, the caller
+ * can detect the `undefined` and both (a) substitute its own fallback URL and
+ * (b) record the failure for partial-refund accounting.
  */
-export async function generateWithFallback<T>(
-  operation: () => Promise<T>,
-  fallbackValue: T,
+export async function runAssetOrNull<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number,
   loggerPrefix: string,
-): Promise<T> {
+): Promise<T | undefined> {
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof safeTimeout> | undefined;
 
-  const timeoutPromise = new Promise<T>((resolve) => {
+  const timeoutPromise = new Promise<undefined>((resolve) => {
     timeoutId = safeTimeout(() => {
       controller.abort();
       logger.warn(
-        `[${loggerPrefix}] Operation timed out (${timeoutMs}ms); using fallback`,
+        `[${loggerPrefix}] Operation timed out (${timeoutMs}ms); marking asset failed`,
       );
-      resolve(fallbackValue);
+      resolve(undefined);
     }, timeoutMs);
   });
 
-  const opPromise = operation()
+  const opPromise = operation(controller.signal)
     .then((result) => {
       if (timeoutId) clearTimeout(timeoutId);
       return result;
@@ -77,10 +78,10 @@ export async function generateWithFallback<T>(
     .catch((error) => {
       if (timeoutId) clearTimeout(timeoutId);
       if (controller.signal.aborted) {
-        return fallbackValue;
+        return undefined;
       }
       logger.error(`[${loggerPrefix}] Operation failed:`, error);
-      return fallbackValue;
+      return undefined;
     });
 
   return Promise.race([opPromise, timeoutPromise]);

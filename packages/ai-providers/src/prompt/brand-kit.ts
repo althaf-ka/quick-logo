@@ -17,6 +17,13 @@ import { buildBusinessCardContentStrategy } from "./business-card-strategy";
 
 const JSON_RESPONSE_MAX_TOKENS = 600;
 
+// Orientation presets. gpt-image-2 (the default brand-kit model) only supports
+// 1:1, 3:2, 2:3, so assets are generated at the nearest supported orientation
+// rather than exact platform pixels. See getAspectRatio clamping in replicate.ts.
+const SQUARE_DIMENSIONS = { width: 1024, height: 1024 }; // 1:1
+const LANDSCAPE_DIMENSIONS = { width: 1536, height: 1024 }; // 3:2
+const PORTRAIT_DIMENSIONS = { width: 1024, height: 1536 }; // 2:3
+
 export const LOGO_VARIATION_PROMPTS = {
   "dark-mode": ({ brandName }: { brandName: string }) =>
     `You are an expert graphic designer. Take the provided logo for "${brandName}" and prepare a dark-background version. Preserve the exact original canvas, logo scale, typography position, spacing, composition, and art style. The output must match the original layout and size exactly. Do not move text, enlarge the mark, shrink the mark, crop, rotate, or redesign any element. Keep the colored icon intact. Only recolor dark or low-contrast text and strokes to white or a light contrasting color so the existing logo remains legible on a pitch-black background.`,
@@ -408,8 +415,7 @@ export function buildLogoVariationGenerationParams({
     prompt: LOGO_VARIATION_PROMPTS[variation]({ brandName }),
     referenceImage: sourceLogoUrl,
     referenceStrength: 75,
-    width: 1024,
-    height: 1024, // Assumed default if missing, though it wasn't there originally. Let's just omit width/height for logo? Wait, buildAssetParams requires width and height. I'll provide 1024. Or make them optional in buildAssetParams.
+    ...SQUARE_DIMENSIONS,
     backendModel,
     defaultParams,
   });
@@ -436,12 +442,14 @@ export function buildSocialMediaGenerationParams({
   refinementPrompt?: string;
 }): GenerationParams {
   const ctx = context || normalizeBrandContext(brandName, {});
+  // Profile is a square avatar; banners are wide → nearest supported landscape.
+  const dimensions =
+    variation === "social-profile" ? SQUARE_DIMENSIONS : LANDSCAPE_DIMENSIONS;
   return buildAssetParams({
     prompt: SOCIAL_MEDIA_PROMPTS[variation](ctx),
     referenceImage: sourceLogoUrl,
     referenceStrength: variation === "social-profile" ? 90 : 40,
-    width: 1024,
-    height: 1024,
+    ...dimensions,
     backendModel,
     defaultParams,
     refinementPrompt,
@@ -467,12 +475,14 @@ export function buildBackdropGenerationParams({
   context,
 }: BuildBackdropParamsInput & { refinementPrompt?: string }): GenerationParams {
   const ctx = context || normalizeBrandContext(brandName, {});
+  // Feed backdrop is square; story is a tall 9:16 → nearest supported portrait.
+  const dimensions =
+    variation === "story-backdrop" ? PORTRAIT_DIMENSIONS : SQUARE_DIMENSIONS;
   return buildAssetParams({
     prompt: BACKDROP_PROMPTS[variation](ctx),
     referenceImage: sourceLogoUrl,
     referenceStrength: 40,
-    width: 1024,
-    height: 1024,
+    ...dimensions,
     backendModel,
     defaultParams,
     refinementPrompt,
@@ -513,8 +523,7 @@ export function buildBusinessCardGenerationParams({
     referenceImage: useReference ? sourceLogoUrl : undefined,
     referenceStrength:
       variation === "front" ? (ctx.hasAnyDetails ? 60 : 90) : 40,
-    width: 1376,
-    height: 768,
+    ...LANDSCAPE_DIMENSIONS,
     backendModel,
     defaultParams,
     refinementPrompt,
@@ -573,8 +582,7 @@ export function buildBrandPresentationGenerationParams({
     prompt: basePrompt,
     referenceImage: productImageUrl,
     referenceStrength: productImageUrl ? 45 : undefined,
-    width: 1376,
-    height: 768,
+    ...LANDSCAPE_DIMENSIONS,
     backendModel,
     defaultParams,
     refinementPrompt,

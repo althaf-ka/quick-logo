@@ -15,6 +15,7 @@ import {
   generateSocialMediaAssets,
   generateBrandedBackdrops,
   generateBusinessCardAssets,
+  buildSocialMediaAssetList,
 } from "./asset-generator";
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -107,38 +108,7 @@ export async function mergeRevisionResults({
           },
         );
       } else {
-        newMergedJSON.socialMedia = [
-          {
-            platform: "Instagram",
-            type: "Profile",
-            dimensions: "1080x1080",
-            url: socialMediaUrls.socialProfileUrl,
-          },
-          {
-            platform: "Twitter",
-            type: "Header",
-            dimensions: "1500x500",
-            url: socialMediaUrls.masterBannerUrl,
-          },
-          {
-            platform: "LinkedIn",
-            type: "Header",
-            dimensions: "1584x396",
-            url: socialMediaUrls.masterBannerUrl,
-          },
-          {
-            platform: "Facebook",
-            type: "Header",
-            dimensions: "820x360",
-            url: socialMediaUrls.facebookBannerUrl,
-          },
-          {
-            platform: "YouTube",
-            type: "Channel Art",
-            dimensions: "2560x1440",
-            url: socialMediaUrls.masterBannerUrl,
-          },
-        ];
+        newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
       }
     }
   } else if (sectionId === "branded-backdrops") {
@@ -316,31 +286,32 @@ export async function mergeRevisionResults({
 
             if (copyChanged && actualLogoUrl) {
               try {
-                newPresentationUrl = await generateBrandPresentationImage({
-                  ai,
-                  env,
-                  storage,
-                  brandKitId,
-                  brandName:
-                    currentBrandKit?.brandName ||
-                    newMergedJSON.brandName ||
-                    "Brand",
-                  sourceLogoUrl: actualLogoUrl,
-                  refinementPrompt,
-                  headingFont: newMergedJSON.typography?.heading?.family,
-                  bodyFont: newMergedJSON.typography?.body?.family,
-                  productImageUrl:
-                    currentBrandKit?.productImageUrls &&
-                    currentBrandKit.productImageUrls.length > 0
-                      ? currentBrandKit.productImageUrls[0]
-                      : undefined,
-                  brandDescription:
-                    currentBrandKit?.prompt || "Professional brand kit",
-                  industry: currentBrandKit?.industry,
-                  targetAudience: currentBrandKit?.targetAudience,
-                  selectedVibes: currentBrandKit?.selectedVibes,
-                  brandPersonality: currentBrandKit?.brandPersonality,
-                });
+                newPresentationUrl =
+                  (await generateBrandPresentationImage({
+                    ai,
+                    env,
+                    storage,
+                    brandKitId,
+                    brandName:
+                      currentBrandKit?.brandName ||
+                      newMergedJSON.brandName ||
+                      "Brand",
+                    sourceLogoUrl: actualLogoUrl,
+                    refinementPrompt,
+                    headingFont: newMergedJSON.typography?.heading?.family,
+                    bodyFont: newMergedJSON.typography?.body?.family,
+                    productImageUrl:
+                      currentBrandKit?.productImageUrls &&
+                      currentBrandKit.productImageUrls.length > 0
+                        ? currentBrandKit.productImageUrls[0]
+                        : undefined,
+                    brandDescription:
+                      currentBrandKit?.prompt || "Professional brand kit",
+                    industry: currentBrandKit?.industry,
+                    targetAudience: currentBrandKit?.targetAudience,
+                    selectedVibes: currentBrandKit?.selectedVibes,
+                    brandPersonality: currentBrandKit?.brandPersonality,
+                  })) ?? newPresentationUrl;
               } catch (err) {
                 logger.error(
                   "[revision-merger] Global refine: presentation image generation failed",
@@ -462,33 +433,35 @@ export async function mergeRevisionResults({
               newMergedJSON.logoVariations?.[0]?.url ||
               currentBrandKit?.customLogoUrl;
 
-            const newPresentationUrl = actualLogoUrl
-              ? await generateBrandPresentationImage({
-                  ai,
-                  env,
-                  storage,
-                  brandKitId,
-                  brandName:
-                    currentBrandKit?.brandName ||
-                    newMergedJSON.brandName ||
-                    "Brand",
-                  sourceLogoUrl: actualLogoUrl,
-                  refinementPrompt,
-                  headingFont: newMergedJSON.typography?.heading?.family,
-                  bodyFont: newMergedJSON.typography?.body?.family,
-                  productImageUrl:
-                    currentBrandKit?.productImageUrls &&
-                    currentBrandKit.productImageUrls.length > 0
-                      ? currentBrandKit.productImageUrls[0]
-                      : undefined,
-                  brandDescription:
-                    currentBrandKit?.prompt || "Professional brand kit",
-                  industry: currentBrandKit?.industry,
-                  targetAudience: currentBrandKit?.targetAudience,
-                  selectedVibes: currentBrandKit?.selectedVibes,
-                  brandPersonality: currentBrandKit?.brandPersonality,
-                })
-              : newMergedJSON.brandPresentation?.presentationUrl;
+            const newPresentationUrl =
+              (actualLogoUrl
+                ? await generateBrandPresentationImage({
+                    ai,
+                    env,
+                    storage,
+                    brandKitId,
+                    brandName:
+                      currentBrandKit?.brandName ||
+                      newMergedJSON.brandName ||
+                      "Brand",
+                    sourceLogoUrl: actualLogoUrl,
+                    refinementPrompt,
+                    headingFont: newMergedJSON.typography?.heading?.family,
+                    bodyFont: newMergedJSON.typography?.body?.family,
+                    productImageUrl:
+                      currentBrandKit?.productImageUrls &&
+                      currentBrandKit.productImageUrls.length > 0
+                        ? currentBrandKit.productImageUrls[0]
+                        : undefined,
+                    brandDescription:
+                      currentBrandKit?.prompt || "Professional brand kit",
+                    industry: currentBrandKit?.industry,
+                    targetAudience: currentBrandKit?.targetAudience,
+                    selectedVibes: currentBrandKit?.selectedVibes,
+                    brandPersonality: currentBrandKit?.brandPersonality,
+                  })
+                : undefined) ??
+              newMergedJSON.brandPresentation?.presentationUrl;
 
             newMergedJSON.brandPresentation = {
               tagline: parsedJson.tagline,
