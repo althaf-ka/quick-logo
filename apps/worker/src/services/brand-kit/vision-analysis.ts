@@ -21,18 +21,6 @@ export async function analyzeLogoStyle({
   const MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
   try {
-    await ai.run(
-      MODEL as any,
-      {
-        messages: [{ role: "user", content: "agree" }],
-        max_tokens: 1,
-      } as any,
-    );
-  } catch {
-    // Already accepted or other error — proceed
-  }
-
-  try {
     const logoResponse = await fetch(logoUrl);
     if (!logoResponse.ok)
       throw new Error("Failed to fetch logo for AI analysis");
@@ -58,10 +46,23 @@ export async function analyzeLogoStyle({
       }),
     );
     const text = extractWorkersAiResponseText(response);
-    logger.info("Logo style analysis", { text, prefix: "vision-analysis" });
-    return text;
+    logger.info("Brand logo analysis raw response", {
+      text,
+      prefix: "vision-analysis",
+    });
+
+    const parsed = JSON.parse(text);
+    if (parsed.style && typeof parsed.style === "string") {
+      return parsed.style;
+    }
+
+    logger.warn("Logo analysis style parsing failed", {
+      text,
+      prefix: "vision-analysis",
+    });
+    return null;
   } catch (error) {
-    logger.warn("Logo style analysis failed", {
+    logger.warn("Brand logo analysis failed", {
       error,
       prefix: "vision-analysis",
     });
@@ -82,23 +83,28 @@ export async function runVisionTypographyRequest({
   description: string;
   typographyStyleHint: string;
   typographyStyleKey?: string;
-  logoUrl: string;
+  logoUrl?: string;
 }): Promise<unknown | null> {
   try {
-    // Step 1: Analyze logo style via vision model
-    const visualAnalysis = await analyzeLogoStyle({
-      ai,
-      brandName,
-      description,
-      logoUrl,
-    });
+    let finalAnalysis: string | null = null;
+
+    // Fetch visual analysis if we have a logo.
+    if (logoUrl) {
+      const analysis = await analyzeLogoStyle({
+        ai,
+        brandName,
+        description,
+        logoUrl,
+      });
+      finalAnalysis = analysis || null;
+    }
 
     const fontRequest = buildBrandKitTypographyRequest({
       brandName,
       description,
       typographyStyleHint,
       typographyStyleKey,
-      visualAnalysis: visualAnalysis ?? undefined,
+      visualAnalysis: finalAnalysis ?? undefined,
     });
 
     const fontResponse = await ai.run(

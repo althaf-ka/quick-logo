@@ -7,7 +7,6 @@ import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { runAssetOrNull } from "../../core/pipeline-helpers";
-import { analyzeLogoStyle } from "./vision-analysis";
 import { createLogger } from "@quicklogo/server-telemetry";
 
 const logger = createLogger("worker");
@@ -50,27 +49,6 @@ export async function generateBrandPresentationImage({
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
-  // Get visual description of the logo to feed into the image generator's text prompt
-  let logoStyleDescription: string | undefined = undefined;
-  if (sourceLogoUrl && brandDescription) {
-    try {
-      const analysis = await analyzeLogoStyle({
-        ai,
-        brandName,
-        description: brandDescription,
-        logoUrl: sourceLogoUrl,
-      });
-      if (analysis) {
-        logoStyleDescription = analysis;
-      }
-    } catch (err) {
-      logger.warn("Failed to analyze logo style, proceeding without it", {
-        error: err,
-        prefix: "brand-presentation-generator",
-      });
-    }
-  }
-
   // Returns undefined on failure/timeout so the caller can fall back and record
   // the failure for partial-refund accounting.
   return runAssetOrNull(
@@ -84,7 +62,6 @@ export async function generateBrandPresentationImage({
           headingFont,
           bodyFont,
           productImageUrl,
-          logoStyleDescription,
           industry,
           targetAudience,
           selectedVibes,

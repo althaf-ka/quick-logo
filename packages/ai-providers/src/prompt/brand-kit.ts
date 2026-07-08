@@ -121,50 +121,60 @@ export function buildJsonBrandKitRequest(
     max_tokens: JSON_RESPONSE_MAX_TOKENS,
   };
 }
+export const FALLBACK_PALETTE = ["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"];
 
-export interface BuildBrandKitIdentityRequestInput {
-  brandName: string;
-  description: string;
-  extractedColors: string[];
-  industry?: string;
-  targetAudience?: string;
-  selectedVibes?: string[];
-  brandPersonality?: string;
+export interface PaletteColor {
+  hex: string;
+  role: string;
+  rgb: string;
 }
 
-export function buildBrandKitIdentityRequest({
-  brandName,
-  description,
-  extractedColors,
-  industry,
-  targetAudience,
-  selectedVibes,
-  brandPersonality,
-}: BuildBrandKitIdentityRequestInput): BrandKitJsonRequest {
-  const systemPrompt = `You are an expert brand identity designer.
-Output ONLY valid JSON matching the schema below.
-CRITICAL: Respond with ONLY the "colorPalette" key. Never add brandName, typography, logos, or any other fields.
-{
-  "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }]
-}`;
-
-  let context = `Brand Name: ${brandName}\nBase Colors: ${extractedColors.join(", ")}\n`;
-  if (industry) context += `Industry: ${industry}\n`;
-  if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
-  if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
-  if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
-  if (
-    !industry &&
-    !targetAudience &&
-    !selectedVibes?.length &&
-    !brandPersonality
-  ) {
-    context += `Description: ${description}\n`;
-  } else {
-    context += `Additional Context: ${description}\n`;
+export function derivePalette(hexes: string[]): PaletteColor[] {
+  if (!hexes || hexes.length === 0) {
+    hexes = FALLBACK_PALETTE;
   }
 
-  return buildJsonBrandKitRequest(systemPrompt, context);
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) return { r: 0, g: 0, b: 0, str: "0,0,0" };
+    const r = parseInt(result[1] as string, 16);
+    const g = parseInt(result[2] as string, 16);
+    const b = parseInt(result[3] as string, 16);
+    return { r, g, b, str: `${r},${g},${b}` };
+  };
+
+  const calculateLuminance = (r: number, g: number, b: number) => {
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  };
+
+  const sortedHexes = [...new Set(hexes)]
+    .map((hex) => {
+      const rgb = hexToRgb(hex);
+      return {
+        hex,
+        rgb: rgb.str,
+        luminance: calculateLuminance(rgb.r, rgb.g, rgb.b),
+      };
+    })
+    .sort((a, b) => a.luminance - b.luminance)
+    .slice(0, 5);
+
+  const assignRole = (index: number, total: number) => {
+    if (index === 0) return "Primary";
+    if (index === total - 1) return "Background";
+    if (total === 3) return "Accent";
+    if (total === 4) return index === 1 ? "Secondary" : "Accent";
+    return (
+      ["Primary", "Secondary", "Accent", "Neutral", "Background"][index] ||
+      "Support"
+    );
+  };
+
+  return sortedHexes.map((item, index) => ({
+    hex: item.hex,
+    rgb: item.rgb,
+    role: assignRole(index, sortedHexes.length),
+  }));
 }
 
 export interface BuildBrandPresentationTextRequestInput {
@@ -242,6 +252,7 @@ Schema:
         ],
       },
     ],
+    response_format: { type: "json_object" },
     max_tokens: 300,
   };
 }
@@ -538,7 +549,6 @@ export function buildBrandPresentationGenerationParams({
   headingFont,
   bodyFont,
   productImageUrl,
-  logoStyleDescription,
   industry,
   targetAudience,
   selectedVibes,
@@ -552,7 +562,6 @@ export function buildBrandPresentationGenerationParams({
   headingFont?: string;
   bodyFont?: string;
   productImageUrl?: string;
-  logoStyleDescription?: string;
   industry?: string;
   targetAudience?: string;
   selectedVibes?: string[];
@@ -572,7 +581,6 @@ export function buildBrandPresentationGenerationParams({
 
   basePrompt += ` Include clean typography`;
   basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup\n`;
-  if (logoStyleDescription) basePrompt += ` (${logoStyleDescription})`;
   if (productImageUrl) basePrompt += `, a sleek product showcase`;
   basePrompt += `, subtle typography integration (${headingFont || "Inter"} & ${bodyFont || "Montserrat"}), and beautiful modern color palette swatches.`;
   basePrompt += ` Background should feature abstract organic shapes and sleek brand textures.`;

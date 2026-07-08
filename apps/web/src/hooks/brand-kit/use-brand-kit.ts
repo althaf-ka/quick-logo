@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/lib/api";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -6,6 +6,10 @@ import { useBrandKitSession } from "./use-brand-kit-session";
 import { useBrandKitGeneration } from "./use-brand-kit-generation";
 import { useBrandKitRefinement } from "./use-brand-kit-refinement";
 import { uploadFileToImageKit } from "@/lib/imagekit";
+import {
+  extractColorsFromFile,
+  extractColorsFromUrl,
+} from "@/lib/brand-kit/extract-colors";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
@@ -67,10 +71,8 @@ export function useBrandKit({
 
   // Use state to track logo upload process
   const [isLoadingLogo, setIsLoadingLogo] = useState(false);
-  // Track uploaded logo file if needed locally
 
   // Track mockup uploads
-  // Track mockup files if needed locally
   const [isUploadingMockups, setIsUploadingMockups] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -117,6 +119,10 @@ export function useBrandKit({
     enabled: !!imageId,
   });
 
+  // Guard ref prevents double-extraction during React StrictMode mount
+  // (the !logoUrl check already prevents normal re-renders from triggering this).
+  const colorExtractionStarted = useRef(false);
+
   useEffect(() => {
     if (imageDetails?.image) {
       const img = imageDetails.image as {
@@ -125,7 +131,15 @@ export function useBrandKit({
       };
       if (img.imageUrl && !logoUrl) {
         setLogoUrl(img.imageUrl);
-        setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
+
+        if (!colorExtractionStarted.current) {
+          colorExtractionStarted.current = true;
+          extractColorsFromUrl(img.imageUrl)
+            .then((colors) => {
+              if (colors.length > 0) setExtractedColors(colors);
+            })
+            .catch(() => {});
+        }
       }
       if (img.brandName && !brandName) {
         setBrandName(img.brandName);
@@ -168,10 +182,19 @@ export function useBrandKit({
       }
       setIsLoadingLogo(true);
       try {
-        const url = await uploadFileToImageKit(file, user?.id);
+        const [url, colors] = await Promise.all([
+          uploadFileToImageKit(file, user?.id),
+          extractColorsFromFile(file).catch(() => [] as string[]),
+        ]);
+
         setLogoUrl(url);
-        // Optimistically seed palette derived from placeholder/image
-        setExtractedColors(["#3b82f6", "#1d4ed8", "#1e3a8a", "#eff6ff"]);
+        setExtractedColors(colors);
+
+        if (!colors || colors.length === 0) {
+          toast.warning("Could not read colors from this logo.", {
+            description: "A default professional palette will be used instead.",
+          });
+        }
       } catch {
         toast.error("Failed to upload logo. Please try again.");
       } finally {
@@ -184,6 +207,7 @@ export function useBrandKit({
   const handleLogoRemove = useCallback(() => {
     setLogoUrl(null);
     setExtractedColors([]);
+    colorExtractionStarted.current = false;
   }, [setLogoUrl, setExtractedColors]);
 
   const handleMockupUpload = useCallback(

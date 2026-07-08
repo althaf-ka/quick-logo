@@ -1,15 +1,14 @@
 import type { Database } from "@quicklogo/db";
 
 import {
-  buildBrandKitIdentityRequest,
   buildBrandPresentationTextRequest,
+  derivePalette,
 } from "@quicklogo/ai-providers/prompt";
 import type { StorageProvider } from "@quicklogo/storage";
 import type {
   GenerateBrandKitMessage,
   RefineBrandKitMessage,
 } from "@quicklogo/shared";
-import { brandKitColorPaletteResponseSchema } from "@quicklogo/shared";
 import type { Env } from "../types";
 import { normalizeBrandContext } from "@quicklogo/ai-providers/prompt";
 import { extractWorkersAiResponseText } from "../core/ai-response-parser";
@@ -116,16 +115,6 @@ export class BrandKitPipeline {
     await this.repository.updateStatus(brandKitId, "processing");
 
     try {
-      const requestConfig = buildBrandKitIdentityRequest({
-        brandName,
-        description: prompt,
-        extractedColors,
-        industry: message.industry,
-        targetAudience: message.targetAudience,
-        selectedVibes: message.selectedVibes,
-        brandPersonality: message.brandPersonality,
-      });
-
       let actualLogoUrl = message.customLogoUrl;
 
       if (!actualLogoUrl && message.sourceImageId) {
@@ -137,45 +126,24 @@ export class BrandKitPipeline {
         }
       }
 
+      const colorOutput = {
+        colorPalette: derivePalette(extractedColors || []),
+      };
+
+      // Step 3: Typography via hybrid vision request
       const { key: resolvedStyle, hint: styleHint } =
         resolveTypographyStyle(typographyStyle);
 
-      const [colorResponse, typographyResponse] = await Promise.all([
-        this.ai.run("@cf/meta/llama-3.1-8b-instruct-fp8", requestConfig),
-        actualLogoUrl
-          ? runVisionTypographyRequest({
-              ai: this.ai,
-              brandName,
-              description: prompt,
-              typographyStyleHint: styleHint,
-              typographyStyleKey: resolvedStyle,
-              logoUrl: actualLogoUrl,
-            })
-          : Promise.resolve(null),
-      ]);
-
-      const colorText = extractWorkersAiResponseText(colorResponse);
-
-      let colorOutput: { colorPalette: any[] } = { colorPalette: [] };
-      try {
-        const parsedJson = JSON.parse(colorText);
-        const validated =
-          brandKitColorPaletteResponseSchema.safeParse(parsedJson);
-        if (validated.success) {
-          colorOutput = validated.data;
-        } else {
-          this.logger.warn(
-            "[brand-kit-pipeline] Color palette schema validation failed",
-            { brandKitId, error: validated.error },
-          );
-        }
-      } catch (e) {
-        this.logger.error("[brand-kit-pipeline] Failed to parse JSON", e, {
-          brandKitId,
-          colorText,
-        });
-        throw new Error("AI returned invalid JSON");
-      }
+      const typographyResponse = actualLogoUrl
+        ? await runVisionTypographyRequest({
+            ai: this.ai,
+            brandName,
+            description: prompt,
+            typographyStyleHint: styleHint,
+            typographyStyleKey: resolvedStyle,
+            logoUrl: actualLogoUrl,
+          })
+        : Promise.resolve(null);
 
       let typographyOutput = FALLBACK_TYPOGRAPHY;
       if (typographyResponse) {
