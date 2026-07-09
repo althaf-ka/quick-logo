@@ -2,7 +2,7 @@ import type { GenerationParams } from "../types";
 import {
   LogoVariationKind,
   SocialMediaVariationKind,
-  BackdropVariationKind,
+  BrandGraphicVariationKind,
   BusinessCardVariationKind,
   BrandKitSectionKey,
   BrandKitJsonRequest,
@@ -20,9 +20,9 @@ const JSON_RESPONSE_MAX_TOKENS = 600;
 // Orientation presets. gpt-image-2 (the default brand-kit model) only supports
 // 1:1, 3:2, 2:3, so assets are generated at the nearest supported orientation
 // rather than exact platform pixels. See getAspectRatio clamping in replicate.ts.
-const SQUARE_DIMENSIONS = { width: 1024, height: 1024 }; // 1:1
-const LANDSCAPE_DIMENSIONS = { width: 1536, height: 1024 }; // 3:2
-const PORTRAIT_DIMENSIONS = { width: 1024, height: 1536 }; // 2:3
+const SQUARE_DIMENSIONS = { width: 1024, height: 1024 }; // 1024x1024
+const LANDSCAPE_DIMENSIONS = { width: 1536, height: 1024 }; // 1536x1024
+const STORY_DIMENSIONS = { width: 1152, height: 2048 }; // 1152x2048
 
 export const LOGO_VARIATION_PROMPTS = {
   "dark-mode": ({ brandName }: { brandName: string }) =>
@@ -46,13 +46,13 @@ export const SOCIAL_MEDIA_PROMPTS = {
   (context: ValidatedBrandContext) => string
 >;
 
-export const BACKDROP_PROMPTS = {
-  "feed-backdrop": (context: ValidatedBrandContext) =>
-    `You are an expert graphic designer. Create a beautiful abstract background or gradient derived from the brand's color palette for "${context.brandName}". It should be suitable as an Instagram feed post backdrop for writing text or quotes over. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.${context.hasSocials ? " Subtle social watermarks are permitted." : ""}${buildBrandDesignContext(context)}`,
-  "story-backdrop": (context: ValidatedBrandContext) =>
-    `You are an expert graphic designer. Create a 9:16 vertical story backdrop for "${context.brandName}". Create a beautiful abstract background or gradient derived from the brand's color palette. Include a tasteful, semi-transparent watermark of the logo in the bottom corner.${context.hasSocials ? " Subtle social watermarks are permitted." : ""}${buildBrandDesignContext(context)}`,
+export const BRAND_GRAPHIC_PROMPTS = {
+  "graphic-backdrop-post": (context: ValidatedBrandContext) =>
+    `You are an expert graphic designer specializing in social media content design. Create a clean, minimal 1:1 square background graphic for "${context.brandName}". Use the brand's color palette with subtle gradients, soft tones, and generous negative space. The design should feel refined and understated — think premium editorial layouts. Keep the center open and clean for text overlay. Use minimal geometric accents or soft textures at the edges only. The overall feel should be calm, sophisticated, and professional. CRITICAL: Do NOT include any logo, watermark, text, or typography — this is a pure background graphic. Create an elegant, minimalist composition.${buildBrandDesignContext(context)}`,
+  "graphic-backdrop-story": (context: ValidatedBrandContext) =>
+    `You are an expert graphic designer specializing in social media content design. Create a clean, minimal 9:16 vertical story background graphic for "${context.brandName}". Use the brand's color palette with subtle gradients, soft tones, and generous negative space. Design for mobile — keep the middle third clean for text or sticker overlays. Use soft geometric accents or subtle textures at the very top and bottom edges for framing. The overall feel should be calm, sophisticated, and professional. CRITICAL: Do NOT include any logo, watermark, text, or typography — this is a pure background graphic. Create an elegant, minimalist composition.${buildBrandDesignContext(context)}`,
 } satisfies Record<
-  BackdropVariationKind,
+  BrandGraphicVariationKind,
   (context: ValidatedBrandContext) => string
 >;
 
@@ -467,8 +467,8 @@ export function buildSocialMediaGenerationParams({
   });
 }
 
-export interface BuildBackdropParamsInput {
-  variation: BackdropVariationKind;
+export interface BuildBrandGraphicParamsInput {
+  variation: BrandGraphicVariationKind;
   brandName: string;
   sourceLogoUrl: string;
   backendModel: string;
@@ -476,7 +476,7 @@ export interface BuildBackdropParamsInput {
   context?: ValidatedBrandContext;
 }
 
-export function buildBackdropGenerationParams({
+export function buildBrandGraphicGenerationParams({
   variation,
   brandName,
   sourceLogoUrl,
@@ -484,15 +484,17 @@ export function buildBackdropGenerationParams({
   defaultParams,
   refinementPrompt,
   context,
-}: BuildBackdropParamsInput & { refinementPrompt?: string }): GenerationParams {
+}: BuildBrandGraphicParamsInput & {
+  refinementPrompt?: string;
+}): GenerationParams {
   const ctx = context || normalizeBrandContext(brandName, {});
-  // Feed backdrop is square; story is a tall 9:16 → nearest supported portrait.
-  const dimensions =
-    variation === "story-backdrop" ? PORTRAIT_DIMENSIONS : SQUARE_DIMENSIONS;
+  // Post graphics are square (1:1); story graphics are tall (9:16).
+  const isStory = variation.includes("story");
+  const dimensions = isStory ? STORY_DIMENSIONS : SQUARE_DIMENSIONS;
   return buildAssetParams({
-    prompt: BACKDROP_PROMPTS[variation](ctx),
+    prompt: BRAND_GRAPHIC_PROMPTS[variation](ctx),
     referenceImage: sourceLogoUrl,
-    referenceStrength: 40,
+    referenceStrength: 60,
     ...dimensions,
     backendModel,
     defaultParams,
@@ -543,6 +545,7 @@ export function buildBusinessCardGenerationParams({
 
 export function buildBrandPresentationGenerationParams({
   brandName,
+  sourceLogoUrl,
   backendModel,
   defaultParams,
   refinementPrompt,
@@ -556,6 +559,7 @@ export function buildBrandPresentationGenerationParams({
   fallbackPrompt,
 }: {
   brandName: string;
+  sourceLogoUrl: string;
   backendModel: string;
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
   refinementPrompt?: string;
@@ -588,8 +592,8 @@ export function buildBrandPresentationGenerationParams({
 
   return buildAssetParams({
     prompt: basePrompt,
-    referenceImage: productImageUrl,
-    referenceStrength: productImageUrl ? 45 : undefined,
+    referenceImage: sourceLogoUrl || productImageUrl,
+    referenceStrength: sourceLogoUrl ? 65 : productImageUrl ? 45 : undefined,
     ...LANDSCAPE_DIMENSIONS,
     backendModel,
     defaultParams,

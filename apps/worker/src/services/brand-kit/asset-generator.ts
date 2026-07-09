@@ -6,7 +6,7 @@ import {
   buildLogoVariationGenerationParams,
   buildSocialMediaGenerationParams,
   buildBusinessCardGenerationParams,
-  buildBackdropGenerationParams,
+  buildBrandGraphicGenerationParams,
 } from "@quicklogo/ai-providers/prompt";
 import type {
   AIProvider,
@@ -15,7 +15,11 @@ import type {
 import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
-import { runAssetOrNull } from "../../core/pipeline-helpers";
+import {
+  runAssetOrNull,
+  withRetryableGeneration,
+} from "../../core/pipeline-helpers";
+
 import { findReusableLogoVariationUrls } from "./reusable-url-finder";
 import type { Database } from "@quicklogo/db";
 import type { ValidatedBrandContext } from "@quicklogo/ai-providers/prompt";
@@ -112,14 +116,14 @@ export function buildSocialMediaAssetList(
  * Generates one asset and uploads it to a deterministic, overwrite-safe path.
  * Throws on generation failure so the caller's `runAssetOrNull` records it.
  */
-async function generateAndUpload(
+export async function generateAndUpload(
   provider: AIProvider,
   params: GenerationParams,
   storage: StorageProvider,
   key: string,
   signal?: AbortSignal,
 ): Promise<string> {
-  const result = await provider.generate({ ...params, signal });
+  const result = await withRetryableGeneration(provider, { ...params, signal });
   if (!result.success || !result.imageData) {
     throw new Error(result.error ?? "Asset generation failed");
   }
@@ -169,30 +173,29 @@ export async function generateLogoVariations({
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
-  const results = await Promise.all(
-    typesToGenerate.map(async (type) => {
-      const slug = type === "dark-mode" ? "dark" : "icon";
-      const url = await runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildLogoVariationGenerationParams({
-              variation: type,
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: mapping.defaultParams,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/logo-${slug}`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      );
-      return { type, url };
-    }),
-  );
+  const results: { type: string; url: string | undefined }[] = [];
+  for (const type of typesToGenerate) {
+    const slug = type === "dark-mode" ? "dark" : "icon";
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildLogoVariationGenerationParams({
+            variation: type,
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: mapping.defaultParams,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/logo-${slug}`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
+    );
+    results.push({ type, url: url ?? undefined });
+  }
 
   const failed = results.filter((r) => !r.url).length;
 
@@ -250,96 +253,83 @@ export async function generateSocialMediaAssets({
       targetItemId,
     );
 
-  const promises: Promise<void>[] = [];
-
   if (shouldGenerateProfile) {
     total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildSocialMediaGenerationParams({
-              variation: "social-profile",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: mapping.defaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/social-profile`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) socialProfileUrl = url;
-        else failed++;
-      }),
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildSocialMediaGenerationParams({
+            variation: "social-profile",
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: mapping.defaultParams,
+            refinementPrompt,
+            context,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/social-profile`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
     );
+    if (url) socialProfileUrl = url;
+    else failed++;
   }
 
   if (shouldGenerateMaster) {
     total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildSocialMediaGenerationParams({
-              variation: "master-banner",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: mapping.defaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/social-master-banner`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) masterBannerUrl = url;
-        else failed++;
-      }),
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildSocialMediaGenerationParams({
+            variation: "master-banner",
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: mapping.defaultParams,
+            refinementPrompt,
+            context,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/social-master-banner`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
     );
+    if (url) masterBannerUrl = url;
+    else failed++;
   }
 
   if (shouldGenerateFacebook) {
     total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildSocialMediaGenerationParams({
-              variation: "facebook-banner",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: mapping.defaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/social-facebook-banner`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) facebookBannerUrl = url;
-        else failed++;
-      }),
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildSocialMediaGenerationParams({
+            variation: "facebook-banner",
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: mapping.defaultParams,
+            refinementPrompt,
+            context,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/social-facebook-banner`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
     );
+    if (url) facebookBannerUrl = url;
+    else failed++;
   }
-
-  await Promise.all(promises);
   return {
     socialProfileUrl,
     masterBannerUrl,
@@ -349,7 +339,32 @@ export async function generateSocialMediaAssets({
   };
 }
 
-export async function generateBrandedBackdrops({
+export interface BrandGraphicUrls {
+  backdropPostUrl?: string;
+  backdropStoryUrl?: string;
+}
+
+/** All valid brand graphic target item IDs, mapped to their variation kind. */
+const BRAND_GRAPHIC_VARIANTS = [
+  {
+    targetId: "backdrop-post",
+    variation: "graphic-backdrop-post" as const,
+    storageSuffix: "graphic-backdrop-post",
+  },
+  {
+    targetId: "backdrop-story",
+    variation: "graphic-backdrop-story" as const,
+    storageSuffix: "graphic-backdrop-story",
+  },
+] as const;
+
+/** Maps a targetId like "backdrop-post" to the URL key like "backdropPostUrl". */
+function toUrlKey(targetId: string): keyof BrandGraphicUrls {
+  const camel = targetId.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  return `${camel}Url` as keyof BrandGraphicUrls;
+}
+
+export async function generateBrandGraphics({
   ai,
   env,
   storage,
@@ -369,77 +384,45 @@ export async function generateBrandedBackdrops({
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
   targetItemId?: string;
-}): Promise<{ feedUrl?: string; storyUrl?: string } & AssetSectionTally> {
+}): Promise<BrandGraphicUrls & AssetSectionTally> {
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
-  let feedUrl: string | undefined;
-  let storyUrl: string | undefined;
+  const urls: BrandGraphicUrls = {};
   let failed = 0;
   let total = 0;
 
-  const promises: Promise<void>[] = [];
+  const variants = targetItemId
+    ? BRAND_GRAPHIC_VARIANTS.filter((v) => v.targetId === targetItemId)
+    : BRAND_GRAPHIC_VARIANTS;
 
-  if (!targetItemId || targetItemId === "feed") {
+  for (const variant of variants) {
     total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildBackdropGenerationParams({
-              variation: "feed-backdrop",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: mapping.defaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/backdrop-feed`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) feedUrl = url;
-        else failed++;
-      }),
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildBrandGraphicGenerationParams({
+            variation: variant.variation,
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: mapping.defaultParams,
+            refinementPrompt,
+            context,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/${variant.storageSuffix}`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
     );
+    if (url) urls[toUrlKey(variant.targetId)] = url;
+    else failed++;
   }
 
-  if (!targetItemId || targetItemId === "story") {
-    total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildBackdropGenerationParams({
-              variation: "story-backdrop",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: mapping.defaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/backdrop-story`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) storyUrl = url;
-        else failed++;
-      }),
-    );
-  }
-
-  await Promise.all(promises);
-  return { feedUrl, storyUrl, failed, total };
+  return { ...urls, failed, total };
 }
 
 export async function generateBusinessCardAssets({
@@ -480,66 +463,56 @@ export async function generateBusinessCardAssets({
   let failed = 0;
   let total = 0;
 
-  const promises: Promise<void>[] = [];
-
   if (!targetItemId || targetItemId === "front") {
     total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildBusinessCardGenerationParams({
-              variation: "front",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: cardDefaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/business-card-front`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) frontUrl = url;
-        else failed++;
-      }),
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildBusinessCardGenerationParams({
+            variation: "front",
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: cardDefaultParams,
+            refinementPrompt,
+            context,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/business-card-front`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
     );
+    if (url) frontUrl = url;
+    else failed++;
   }
 
   if (!targetItemId || targetItemId === "back") {
     total++;
-    promises.push(
-      runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            provider,
-            buildBusinessCardGenerationParams({
-              variation: "back",
-              brandName,
-              sourceLogoUrl,
-              backendModel: mapping.backendModel,
-              defaultParams: cardDefaultParams,
-              refinementPrompt,
-              context,
-            }),
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/business-card-back`,
-            signal,
-          ),
-        LOGO_VARIATION_TIMEOUT_MS,
-        "asset-generator",
-      ).then((url) => {
-        if (url) backUrl = url;
-        else failed++;
-      }),
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          provider,
+          buildBusinessCardGenerationParams({
+            variation: "back",
+            brandName,
+            sourceLogoUrl,
+            backendModel: mapping.backendModel,
+            defaultParams: cardDefaultParams,
+            refinementPrompt,
+            context,
+          }),
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/business-card-back`,
+          signal,
+        ),
+      LOGO_VARIATION_TIMEOUT_MS,
+      "asset-generator",
     );
+    if (url) backUrl = url;
+    else failed++;
   }
-
-  await Promise.all(promises);
   return { frontUrl, backUrl, failed, total };
 }

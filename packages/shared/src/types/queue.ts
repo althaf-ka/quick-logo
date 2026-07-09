@@ -43,7 +43,7 @@ export interface GenerateBrandKitMessage extends StructuredBrandContext {
     socialMedia: boolean;
     businessCard: boolean;
     favicon: boolean;
-    brandedBackdrops?: boolean;
+    brandGraphics?: boolean;
     brandPresentation?: boolean;
     brandGuidelines?: boolean;
   };
@@ -63,7 +63,7 @@ export interface RefineBrandKitMessage {
     | "social-media"
     | "business-card"
     | "favicon"
-    | "branded-backdrops"
+    | "brand-graphics"
     | "brand-presentation"
     | "brand-guidelines"
     | "global";

@@ -2,6 +2,11 @@ import { clearTimeout, setTimeout as safeTimeout } from "node:timers";
 import { setTimeout } from "node:timers/promises";
 import { PipelineError } from "./errors";
 import { createLogger } from "@quicklogo/server-telemetry";
+import type {
+  AIProvider,
+  GenerationParams,
+  GenerationResult,
+} from "@quicklogo/ai-providers/types";
 
 const logger = createLogger("worker");
 
@@ -44,6 +49,52 @@ export async function withTimeout<T>(
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
+}
+
+export async function withRetryableGeneration(
+  provider: AIProvider,
+  params: GenerationParams,
+  maxRetries = 2,
+  baseDelayMs = 1000,
+): Promise<GenerationResult> {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    const result = await provider.generate(params);
+    if (result.success) {
+      return result;
+    }
+
+    if (!result.isRetryable) {
+      return result;
+    }
+
+    attempt++;
+    if (attempt >= maxRetries) {
+      return result;
+    }
+
+    const delay = result.retryAfter
+      ? result.retryAfter * 1000
+      : baseDelayMs * Math.pow(2, attempt - 1);
+
+    logger.warn(
+      `[ai-providers] Generation failed, retrying after ${delay}ms...`,
+      { error: result.error, attempt },
+    );
+    try {
+      await setTimeout(delay, undefined, { signal: params.signal });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return {
+          success: false,
+          error: "Aborted during retry delay",
+          isRetryable: false,
+        };
+      }
+      throw err;
+    }
+  }
+  throw new Error("Unreachable");
 }
 
 /**

@@ -19,9 +19,9 @@ export function getSectionLabel(
     case "favicon":
       label = "Favicons";
       break;
-    case "brandedBackdrops":
-    case "branded-backdrops":
-      label = "Branded Backdrops";
+    case "brandGraphics":
+    case "brand-graphics":
+      label = "Brand Graphics";
       break;
     case "brandPresentation":
     case "brand-presentation":

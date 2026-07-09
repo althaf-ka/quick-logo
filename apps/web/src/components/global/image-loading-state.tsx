@@ -32,11 +32,11 @@ export function ImageLoadingState({
       {isOverlay ? (
         <Skeleton className="absolute inset-4 z-10 rounded-none opacity-25" />
       ) : imageCount === 1 ? (
-        <div className="w-full max-w-xs">
+        <div className="w-full max-w-md">
           <Skeleton className="border-border/10 aspect-square w-full rounded-none border" />
         </div>
       ) : (
-        <div className="grid w-full max-w-lg grid-cols-2 gap-3">
+        <div className="grid w-full max-w-2xl grid-cols-2 gap-4">
           {Array.from({ length: imageCount }, (_, i) => (
             <Skeleton
               key={i}

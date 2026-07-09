@@ -45,7 +45,7 @@ export interface DeliverablesConfig {
   socialMedia: DeliverableSettings<SocialMediaConfig>;
   businessCard: DeliverableSettings<BusinessCardConfig>;
   favicon: DeliverableSettings<Record<string, unknown>>;
-  brandedBackdrops: DeliverableSettings<Record<string, unknown>>;
+  brandGraphics: DeliverableSettings<Record<string, unknown>>;
   brandPresentation: DeliverableSettings<PresentationConfig>;
   brandGuidelines: DeliverableSettings<BrandGuidelinesConfig>;
 }

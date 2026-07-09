@@ -56,7 +56,9 @@ export type SocialMediaVariationKind =
   | "master-banner"
   | "facebook-banner";
 export type BusinessCardVariationKind = "front" | "back";
-export type BackdropVariationKind = "feed-backdrop" | "story-backdrop";
+export type BrandGraphicVariationKind =
+  | "graphic-backdrop-post"
+  | "graphic-backdrop-story";
 export type BrandKitSectionKey = "colorPalette" | "brandPresentation";
 
 export interface BrandKitMessage {

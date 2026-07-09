@@ -17,8 +17,10 @@ import { toast } from "@quicklogo/ui/components/sonner";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
+import type { WorkspaceState } from "@/types/brand-kit";
 
 export interface SetupSidebarProps {
+  workspaceState?: WorkspaceState;
   logoUrl: string | null;
   isLoadingLogo: boolean;
   onLogoUpload: (file: File) => void;
@@ -30,6 +32,7 @@ export interface SetupSidebarProps {
 }
 
 export function SetupSidebar({
+  workspaceState,
   logoUrl,
   isLoadingLogo,
   onLogoUpload,
@@ -220,7 +223,8 @@ export function SetupSidebar({
       </motion.div>
 
       {/* Order Summary */}
-      {deliverables || totalCredits !== undefined ? (
+      {(workspaceState === "deliverables" || workspaceState === "review") &&
+      (deliverables || totalCredits !== undefined) ? (
         <motion.div variants={staggerItem} className="space-y-3">
           <h3 className="text-muted-foreground/60 text-[10px] font-bold tracking-widest uppercase">
             Order Summary

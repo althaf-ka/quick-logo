@@ -24,7 +24,7 @@ import {
   generateLogoVariations,
   generateSocialMediaAssets,
   generateBusinessCardAssets,
-  generateBrandedBackdrops,
+  generateBrandGraphics,
   buildSocialMediaAssetList,
   SOCIAL_MEDIA_ASSET_COUNT,
 } from "../services/brand-kit/asset-generator";
@@ -349,9 +349,9 @@ export class BrandKitPipeline {
         finalResultsJSON.socialMedia =
           buildSocialMediaAssetList(socialMediaUrls);
       }
-      if (deliverables?.brandedBackdrops) {
-        const backdropUrls = actualLogoUrl
-          ? await generateBrandedBackdrops({
+      if (deliverables?.brandGraphics) {
+        const graphicUrls = actualLogoUrl
+          ? await generateBrandGraphics({
               ai: this.ai,
               env: this.env,
               storage: this.storage,
@@ -362,14 +362,19 @@ export class BrandKitPipeline {
             })
           : null;
 
-        // Branded backdrops are not charged (free), so no refund accounting.
-        finalResultsJSON.brandedBackdrops = {
-          feedUrl:
-            backdropUrls?.feedUrl ??
-            "https://placehold.co/1024x1024/000/FFF?text=Feed",
-          storyUrl:
-            backdropUrls?.storyUrl ??
-            "https://placehold.co/1024x1536/000/FFF?text=Story",
+        accountFailure(
+          "brandGraphics",
+          graphicUrls ? graphicUrls.failed : 2,
+          graphicUrls ? graphicUrls.total : 2,
+        );
+
+        finalResultsJSON.brandGraphics = {
+          backdropPostUrl:
+            graphicUrls?.backdropPostUrl ??
+            "https://placehold.co/1024x1024/000/FFF?text=Backdrop+Post",
+          backdropStoryUrl:
+            graphicUrls?.backdropStoryUrl ??
+            "https://placehold.co/1152x2048/000/FFF?text=Backdrop+Story",
         };
       }
       if (deliverables?.businessCard) {

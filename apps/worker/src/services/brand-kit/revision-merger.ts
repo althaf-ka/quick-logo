@@ -13,7 +13,7 @@ import {
 } from "@quicklogo/shared";
 import {
   generateSocialMediaAssets,
-  generateBrandedBackdrops,
+  generateBrandGraphics,
   generateBusinessCardAssets,
   buildSocialMediaAssetList,
 } from "./asset-generator";
@@ -111,11 +111,11 @@ export async function mergeRevisionResults({
         newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
       }
     }
-  } else if (sectionId === "branded-backdrops") {
+  } else if (sectionId === "brand-graphics") {
     const actualLogoUrl =
       currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
     if (actualLogoUrl) {
-      const backdropUrls = await generateBrandedBackdrops({
+      const graphicUrls = await generateBrandGraphics({
         ai,
         env,
         storage,
@@ -127,11 +127,17 @@ export async function mergeRevisionResults({
         context: brandAssetContext,
         targetItemId,
       });
-      newMergedJSON.brandedBackdrops = {
-        feedUrl:
-          backdropUrls.feedUrl ?? newMergedJSON.brandedBackdrops?.feedUrl,
-        storyUrl:
-          backdropUrls.storyUrl ?? newMergedJSON.brandedBackdrops?.storyUrl,
+      const existing =
+        newMergedJSON.brandGraphics ?? newMergedJSON.brandedBackdrops;
+      newMergedJSON.brandGraphics = {
+        backdropPostUrl:
+          graphicUrls.backdropPostUrl ??
+          existing?.backdropPostUrl ??
+          existing?.feedUrl,
+        backdropStoryUrl:
+          graphicUrls.backdropStoryUrl ??
+          existing?.backdropStoryUrl ??
+          existing?.storyUrl,
       };
     }
   } else if (sectionId === "business-card") {

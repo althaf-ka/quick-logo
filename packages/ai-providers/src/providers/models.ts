@@ -86,8 +86,21 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
       type: "remix-image-array",
       imageField: "input_images",
     },
-    defaultOutputFormat: "webp",
-    // Replicate's gpt-image-2 only accepts these three ratios.
-    supportedAspectRatios: ["1:1", "3:2", "2:3"],
+    defaultOutputFormat: "png",
+    // Replicate's gpt-image-2 supports these aspect ratios & resolutions
+    supportedAspectRatios: [
+      "1:1",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "1024x1024",
+      "1536x1024",
+      "1024x1536",
+      "1152x2048",
+      "2048x1152",
+    ],
   },
 } as const;

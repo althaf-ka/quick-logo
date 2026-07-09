@@ -23,10 +23,11 @@ export type BrandKitPaidSection =
   | "businessCard"
   | "favicon"
   | "brandPresentation"
+  | "brandGraphics"
   | "brandGuidelines";
 
 /**
- * Per-section credit cost. Sections not listed here (e.g. brandedBackdrops) are free.
+ * Per-section credit cost. Sections not listed here are free.
  * A section costing 0 automatically refunds 0, so free sections never over-refund.
  */
 export const BRAND_KIT_SECTION_COSTS: Record<BrandKitPaidSection, number> = {
@@ -35,6 +36,7 @@ export const BRAND_KIT_SECTION_COSTS: Record<BrandKitPaidSection, number> = {
   businessCard: 2,
   favicon: 1,
   brandPresentation: 3,
+  brandGraphics: 2,
   brandGuidelines: 0,
 };
 

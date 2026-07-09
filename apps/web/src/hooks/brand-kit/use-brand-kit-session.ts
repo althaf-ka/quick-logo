@@ -24,7 +24,7 @@ export function useBrandKitSession() {
     socialMedia: { enabled: false, config: {} },
     businessCard: { enabled: false, config: {} },
     favicon: { enabled: false, config: {} },
-    brandedBackdrops: { enabled: false, config: {} },
+    brandGraphics: { enabled: false, config: {} },
     brandPresentation: { enabled: false, config: {} },
     brandGuidelines: { enabled: false, config: {} },
   }));
@@ -139,7 +139,7 @@ export function useBrandKitSession() {
       socialMedia: { enabled: false, config: {} },
       businessCard: { enabled: false, config: {} },
       favicon: { enabled: false, config: {} },
-      brandedBackdrops: { enabled: false, config: {} },
+      brandGraphics: { enabled: false, config: {} },
       brandPresentation: { enabled: false, config: {} },
       brandGuidelines: { enabled: false, config: {} },
     });

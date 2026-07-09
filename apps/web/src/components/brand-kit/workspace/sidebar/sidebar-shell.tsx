@@ -112,7 +112,7 @@ export function SidebarShell({
       case "creative-direction":
       case "deliverables":
       case "review":
-        return <SetupSidebar {...props} />;
+        return <SetupSidebar workspaceState={workspaceState} {...props} />;
       case "generating":
         return (
           <GeneratingSidebar

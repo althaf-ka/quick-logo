@@ -70,24 +70,33 @@ export async function generateBrandKitZip(
     }
   }
 
-  // Add Branded Backdrops
-  if (data.brandedBackdrops) {
-    if (data.brandedBackdrops.feedUrl) {
+  // Add Brand Graphics
+  if (data.brandGraphics || data.brandedBackdrops) {
+    const bg = data.brandGraphics ?? {
+      backdropPostUrl: data.brandedBackdrops!.feedUrl,
+      backdropStoryUrl: data.brandedBackdrops!.storyUrl,
+    };
+
+    if (bg.backdropPostUrl) {
       promises.push(
-        fetchAsUint8Array(data.brandedBackdrops.feedUrl)
+        fetchAsUint8Array(bg.backdropPostUrl)
           .then((bytes) => {
-            zipData[`backdrops/feed.png`] = bytes;
+            zipData["brand-graphics/backdrop-post.png"] = bytes;
           })
-          .catch((e) => console.error("Failed to add backdrop feed", e)),
+          .catch((err) =>
+            console.error("Failed to fetch backdrop post graphic:", err),
+          ),
       );
     }
-    if (data.brandedBackdrops.storyUrl) {
+    if (bg.backdropStoryUrl) {
       promises.push(
-        fetchAsUint8Array(data.brandedBackdrops.storyUrl)
+        fetchAsUint8Array(bg.backdropStoryUrl)
           .then((bytes) => {
-            zipData[`backdrops/story.png`] = bytes;
+            zipData["brand-graphics/backdrop-story.png"] = bytes;
           })
-          .catch((e) => console.error("Failed to add backdrop story", e)),
+          .catch((err) =>
+            console.error("Failed to fetch backdrop story graphic:", err),
+          ),
       );
     }
   }

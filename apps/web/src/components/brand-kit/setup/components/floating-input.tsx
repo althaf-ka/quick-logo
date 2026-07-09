@@ -8,6 +8,7 @@ export function FloatingInput({
   placeholder,
   autoFocus,
   error,
+  inputClassName,
 }: {
   label: string;
   value: string;
@@ -15,6 +16,7 @@ export function FloatingInput({
   placeholder?: string;
   autoFocus?: boolean;
   error?: boolean;
+  inputClassName?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const isActive = focused || value.length > 0;
@@ -48,6 +50,7 @@ export function FloatingInput({
           error
             ? "border-red-500/30 focus:border-red-500/60"
             : "focus:border-primary/40 border-white/[0.06]",
+          inputClassName,
         )}
       />
       {/* Focus line animation */}

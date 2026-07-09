@@ -160,20 +160,19 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
     }
   }
 
-  if (data.brandedBackdrops) {
-    if (
-      data.brandedBackdrops.feedUrl &&
-      !data.brandedBackdrops.feedUrl.includes("placehold.co")
-    ) {
-      const buffer = await fetchImageBuffer(data.brandedBackdrops.feedUrl);
-      if (buffer) zipData["backdrops/instagram-feed.png"] = buffer;
+  if (data.brandGraphics || data.brandedBackdrops) {
+    const bg = data.brandGraphics ?? {
+      backdropPostUrl: data.brandedBackdrops!.feedUrl,
+      backdropStoryUrl: data.brandedBackdrops!.storyUrl,
+    };
+
+    if (bg.backdropPostUrl && !bg.backdropPostUrl.includes("placehold.co")) {
+      const buffer = await fetchImageBuffer(bg.backdropPostUrl);
+      if (buffer) zipData["brand-graphics/backdrop-post.png"] = buffer;
     }
-    if (
-      data.brandedBackdrops.storyUrl &&
-      !data.brandedBackdrops.storyUrl.includes("placehold.co")
-    ) {
-      const buffer = await fetchImageBuffer(data.brandedBackdrops.storyUrl);
-      if (buffer) zipData["backdrops/instagram-story.png"] = buffer;
+    if (bg.backdropStoryUrl && !bg.backdropStoryUrl.includes("placehold.co")) {
+      const buffer = await fetchImageBuffer(bg.backdropStoryUrl);
+      if (buffer) zipData["brand-graphics/backdrop-story.png"] = buffer;
     }
   }
 

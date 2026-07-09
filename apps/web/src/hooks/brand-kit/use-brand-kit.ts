@@ -128,6 +128,7 @@ export function useBrandKit({
       const img = imageDetails.image as {
         imageUrl?: string;
         brandName?: string;
+        config?: { brandName?: string; industry?: string };
       };
       if (img.imageUrl && !logoUrl) {
         setLogoUrl(img.imageUrl);
@@ -141,8 +142,20 @@ export function useBrandKit({
             .catch(() => {});
         }
       }
-      if (img.brandName && !brandName) {
-        setBrandName(img.brandName);
+
+      const extractedBrandName = img.brandName || img.config?.brandName;
+      if (extractedBrandName && !brandName) {
+        setBrandName(extractedBrandName);
+      }
+
+      const extractedIndustry = img.config?.industry;
+      if (
+        extractedIndustry &&
+        extractedIndustry.trim() !== "" &&
+        extractedIndustry.toLowerCase() !== "auto" &&
+        !structuredContext.industry
+      ) {
+        updateStructuredContext({ industry: extractedIndustry });
       }
     }
   }, [
@@ -152,6 +165,8 @@ export function useBrandKit({
     setExtractedColors,
     brandName,
     setBrandName,
+    structuredContext.industry,
+    updateStructuredContext,
   ]);
 
   // Derived state
@@ -278,7 +293,7 @@ export function useBrandKit({
     (deliverables.socialMedia.enabled ? 3 : 0) +
     (deliverables.businessCard.enabled ? 2 : 0) +
     (deliverables.favicon.enabled ? 1 : 0) +
-    (deliverables.brandedBackdrops.enabled ? 2 : 0) +
+    (deliverables.brandGraphics.enabled ? 4 : 0) +
     (deliverables.brandPresentation.enabled ? 3 : 0);
 
   const totalCredits = targetSection
@@ -350,7 +365,7 @@ export function useBrandKit({
             socialMedia: deliverables.socialMedia.enabled,
             businessCard: deliverables.businessCard.enabled,
             favicon: deliverables.favicon.enabled,
-            brandedBackdrops: deliverables.brandedBackdrops.enabled,
+            brandGraphics: deliverables.brandGraphics.enabled,
             brandPresentation: deliverables.brandPresentation.enabled,
             brandGuidelines: deliverables.brandGuidelines.enabled,
           },

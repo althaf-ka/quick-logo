@@ -88,6 +88,7 @@ export function FoundationStep({
           placeholder="e.g. B2B SaaS, Artisanal Coffee"
           autoFocus={!!brandName}
           error={showErrors && industry.trim().length === 0}
+          inputClassName="capitalize"
         />
         <FloatingInput
           label="Tagline (Optional)"

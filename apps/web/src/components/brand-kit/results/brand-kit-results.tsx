@@ -26,7 +26,7 @@ import {
 } from "../sections/business-card-section";
 import { FaviconSection, type FaviconSize } from "../sections/favicon-section";
 import { BrandGuidelinesSection } from "../sections/brand-guidelines-section";
-import { BrandedBackdropsSection } from "../sections/branded-backdrops-section";
+import { BrandGraphicsSection } from "../sections/brand-graphics-section";
 import { BrandPresentationSection } from "../sections/brand-presentation-section";
 import { ErrorBoundary } from "@/components/global/error-boundary";
 
@@ -40,6 +40,11 @@ export interface BrandKitResultsData {
   brandName?: string;
   logoUrl?: string;
   productImages?: string[];
+  brandGraphics?: {
+    backdropPostUrl: string;
+    backdropStoryUrl: string;
+  };
+  /** @deprecated Use brandGraphics. Kept for backward compatibility with existing kits. */
   brandedBackdrops?: { feedUrl: string; storyUrl: string };
   brandPresentation?: {
     tagline: string;
@@ -217,6 +222,25 @@ export function BrandKitResults({
               </FocusWrapper>
             ) : null}
 
+            {data.brandGraphics || data.brandedBackdrops ? (
+              <FocusWrapper
+                id="brand-graphics"
+                className="w-full md:col-span-2 lg:col-span-3"
+                refiningSectionId={refiningSectionId}
+                isMobile={isMobile}
+                anyRefining={anyRefining}
+              >
+                <BrandGraphicsSection
+                  data={
+                    data.brandGraphics ?? {
+                      backdropPostUrl: data.brandedBackdrops!.feedUrl,
+                      backdropStoryUrl: data.brandedBackdrops!.storyUrl,
+                    }
+                  }
+                />
+              </FocusWrapper>
+            ) : null}
+
             {data.socialMedia && data.socialMedia.length > 0 ? (
               <FocusWrapper
                 id="social-media"
@@ -253,18 +277,6 @@ export function BrandKitResults({
                   icons={data.favicons}
                   brandName={data.brandName}
                 />
-              </FocusWrapper>
-            ) : null}
-
-            {data.brandedBackdrops ? (
-              <FocusWrapper
-                id="branded-backdrops"
-                className="w-full md:col-span-2 lg:col-span-3"
-                refiningSectionId={refiningSectionId}
-                isMobile={isMobile}
-                anyRefining={anyRefining}
-              >
-                <BrandedBackdropsSection data={data.brandedBackdrops} />
               </FocusWrapper>
             ) : null}
 

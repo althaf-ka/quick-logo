@@ -170,22 +170,25 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             throw new BadRequestError(
               "Business card back does not exist in active revision",
             );
-        } else if (data.sectionId === "branded-backdrops") {
-          const bb = results.brandedBackdrops as
+        } else if (data.sectionId === "brand-graphics") {
+          const bg = results.brandGraphics as
             | Record<string, string>
             | undefined;
-          if (!bb)
+          if (!bg)
             throw new BadRequestError(
-              "Branded backdrops do not exist in active revision",
+              "Brand graphics do not exist in active revision",
             );
-          if (data.targetItemId === "feed" && !bb.feedUrl)
-            throw new BadRequestError(
-              "Branded backdrop feed does not exist in active revision",
-            );
-          if (data.targetItemId === "story" && !bb.storyUrl)
-            throw new BadRequestError(
-              "Branded backdrop story does not exist in active revision",
-            );
+          const validItems = ["backdrop-post", "backdrop-story"];
+          if (data.targetItemId && validItems.includes(data.targetItemId)) {
+            const urlKey =
+              data.targetItemId.replace(/-([a-z])/g, (_: string, c: string) =>
+                c.toUpperCase(),
+              ) + "Url";
+            if (!bg[urlKey])
+              throw new BadRequestError(
+                `Brand graphic ${data.targetItemId} does not exist in active revision`,
+              );
+          }
         } else if (data.sectionId === "social-media") {
           const socialAssets = results.socialMedia;
           if (!Array.isArray(socialAssets))
@@ -290,7 +293,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         "social-media": "socialMedia",
         "business-card": "businessCard",
         favicon: "favicons",
-        "branded-backdrops": "brandedBackdrops",
+        "brand-graphics": "brandGraphics",
         "brand-presentation": "brandPresentation",
         "brand-guidelines": "brandGuidelines",
       };

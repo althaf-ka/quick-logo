@@ -98,13 +98,6 @@ const DELIVERABLES_CONFIG = [
     icon: <AppWindowIcon weight="duotone" className="size-4" />,
   },
   {
-    id: "brandedBackdrops",
-    label: "Branded Backdrops",
-    desc: "Wallpapers & patterns",
-    cost: 2,
-    icon: <ImageIcon weight="duotone" className="size-4" />,
-  },
-  {
     id: "socialMedia",
     label: "Social Media Kit",
     desc: "Profile pics & covers",
@@ -124,6 +117,13 @@ const DELIVERABLES_CONFIG = [
     desc: "Full brand guidelines",
     cost: 3,
     icon: <PresentationChartIcon weight="duotone" className="size-4" />,
+  },
+  {
+    id: "brandGraphics",
+    label: "Brand Graphics",
+    desc: "Social post & story backgrounds",
+    cost: 2,
+    icon: <ImageIcon weight="duotone" className="size-4" />,
   },
   {
     id: "brandGuidelines",

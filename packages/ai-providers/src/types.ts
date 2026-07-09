@@ -23,6 +23,7 @@ export interface GenerationResult {
   format?: "png" | "jpeg" | "webp" | "jpg";
   error?: string;
   isRetryable?: boolean;
+  retryAfter?: number;
   metadata?: {
     model: string;
     duration?: number;

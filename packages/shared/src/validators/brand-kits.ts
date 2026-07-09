@@ -35,7 +35,7 @@ export const generateBrandKitSchema = z
       socialMedia: z.boolean(),
       businessCard: z.boolean(),
       favicon: z.boolean(),
-      brandedBackdrops: z.boolean().optional(),
+      brandGraphics: z.boolean().optional(),
       brandPresentation: z.boolean().optional(),
       brandGuidelines: z.boolean().optional(),
     }),
@@ -70,7 +70,7 @@ const refineBrandKitSectionBase = z.object({
     "social-media",
     "business-card",
     "favicon",
-    "branded-backdrops",
+    "brand-graphics",
     "brand-presentation",
     "brand-guidelines",
     "global",
@@ -91,11 +91,12 @@ export const refineBrandKitSectionSchema =
             path: ["targetItemId"],
           });
         }
-      } else if (data.sectionId === "branded-backdrops") {
-        if (data.targetItemId !== "feed" && data.targetItemId !== "story") {
+      } else if (data.sectionId === "brand-graphics") {
+        const validItems = ["backdrop-post", "backdrop-story"];
+        if (!validItems.includes(data.targetItemId)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Invalid branded backdrops target item",
+            message: "Invalid brand graphics target item",
             path: ["targetItemId"],
           });
         }
@@ -130,7 +131,7 @@ export const restoreSectionSchema = z.object({
     "social-media",
     "business-card",
     "favicon",
-    "branded-backdrops",
+    "brand-graphics",
     "brand-presentation",
     "brand-guidelines",
   ]),

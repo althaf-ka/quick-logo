@@ -7,9 +7,7 @@ import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { runAssetOrNull } from "../../core/pipeline-helpers";
-import { createLogger } from "@quicklogo/server-telemetry";
-
-const logger = createLogger("worker");
+import { generateAndUpload } from "./asset-generator";
 
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
 
@@ -53,9 +51,11 @@ export async function generateBrandPresentationImage({
   // the failure for partial-refund accounting.
   return runAssetOrNull(
     async (signal) => {
-      const result = await provider.generate({
-        ...buildBrandPresentationGenerationParams({
+      return generateAndUpload(
+        provider,
+        buildBrandPresentationGenerationParams({
           brandName,
+          sourceLogoUrl,
           backendModel: mapping.backendModel,
           defaultParams: mapping.defaultParams,
           refinementPrompt,
@@ -68,20 +68,10 @@ export async function generateBrandPresentationImage({
           brandPersonality,
           fallbackPrompt: brandDescription,
         }),
+        storage,
+        `quick-logo/brand-kits/${brandKitId}/brand-presentation`,
         signal,
-      });
-      if (!result.success || !result.imageData) {
-        throw new Error(
-          result.error ??
-            `Variation generation failed for brand-presentation-image`,
-        );
-      }
-      const uploaded = await storage.upload(
-        `quick-logo/brand-kits/${brandKitId}/brand-presentation.${result.format ?? "png"}`,
-        result.imageData,
-        { overwrite: true },
       );
-      return uploaded.url;
     },
     LOGO_VARIATION_TIMEOUT_MS,
     "asset-generator",

@@ -23,6 +23,8 @@ type GenerateResults = {
     address?: string;
   };
   favicons?: unknown[];
+  brandGraphics?: Record<string, unknown>;
+  /** @deprecated Use brandGraphics instead. Kept for backward compatibility. */
   brandedBackdrops?: Record<string, unknown>;
   brandPresentation?: {
     slidesCount?: number;
@@ -41,7 +43,9 @@ export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
   );
   const businessCardExist = !!results.businessCard;
   const faviconExist = !!(results.favicons && results.favicons.length > 0);
-  const brandedBackdropsExist = !!results.brandedBackdrops;
+  const brandGraphicsExist = !!(
+    results.brandGraphics || results.brandedBackdrops
+  );
   const brandPresentationExist = !!results.brandPresentation;
 
   // Map business card config
@@ -104,9 +108,9 @@ export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
       enabled: faviconExist,
       config: results.favicons ? { sizes: results.favicons } : {},
     },
-    brandedBackdrops: {
-      enabled: brandedBackdropsExist,
-      config: results.brandedBackdrops || {},
+    brandGraphics: {
+      enabled: brandGraphicsExist,
+      config: results.brandGraphics || results.brandedBackdrops || {},
     },
     brandPresentation: {
       enabled: brandPresentationExist,

@@ -91,11 +91,16 @@ export class ReplicateProvider implements AIProvider {
     }
 
     if (caps.aspectRatio && params.width && params.height) {
-      input.aspect_ratio = this.getAspectRatio(
-        params.width,
-        params.height,
-        caps.supportedAspectRatios,
-      );
+      const dimString = `${params.width}x${params.height}`;
+      if (caps.supportedAspectRatios?.includes(dimString)) {
+        input.aspect_ratio = dimString;
+      } else {
+        input.aspect_ratio = this.getAspectRatio(
+          params.width,
+          params.height,
+          caps.supportedAspectRatios,
+        );
+      }
     }
 
     if (caps.defaultOutputFormat) {
@@ -315,14 +320,26 @@ export class ReplicateProvider implements AIProvider {
       });
 
       // Attempt to extract status code from Replicate ApiError
-      const status = (error as { response?: { status?: number } })?.response
-        ?.status;
+      const response = (
+        error as { response?: { status?: number; retry_after?: number } }
+      )?.response;
+      const status = response?.status;
       const isRetryable =
         error instanceof ReplicateParseError
           ? false
           : status
             ? status === 429 || status >= 500
             : true;
+
+      // Extract retry_after. Replicate might send it in response.retry_after,
+      // or we might need to parse it from the message if it's not structured.
+      let retryAfter = response?.retry_after;
+      if (!retryAfter && error instanceof Error) {
+        const match = error.message.match(/retry_after":\s*(\d+)/);
+        if (match && match[1]) {
+          retryAfter = parseInt(match[1], 10);
+        }
+      }
 
       return {
         success: false,
@@ -331,6 +348,7 @@ export class ReplicateProvider implements AIProvider {
             ? error.message
             : "Replicate generation failed",
         isRetryable,
+        retryAfter,
         metadata: { model: params.backendModel, duration: Date.now() - start },
       };
     }
