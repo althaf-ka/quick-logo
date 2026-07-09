@@ -649,16 +649,16 @@ export function DeliverablesStep({
       {/* Tell us more about your brand */}
       <div className="w-full space-y-5 border-t border-white/[0.04] pt-6">
         <div>
-          <div className="text-foreground/50 text-[10px] font-bold tracking-widest uppercase select-text">
+          <div className="text-foreground/90 text-[10px] font-bold tracking-widest uppercase select-text">
             Tell us more about your brand
           </div>
-          <p className="text-muted-foreground/40 mt-1 text-[11px] leading-relaxed">
+          <p className="text-muted-foreground/90 mt-1 text-[11px] leading-relaxed">
             The more context you give, the better your brand kit will be.
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <div className="text-muted-foreground/50 text-[10px] font-semibold tracking-wider uppercase select-text">
+          <div className="text-foreground/80 text-[10px] font-semibold tracking-wider uppercase select-text">
             Brand Personality
           </div>
           <Input
@@ -670,7 +670,7 @@ export function DeliverablesStep({
         </div>
 
         <div className="space-y-1.5">
-          <div className="text-muted-foreground/50 text-[10px] font-semibold tracking-wider uppercase select-text">
+          <div className="text-foreground/80 text-[10px] font-semibold tracking-wider uppercase select-text">
             Anything Else?
           </div>
           <Textarea

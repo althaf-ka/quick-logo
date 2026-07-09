@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type {
   DeliverablesConfig,
   TypographyPreference,
@@ -8,7 +8,29 @@ import type {
 import type { StructuredBrandContext } from "@quicklogo/shared";
 import { structuredBrandContextSchema } from "@quicklogo/shared";
 
-export function useBrandKitSession() {
+export function useBrandKitSession(storageKeySuffix: string) {
+  const storageKey = `brandkit-draft-v1-${storageKeySuffix}`;
+
+  const migrationRan = useRef(false);
+  if (!migrationRan.current) {
+    migrationRan.current = true;
+    if (typeof window !== "undefined") {
+      try {
+        if (!localStorage.getItem("brandkit-draft-migrated")) {
+          const legacy = localStorage.getItem("brandkit-draft-v1");
+          if (legacy) {
+            const newKey = "brandkit-draft-v1-new";
+            if (!localStorage.getItem(newKey)) {
+              localStorage.setItem(newKey, legacy);
+            }
+            localStorage.removeItem("brandkit-draft-v1");
+          }
+          localStorage.setItem("brandkit-draft-migrated", "true");
+        }
+      } catch {}
+    }
+  }
+
   const [workspaceState, setWorkspaceState] =
     useState<WorkspaceState>("foundation");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -37,7 +59,7 @@ export function useBrandKitSession() {
     useState<StructuredBrandContext>(() => {
       if (typeof window === "undefined") return {};
       try {
-        const draft = localStorage.getItem("brandkit-draft-v1");
+        const draft = localStorage.getItem(storageKey);
         if (draft) {
           const parsed = JSON.parse(draft);
           if (parsed.structuredContext) {
@@ -55,24 +77,27 @@ export function useBrandKitSession() {
       return {};
     });
 
-  const saveDraft = useCallback((context: StructuredBrandContext) => {
-    try {
-      localStorage.setItem(
-        "brandkit-draft-v1",
-        JSON.stringify({ structuredContext: context }),
-      );
-    } catch (e) {
-      console.warn("Failed to save draft", e);
-    }
-  }, []);
+  const saveDraft = useCallback(
+    (context: StructuredBrandContext) => {
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({ structuredContext: context }),
+        );
+      } catch (e) {
+        console.warn("Failed to save draft", e);
+      }
+    },
+    [storageKey],
+  );
 
   const clearDraft = useCallback(() => {
     try {
-      localStorage.removeItem("brandkit-draft-v1");
+      localStorage.removeItem(storageKey);
     } catch {
       // ignore
     }
-  }, []);
+  }, [storageKey]);
 
   const updateStructuredContext = useCallback(
     (context: Partial<StructuredBrandContext>) => {

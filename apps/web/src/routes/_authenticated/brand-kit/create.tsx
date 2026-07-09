@@ -22,5 +22,10 @@ export const Route = createFileRoute("/_authenticated/brand-kit/create")({
 
 function BrandKitCreateRoute() {
   const { imageId } = Route.useSearch();
-  return <BrandKitWorkspace imageId={imageId} />;
+  return (
+    <BrandKitWorkspace
+      key={imageId ? `img-${imageId}` : "create-new"}
+      imageId={imageId}
+    />
+  );
 }

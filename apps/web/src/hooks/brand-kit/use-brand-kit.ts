@@ -32,7 +32,12 @@ export function useBrandKit({
   const queryClient = useQueryClient();
 
   // 1. Instantiate lower-level hooks
-  const session = useBrandKitSession();
+  const storageKeySuffix = initialBrandKitId
+    ? `kit-${initialBrandKitId}`
+    : imageId
+      ? `img-${imageId}`
+      : "new";
+  const session = useBrandKitSession(storageKeySuffix);
   const {
     workspaceState,
     setWorkspaceState,
@@ -98,15 +103,26 @@ export function useBrandKit({
   } = refinement;
 
   // 2. Hydration Flow (Sync query changes exactly once)
+  const initialLoadDone = useRef(false);
+
   useEffect(() => {
-    if (normalizedData) {
+    if (
+      normalizedData &&
+      !initialLoadDone.current &&
+      (normalizedData.status === "completed" ||
+        (normalizedData.revisions?.length ?? 0) > 0)
+    ) {
+      initialLoadDone.current = true;
       hydrateSession(normalizedData);
       hydrateRefinement(normalizedData);
-      if (normalizedData.status === "completed") {
-        setWorkspaceState("results");
-      }
     }
-  }, [normalizedData, hydrateSession, setWorkspaceState, hydrateRefinement]);
+  }, [normalizedData, hydrateSession, hydrateRefinement]);
+
+  useEffect(() => {
+    if (normalizedData?.status === "completed") {
+      setWorkspaceState("results");
+    }
+  }, [normalizedData?.status, setWorkspaceState]);
 
   const { data: imageDetails, isError: isImageError } = useQuery({
     queryKey: ["image-details", imageId],
@@ -181,7 +197,7 @@ export function useBrandKit({
 
   const results = useMemo(() => {
     if (!normalizedData) return null;
-    const activeRev = normalizedData.revisions.find((r) => r.isActive);
+    const activeRev = normalizedData.revisions?.find((r) => r.isActive);
     if (!activeRev) return null;
     return activeRev.results as unknown as BrandKitResultsData;
   }, [normalizedData]);
@@ -296,9 +312,10 @@ export function useBrandKit({
     (deliverables.brandGraphics.enabled ? 4 : 0) +
     (deliverables.brandPresentation.enabled ? 3 : 0);
 
-  const totalCredits = targetSection
-    ? regenerationCredits
-    : baseCredits + extraCredits;
+  const totalCredits =
+    targetSection || brandKitId
+      ? regenerationCredits
+      : baseCredits + extraCredits;
 
   // Conversational Submit Handler
   const handleGenerate = useCallback(
@@ -328,6 +345,7 @@ export function useBrandKit({
         return;
       }
       if (
+        !brandKitId &&
         deliverables.brandPresentation.enabled &&
         productImageUrls.length === 0
       ) {

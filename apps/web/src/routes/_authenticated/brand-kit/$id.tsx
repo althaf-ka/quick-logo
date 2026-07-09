@@ -16,5 +16,5 @@ export const Route = createFileRoute("/_authenticated/brand-kit/$id")({
 
 function BrandKitViewRoute() {
   const { id } = Route.useParams();
-  return <BrandKitWorkspace brandKitId={id} />;
+  return <BrandKitWorkspace key={`kit-${id}`} brandKitId={id} />;
 }
