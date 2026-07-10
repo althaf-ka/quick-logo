@@ -45,6 +45,19 @@ export class BrandKitRepository {
     });
   }
 
+  async hasRevisionTrigger(
+    brandKitId: string,
+    triggerType: string,
+  ): Promise<boolean> {
+    const revision = await this.db.query.brandKitRevisions.findFirst({
+      where: and(
+        eq(brandKitRevisions.brandKitId, brandKitId),
+        eq(brandKitRevisions.triggerType, triggerType),
+      ),
+    });
+    return !!revision;
+  }
+
   async saveInitialGeneration(
     brandKitId: string,
     results: Record<string, any>,
@@ -99,8 +112,12 @@ export class BrandKitRepository {
   async saveRefinement(
     brandKitId: string,
     sectionId: string,
+    refinementId: string,
     results: Record<string, any>,
   ) {
+    const triggerType = `refine_${sectionId}:${refinementId}`;
+    if (await this.hasRevisionTrigger(brandKitId, triggerType)) return;
+
     const [maxRev] = await this.db
       .select({ max: sql<number>`MAX(revision_number)` })
       .from(brandKitRevisions)
@@ -121,7 +138,7 @@ export class BrandKitRepository {
         brandKitId,
         isActive: true,
         revisionNumber: (maxRev.max || 0) + 1,
-        triggerType: `refine_${sectionId}`,
+        triggerType,
         results,
       }),
     ]);

@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  SOCIAL_BANNER_PURPOSES,
+  SOCIAL_BANNER_VISUAL_DIRECTIONS,
+} from "../utils/brand-kit-context";
 
 export const structuredBrandContextSchema = z.object({
   industry: z.string().optional(),
@@ -12,6 +16,16 @@ export const structuredBrandContextSchema = z.object({
   guidelines: z
     .object({
       depth: z.enum(["essential", "complete"]).optional(),
+    })
+    .optional(),
+  socialMediaBrief: z
+    .object({
+      purpose: z.enum(SOCIAL_BANNER_PURPOSES),
+      visualDirection: z.enum(SOCIAL_BANNER_VISUAL_DIRECTIONS),
+      message: z.string().trim().max(120).optional(),
+      callToAction: z.string().trim().max(40).optional(),
+      includeLogo: z.boolean(),
+      includeTagline: z.boolean(),
     })
     .optional(),
   _hydratedAt: z.number().optional(),
@@ -86,7 +100,7 @@ export const refineBrandKitSectionSchema =
       if (data.sectionId === "business-card") {
         if (data.targetItemId !== "front" && data.targetItemId !== "back") {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Invalid business card target item",
             path: ["targetItemId"],
           });
@@ -95,22 +109,29 @@ export const refineBrandKitSectionSchema =
         const validItems = ["backdrop-post", "backdrop-story"];
         if (!validItems.includes(data.targetItemId)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Invalid brand graphics target item",
             path: ["targetItemId"],
           });
         }
       } else if (data.sectionId === "social-media") {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.targetItemId)) {
+        const validItems = [
+          "instagram-profile",
+          "twitter-header",
+          "linkedin-header",
+          "facebook-header",
+          "youtube-channel-art",
+        ];
+        if (!validItems.includes(data.targetItemId)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Invalid social media target item format",
+            code: "custom",
+            message: "Invalid social media target item",
             path: ["targetItemId"],
           });
         }
       } else {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `Target items are not supported for section: ${data.sectionId}`,
           path: ["targetItemId"],
         });

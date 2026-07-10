@@ -9,6 +9,7 @@ interface SectionHeaderProps {
   title: string;
   sectionId: string;
   refineLabel?: string;
+  hideRefine?: boolean;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export function SectionHeader({
   title,
   sectionId,
   refineLabel = "Refine Section",
+  hideRefine = false,
   className,
 }: SectionHeaderProps) {
   const { targetSectionId, onRefine, refiningSectionId } = useBrandKitSection();
@@ -27,7 +29,7 @@ export function SectionHeader({
       <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
         {title}
       </h3>
-      {onRefine ? (
+      {onRefine && !hideRefine ? (
         <Button
           variant="outline"
           size="sm"

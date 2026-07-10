@@ -14,6 +14,7 @@ import {
   CircleDashedIcon,
   UploadSimpleIcon,
   TerminalIcon,
+  WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import { promptBarSlide, pageTransition } from "@/lib/motion/variants";
@@ -72,6 +73,19 @@ export function BrandKitWorkspace({
                   }
                 />
               </motion.div>
+            ) : bk.normalizedData?.status === "failed" && !bk.results ? (
+              <motion.div
+                key="generation-failed"
+                variants={pageTransition}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="flex h-full min-h-[60vh] w-full items-center justify-center"
+              >
+                <GenerationFailedState
+                  message={bk.normalizedData.errorMessage}
+                />
+              </motion.div>
             ) : bk.isGenerating && !bk.results ? (
               <motion.div
                 key="generating"
@@ -81,7 +95,9 @@ export function BrandKitWorkspace({
                 exit="exit"
                 className="flex w-full flex-1"
               >
-                <GeneratingState />
+                <GeneratingState
+                  hasSocialMedia={bk.deliverables.socialMedia.enabled}
+                />
               </motion.div>
             ) : bk.results ? (
               <motion.div
@@ -285,7 +301,7 @@ export function BrandKitWorkspace({
   );
 }
 
-const GENERATING_STEPS = [
+const BASE_GENERATING_STEPS = [
   "Analyzing brand identity",
   "Curating typography system",
   "Generating color palettes",
@@ -295,22 +311,25 @@ const GENERATING_STEPS = [
   "Finalizing brand kit",
 ];
 
-function GeneratingState() {
+function GeneratingState({ hasSocialMedia }: { hasSocialMedia: boolean }) {
   const [step, setStep] = useState(0);
 
-  useEffect(() => {
-    const timers = [
-      setTimeout(() => setStep(1), 2500),
-      setTimeout(() => setStep(2), 5000),
-      setTimeout(() => setStep(3), 7500),
-      setTimeout(() => setStep(4), 10000),
-      setTimeout(() => setStep(5), 12500),
-      setTimeout(() => setStep(6), 15000),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+  const steps = hasSocialMedia
+    ? [
+        ...BASE_GENERATING_STEPS.slice(0, 3),
+        "Art-directing banner concepts",
+        "Reviewing campaign artwork",
+        "Composing platform-safe layouts",
+        ...BASE_GENERATING_STEPS.slice(3),
+      ]
+    : BASE_GENERATING_STEPS;
 
-  const steps = GENERATING_STEPS;
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setStep((current) => Math.min(current + 1, steps.length - 1));
+    }, 2500);
+    return () => window.clearInterval(interval);
+  }, [steps.length]);
 
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col items-center justify-center gap-16 py-12">
@@ -393,8 +412,31 @@ function GeneratingState() {
       <div className="text-muted-foreground/20 flex items-center gap-2">
         <TerminalIcon weight="bold" className="size-3" />
         <span className="font-mono text-[9px] tracking-wider">
-          AI pipeline running • Do not close this tab
+          AI pipeline running • Safe to leave — processing continues in the
+          background
         </span>
+      </div>
+    </div>
+  );
+}
+
+function GenerationFailedState({ message }: { message?: string }) {
+  return (
+    <div className="flex max-w-md flex-col items-center gap-5 px-6 text-center">
+      <div className="flex size-20 items-center justify-center bg-red-500/10 ring-1 ring-red-500/25">
+        <WarningCircleIcon className="size-10 text-red-400" weight="duotone" />
+      </div>
+      <div>
+        <p className="font-mono text-lg font-black tracking-wider text-red-300 uppercase">
+          Generation Failed
+        </p>
+        <p className="text-muted-foreground mt-3 font-mono text-[11px] leading-relaxed">
+          {message ||
+            "The asset provider could not complete this brand kit after multiple retries."}
+        </p>
+        <p className="text-muted-foreground/60 mt-2 font-mono text-[10px]">
+          Any charged generation credits are refunded automatically.
+        </p>
       </div>
     </div>
   );

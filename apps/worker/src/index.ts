@@ -124,11 +124,15 @@ export default {
           error,
         );
 
-        // Exponential backoff: 2s, 4s, 8s...
+        // Give rate-limited or temporarily unavailable image providers time to
+        // recover: 30s, 60s, 120s, 240s, then 480s before the DLQ.
         // Cloudflare handles DLQ routing automatically when max_retries is reached
-        const delaySeconds = Math.pow(2, message.attempts);
+        const delaySeconds = Math.min(
+          30 * Math.pow(2, Math.max(0, message.attempts - 1)),
+          900,
+        );
         message.retry({ delaySeconds });
       }
     }
   },
-};
+} satisfies ExportedHandler<Env, QueueMessage>;

@@ -1,3 +1,33 @@
+export const SOCIAL_BANNER_PURPOSES = [
+  "brand-awareness",
+  "product-promotion",
+  "launch",
+  "community",
+  "personal-brand",
+] as const;
+
+export const SOCIAL_BANNER_VISUAL_DIRECTIONS = [
+  "auto",
+  "minimal",
+  "editorial",
+  "photographic",
+  "geometric",
+  "product-focused",
+] as const;
+
+export type SocialBannerPurpose = (typeof SOCIAL_BANNER_PURPOSES)[number];
+export type SocialBannerVisualDirection =
+  (typeof SOCIAL_BANNER_VISUAL_DIRECTIONS)[number];
+
+export interface SocialMediaBrief {
+  purpose: SocialBannerPurpose;
+  visualDirection: SocialBannerVisualDirection;
+  message?: string;
+  callToAction?: string;
+  includeLogo: boolean;
+  includeTagline: boolean;
+}
+
 export interface StructuredBrandContext {
   industry?: string;
   tagline?: string;
@@ -8,6 +38,7 @@ export interface StructuredBrandContext {
   socials?: Record<string, string>;
   contact?: Record<string, string>;
   guidelines?: { depth?: "essential" | "complete" };
+  socialMediaBrief?: SocialMediaBrief;
   _hydratedAt?: number;
 }
 
@@ -28,6 +59,15 @@ export function buildBrandContextSummary(
   }
   if (context.additionalContext?.trim()) {
     parts.push(`Additional Instructions:\n${context.additionalContext.trim()}`);
+  }
+  if (context.socialMediaBrief) {
+    parts.push(
+      `Social Banner Purpose: ${context.socialMediaBrief.purpose}`,
+      `Social Banner Direction: ${context.socialMediaBrief.visualDirection}`,
+    );
+    if (context.socialMediaBrief.message?.trim()) {
+      parts.push(`Social Banner Message: ${context.socialMediaBrief.message}`);
+    }
   }
 
   // If there's literally nothing, return fallback

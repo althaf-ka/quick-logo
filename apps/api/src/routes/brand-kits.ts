@@ -19,10 +19,11 @@ import {
   listQuerySchema,
   getSocialAssetTargetId,
   computeBrandKitCost,
+  computeBrandKitRefinementCost,
 } from "@quicklogo/shared";
 import deepEqual from "fast-deep-equal";
 import { Hono } from "hono";
-import { deductCredits } from "../lib/credits";
+import { deductCredits, refundCreditsOnce } from "../lib/credits";
 import { NotFoundError, BadRequestError } from "../lib/errors";
 import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
@@ -64,18 +65,40 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         socials: data.socials,
         contact: data.contact,
         guidelines: data.guidelines,
+        socialMediaBrief: data.socialMediaBrief,
         creditsUsed: cost,
       });
 
-      await c.env.GENERATION_QUEUE.send({
-        type: "brand-kit-generate",
-        brandKitId,
-        userId: user.id,
-        creditsUsed: cost,
-        ...data,
-        prompt: promptSummary,
-        brandName: data.brandName || "",
-      });
+      try {
+        await c.env.GENERATION_QUEUE.send(
+          {
+            type: "brand-kit-generate",
+            brandKitId,
+            userId: user.id,
+            creditsUsed: cost,
+            ...data,
+            prompt: promptSummary,
+            brandName: data.brandName || "",
+          },
+          { contentType: "json" },
+        );
+      } catch (error) {
+        const refunded = await refundCreditsOnce(db, {
+          refundId: `brand-kit-enqueue:${brandKitId}`,
+          userId: user.id,
+          credits: cost,
+          reason: "brand_kit_enqueue_failed",
+        });
+        await db
+          .update(brandKits)
+          .set({
+            status: "failed",
+            errorMessage: "Unable to queue brand kit generation",
+            ...(refunded && { refundedAt: new Date() }),
+          })
+          .where(eq(brandKits.id, brandKitId));
+        throw error;
+      }
 
       return c.json({ brandKitId }, 202);
     },
@@ -207,18 +230,34 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         }
       }
 
-      const cost = 2; // Refinement cost
+      const cost = computeBrandKitRefinementCost(
+        data.sectionId,
+        data.targetItemId,
+      );
       await deductCredits(db, user.id, cost);
       const refinementId = createId();
 
-      await c.env.GENERATION_QUEUE.send({
-        type: "brand-kit-refine",
-        refinementId,
-        brandKitId: id,
-        userId: user.id,
-        creditsUsed: cost,
-        ...data,
-      });
+      try {
+        await c.env.GENERATION_QUEUE.send(
+          {
+            type: "brand-kit-refine",
+            refinementId,
+            brandKitId: id,
+            userId: user.id,
+            creditsUsed: cost,
+            ...data,
+          },
+          { contentType: "json" },
+        );
+      } catch (error) {
+        await refundCreditsOnce(db, {
+          refundId: `brand-kit-refine-enqueue:${refinementId}`,
+          userId: user.id,
+          credits: cost,
+          reason: "brand_kit_refinement_enqueue_failed",
+        });
+        throw error;
+      }
 
       return c.json({ status: "processing" }, 202);
     },

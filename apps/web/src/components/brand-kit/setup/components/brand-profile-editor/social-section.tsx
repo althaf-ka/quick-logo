@@ -76,7 +76,7 @@ export function SocialSection({
         requiredText={requiredText}
         description="Paste the full profile URL or enter the username directly. We'll automatically extract the exact handle for you."
       />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="flex flex-col gap-3">
         {SOCIAL_PLATFORMS.map(({ id, label, icon }) => (
           <SocialInput
             key={id}

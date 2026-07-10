@@ -21,6 +21,7 @@ import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { createLogger } from "@quicklogo/server-telemetry";
+import { PipelineError } from "../../core/errors";
 
 const logger = createLogger("worker");
 
@@ -50,6 +51,7 @@ export async function mergeRevisionResults({
   const brandAssetContext = normalizeBrandContext(
     currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
     {
+      colors: currentBrandKit?.extractedColors,
       industry: currentBrandKit?.industry,
       tagline:
         currentBrandKit?.tagline || newMergedJSON.brandPresentation?.tagline,
@@ -65,51 +67,95 @@ export async function mergeRevisionResults({
   if (sectionId === "social-media") {
     const actualLogoUrl =
       currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
-    if (actualLogoUrl) {
-      const socialMediaUrls = await generateSocialMediaAssets({
-        ai,
-        env,
-        storage,
-        brandKitId,
-        brandName:
-          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
-        sourceLogoUrl: actualLogoUrl,
-        refinementPrompt,
-        context: brandAssetContext,
-        targetItemId,
-      });
+    if (!actualLogoUrl) {
+      throw new PipelineError(
+        "Cannot refine social media assets without a source logo",
+        false,
+      );
+    }
 
-      const { getSocialAssetTargetId } = await import("@quicklogo/shared");
+    const { getSocialAssetTargetId } = await import("@quicklogo/shared");
+    let existingTargetAssetUrl: string | undefined;
 
-      if (
-        targetItemId &&
-        newMergedJSON.socialMedia &&
-        Array.isArray(newMergedJSON.socialMedia)
-      ) {
-        newMergedJSON.socialMedia = newMergedJSON.socialMedia.map(
-          (asset: any) => {
-            if (getSocialAssetTargetId(asset) === targetItemId) {
-              let newUrl = asset.url;
-              if (
-                targetItemId.endsWith("-profile") &&
-                socialMediaUrls.socialProfileUrl
-              )
-                newUrl = socialMediaUrls.socialProfileUrl;
-              else if (
-                targetItemId === "facebook-header" &&
-                socialMediaUrls.facebookBannerUrl
-              )
-                newUrl = socialMediaUrls.facebookBannerUrl;
-              else if (socialMediaUrls.masterBannerUrl)
-                newUrl = socialMediaUrls.masterBannerUrl;
-              return { ...asset, url: newUrl };
-            }
-            return asset;
-          },
+    if (Array.isArray(newMergedJSON.socialMedia)) {
+      if (targetItemId) {
+        const targetAsset = newMergedJSON.socialMedia.find(
+          (asset: any) => getSocialAssetTargetId(asset) === targetItemId,
         );
-      } else {
-        newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
+        existingTargetAssetUrl = targetAsset?.url;
       }
+    }
+
+    const socialMediaUrls = await generateSocialMediaAssets({
+      ai,
+      env,
+      storage,
+      brandKitId,
+      brandName:
+        currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+      sourceLogoUrl: actualLogoUrl,
+      refinementPrompt,
+      context: brandAssetContext,
+      socialMediaBrief: currentBrandKit?.socialMediaBrief,
+      headingFont: newMergedJSON.typography?.heading?.family,
+      targetItemId,
+      existingTargetAssetUrl,
+    });
+
+    // Refinement is atomic from the user's perspective. Never charge for and
+    // save a no-op revision when one of the requested assets failed.
+    if (socialMediaUrls.failed > 0) {
+      throw new PipelineError(
+        `Failed to refine ${socialMediaUrls.failed} of ${socialMediaUrls.total} social media assets`,
+        true,
+      );
+    }
+
+    if (targetItemId && Array.isArray(newMergedJSON.socialMedia)) {
+      newMergedJSON.socialMedia = newMergedJSON.socialMedia.map(
+        (asset: any) => {
+          if (getSocialAssetTargetId(asset) === targetItemId) {
+            let newUrl = asset.url;
+            if (
+              targetItemId.endsWith("-profile") &&
+              socialMediaUrls.socialProfileUrl
+            )
+              newUrl = socialMediaUrls.socialProfileUrl;
+            else if (
+              targetItemId === "twitter-header" &&
+              socialMediaUrls.twitterBannerUrl
+            )
+              newUrl = socialMediaUrls.twitterBannerUrl;
+            else if (
+              targetItemId === "linkedin-header" &&
+              socialMediaUrls.linkedinBannerUrl
+            )
+              newUrl = socialMediaUrls.linkedinBannerUrl;
+            else if (
+              targetItemId === "facebook-header" &&
+              socialMediaUrls.facebookBannerUrl
+            )
+              newUrl = socialMediaUrls.facebookBannerUrl;
+            else if (
+              targetItemId === "youtube-channel-art" &&
+              socialMediaUrls.youtubeBannerUrl
+            )
+              newUrl = socialMediaUrls.youtubeBannerUrl;
+            return { ...asset, url: newUrl };
+          }
+          return asset;
+        },
+      );
+    } else {
+      newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
+      newMergedJSON.socialMediaKit = {
+        version: 2,
+        brief: currentBrandKit?.socialMediaBrief,
+        masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
+        selectedDirection: socialMediaUrls.creativeDirection,
+        quality: socialMediaUrls.quality,
+        candidateUrls: socialMediaUrls.candidateUrls,
+      };
     }
   } else if (sectionId === "brand-graphics") {
     const actualLogoUrl =

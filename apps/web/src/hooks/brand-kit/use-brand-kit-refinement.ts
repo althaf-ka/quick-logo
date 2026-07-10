@@ -10,6 +10,9 @@ interface UseBrandKitRefinementOptions {
   typographyStyle?: string;
 }
 
+const REFINEMENT_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+const REFINEMENT_POLL_INTERVAL_MS = 4000;
+
 export interface CreativeSessionMessage {
   role: "user" | "assistant" | "system";
   content: string;
@@ -163,13 +166,17 @@ export function useBrandKitRefinement({
   useEffect(() => {
     if (!refiningSectionId || !brandKitId || !activeRevTracker) return;
 
-    // Timeout safety
+    // Queue retries can legitimately outlive one model call. Stop the local
+    // spinner eventually without implying that the background job was killed.
     const timeout = setTimeout(() => {
       setRefiningSectionId(null);
       setTargetItemId(null);
       setActiveRevTracker(null);
-      toast.error("Refinement timed out", { id: "refine-timeout" });
-    }, 120000);
+      toast.info(
+        "This refinement is taking longer than expected and will continue in the background.",
+        { id: "refine-timeout" },
+      );
+    }, REFINEMENT_POLL_TIMEOUT_MS);
 
     const interval = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
@@ -191,7 +198,7 @@ export function useBrandKitRefinement({
           setActiveRevTracker(null);
         }
       }
-    }, 4000);
+    }, REFINEMENT_POLL_INTERVAL_MS);
 
     return () => {
       clearInterval(interval);

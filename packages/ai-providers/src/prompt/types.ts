@@ -2,6 +2,7 @@ export interface NormalizedSocials {
   instagram?: string;
   twitter?: string;
   linkedin?: string;
+  facebook?: string;
   youtube?: string;
   tiktok?: string;
 }
@@ -17,6 +18,7 @@ export interface NormalizedContact {
 
 export interface ValidatedBrandContext {
   brandName: string;
+  colors?: string[];
   tagline?: string;
   industry?: string;
   targetAudience?: string;
@@ -54,7 +56,10 @@ export type LogoVariationKind = "dark-mode" | "icon-only";
 export type SocialMediaVariationKind =
   | "social-profile"
   | "master-banner"
-  | "facebook-banner";
+  | "twitter-banner"
+  | "linkedin-banner"
+  | "facebook-banner"
+  | "youtube-banner";
 export type BusinessCardVariationKind = "front" | "back";
 export type BrandGraphicVariationKind =
   | "graphic-backdrop-post"

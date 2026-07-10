@@ -7,6 +7,7 @@ import { mapDeliverables } from "./map-deliverables";
 
 import type { InferResponseType } from "@quicklogo/api-client";
 import { api } from "@/lib/api";
+import type { SocialMediaBrief } from "@quicklogo/shared";
 
 type BrandKitApiResponse = InferResponseType<
   (typeof api.brandKits)[":id"]["$get"]
@@ -50,6 +51,7 @@ export function normalizeBrandKit(
     typographyPreference,
     deliverables,
     status: brandKit.status || "pending",
+    errorMessage: brandKit.errorMessage || undefined,
     industry: brandKit.industry || undefined,
     tagline: brandKit.tagline || undefined,
     targetAudience: brandKit.targetAudience || undefined,
@@ -60,6 +62,8 @@ export function normalizeBrandKit(
     contact: (brandKit.contact as Record<string, string>) || undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     guidelines: (brandKit.guidelines as Record<string, any>) || undefined,
+    socialMediaBrief:
+      (brandKit.socialMediaBrief as SocialMediaBrief | null) || undefined,
     revisions: revisions.map((r) => ({
       id: r.id,
       isActive: r.isActive,

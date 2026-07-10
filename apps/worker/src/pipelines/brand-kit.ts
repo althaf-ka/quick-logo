@@ -36,6 +36,7 @@ import {
   computeSectionRefund,
 } from "@quicklogo/shared";
 import { refundCreditsOnce } from "../services/image/image-repository";
+import { PipelineError } from "../core/errors";
 
 export class BrandKitPipeline {
   private repository: BrandKitRepository;
@@ -68,9 +69,11 @@ export class BrandKitPipeline {
       additionalContext,
       socials,
       contact,
+      socialMediaBrief,
     } = message;
 
     const brandAssetContext = normalizeBrandContext(brandName || "", {
+      colors: extractedColors,
       industry,
       tagline,
       targetAudience,
@@ -126,6 +129,13 @@ export class BrandKitPipeline {
         }
       }
 
+      if (!actualLogoUrl) {
+        throw new PipelineError(
+          "The source logo is missing or no longer accessible",
+          false,
+        );
+      }
+
       const colorOutput = {
         colorPalette: derivePalette(extractedColors || []),
       };
@@ -161,8 +171,7 @@ export class BrandKitPipeline {
         }
       }
 
-      const fallbackLogoUrl =
-        actualLogoUrl || "https://placehold.co/400x400/000/FFF?text=Logo";
+      const fallbackLogoUrl = actualLogoUrl;
 
       let brandPresentationOutput = null;
       if (deliverables?.brandPresentation) {
@@ -336,6 +345,8 @@ export class BrandKitPipeline {
               brandName,
               sourceLogoUrl: actualLogoUrl,
               context: brandAssetContext,
+              socialMediaBrief,
+              headingFont: typographyOutput.heading.family,
             })
           : null;
 
@@ -348,6 +359,16 @@ export class BrandKitPipeline {
 
         finalResultsJSON.socialMedia =
           buildSocialMediaAssetList(socialMediaUrls);
+        if (socialMediaUrls) {
+          finalResultsJSON.socialMediaKit = {
+            version: 2,
+            brief: socialMediaBrief,
+            masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
+            selectedDirection: socialMediaUrls.creativeDirection,
+            quality: socialMediaUrls.quality,
+            candidateUrls: socialMediaUrls.candidateUrls,
+          };
+        }
       }
       if (deliverables?.brandGraphics) {
         const graphicUrls = actualLogoUrl
@@ -458,15 +479,35 @@ export class BrandKitPipeline {
   }
 
   async processRefinement(message: RefineBrandKitMessage) {
-    const { brandKitId, sectionId, refinementPrompt, targetItemId } = message;
+    const {
+      refinementId,
+      brandKitId,
+      sectionId,
+      refinementPrompt,
+      targetItemId,
+    } = message;
 
     try {
+      const triggerType = `refine_${sectionId}:${refinementId}`;
+      if (await this.repository.hasRevisionTrigger(brandKitId, triggerType)) {
+        this.logger.info("Refinement already completed; skipping replay", {
+          brandKitId,
+          refinementId,
+        });
+        return;
+      }
+
+      const currentBrandKit = await this.repository.getBrandKit(brandKitId);
+      if (!currentBrandKit) {
+        throw new PipelineError("Brand kit no longer exists", false);
+      }
+
       const activeRevision =
         await this.repository.getActiveRevision(brandKitId);
 
-      if (!activeRevision) throw new Error("No active revision found");
-
-      const currentBrandKit = await this.repository.getBrandKit(brandKitId);
+      if (!activeRevision) {
+        throw new PipelineError("No active revision found", false);
+      }
 
       const newMergedJSON = await mergeRevisionResults({
         ai: this.ai,
@@ -483,6 +524,7 @@ export class BrandKitPipeline {
       await this.repository.saveRefinement(
         brandKitId,
         sectionId,
+        refinementId,
         newMergedJSON,
       );
       this.logger.info(`Completed refinement for brandKitId=${brandKitId}`, {

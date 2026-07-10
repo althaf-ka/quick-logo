@@ -80,6 +80,8 @@ import { Input } from "@quicklogo/ui/components/input";
 import { Textarea } from "@quicklogo/ui/components/textarea";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { DeliverablesConfig } from "@/types/brand-kit";
+import type { SocialMediaBrief } from "@quicklogo/shared";
+import { BRAND_KIT_SECTION_COSTS } from "@quicklogo/shared";
 import { BrandProfileEditor } from "../components/brand-profile-editor";
 
 const DELIVERABLES_CONFIG = [
@@ -87,55 +89,56 @@ const DELIVERABLES_CONFIG = [
     id: "logoVariations",
     label: "Logo Variations",
     desc: "Alternate layouts & lockups",
-    cost: 2,
+    cost: BRAND_KIT_SECTION_COSTS.logoVariations,
     icon: <ShapesIcon weight="duotone" className="size-4" />,
   },
   {
     id: "favicon",
     label: "Favicon & Icons",
     desc: "App icons & favicons",
-    cost: 1,
+    cost: BRAND_KIT_SECTION_COSTS.favicon,
     icon: <AppWindowIcon weight="duotone" className="size-4" />,
   },
   {
     id: "socialMedia",
     label: "Social Media Kit",
     desc: "Profile pics & covers",
-    cost: 3,
+    cost: BRAND_KIT_SECTION_COSTS.socialMedia,
     icon: <ShareNetworkIcon weight="duotone" className="size-4" />,
   },
   {
     id: "businessCard",
     label: "Business Card",
     desc: "Print-ready designs",
-    cost: 2,
+    cost: BRAND_KIT_SECTION_COSTS.businessCard,
     icon: <IdentificationCardIcon weight="duotone" className="size-4" />,
   },
   {
     id: "brandPresentation",
     label: "Brand Presentation",
     desc: "Full brand guidelines",
-    cost: 3,
+    cost: BRAND_KIT_SECTION_COSTS.brandPresentation,
     icon: <PresentationChartIcon weight="duotone" className="size-4" />,
   },
   {
     id: "brandGraphics",
     label: "Brand Graphics",
     desc: "Social post & story backgrounds",
-    cost: 2,
+    cost: BRAND_KIT_SECTION_COSTS.brandGraphics,
     icon: <ImageIcon weight="duotone" className="size-4" />,
   },
   {
     id: "brandGuidelines",
     label: "Brand Guidelines",
     desc: "Rules and PDF exports",
-    cost: 0,
+    cost: BRAND_KIT_SECTION_COSTS.brandGuidelines,
     icon: <BookOpenTextIcon weight="duotone" className="size-4" />,
   },
 ] as const;
 
 const DELIVERABLES_WITH_SETTINGS: Array<keyof DeliverablesConfig> = [
   "businessCard",
+  "socialMedia",
   "brandGuidelines",
   "brandPresentation",
 ];
@@ -190,6 +193,8 @@ interface DeliverablesStepProps {
       depth: "essential" | "complete";
     }>
   >;
+  socialMediaBrief: SocialMediaBrief;
+  setSocialMediaBrief: React.Dispatch<React.SetStateAction<SocialMediaBrief>>;
   brandPersonality: string;
   setBrandPersonality: (v: string) => void;
   additionalContext: string;
@@ -210,6 +215,8 @@ export function DeliverablesStep({
   setContact,
   guidelines,
   setGuidelines,
+  socialMediaBrief,
+  setSocialMediaBrief,
   brandPersonality,
   setBrandPersonality,
   additionalContext,
@@ -273,11 +280,6 @@ export function DeliverablesStep({
 
   // Validation
   const socialHasData = Object.values(socials).some((v) => v.trim() !== "");
-  const socialError =
-    errorKeys.has("socialMedia") &&
-    deliverables.socialMedia.enabled &&
-    !socialHasData;
-
   const contactHasData =
     !!contact.name.trim() &&
     !!contact.title.trim() &&
@@ -296,12 +298,12 @@ export function DeliverablesStep({
     !presentationHasData;
 
   const hasErrors =
-    (deliverables.socialMedia.enabled && !socialHasData) ||
     (deliverables.businessCard.enabled && !contactHasData) ||
     (deliverables.brandPresentation.enabled && !presentationHasData);
 
   return (
     <motion.div
+      layout
       layoutId="section-deliverables"
       key="deliverables-active"
       initial={{ opacity: 0, y: 30 }}
@@ -393,7 +395,6 @@ export function DeliverablesStep({
             const isExpanded = activeAccordions.includes(key);
 
             const isError =
-              (key === "socialMedia" && socialError) ||
               (key === "businessCard" && contactError) ||
               (key === "brandPresentation" && presentationError);
 
@@ -581,6 +582,126 @@ export function DeliverablesStep({
                             </p>
                           </div>
                         ) : null}
+                        {key === "socialMedia" ? (
+                          <div className="flex flex-col gap-4 pt-2">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <label className="flex flex-col gap-1.5">
+                                <span className="text-muted-foreground/60 font-mono text-[9px] tracking-widest uppercase">
+                                  Purpose
+                                </span>
+                                <select
+                                  value={socialMediaBrief.purpose}
+                                  onChange={(event) =>
+                                    setSocialMediaBrief((current) => ({
+                                      ...current,
+                                      purpose: event.target
+                                        .value as SocialMediaBrief["purpose"],
+                                    }))
+                                  }
+                                  className={inputClassName}
+                                >
+                                  <option value="brand-awareness">
+                                    Brand awareness
+                                  </option>
+                                  <option value="product-promotion">
+                                    Product promotion
+                                  </option>
+                                  <option value="launch">Launch</option>
+                                  <option value="community">Community</option>
+                                  <option value="personal-brand">
+                                    Personal brand
+                                  </option>
+                                </select>
+                              </label>
+                              <label className="flex flex-col gap-1.5">
+                                <span className="text-muted-foreground/60 font-mono text-[9px] tracking-widest uppercase">
+                                  Visual direction
+                                </span>
+                                <select
+                                  value={socialMediaBrief.visualDirection}
+                                  onChange={(event) =>
+                                    setSocialMediaBrief((current) => ({
+                                      ...current,
+                                      visualDirection: event.target
+                                        .value as SocialMediaBrief["visualDirection"],
+                                    }))
+                                  }
+                                  className={inputClassName}
+                                >
+                                  <option value="auto">Choose for me</option>
+                                  <option value="minimal">Minimal</option>
+                                  <option value="editorial">Editorial</option>
+                                  <option value="photographic">
+                                    Photographic
+                                  </option>
+                                  <option value="geometric">Geometric</option>
+                                  <option value="product-focused">
+                                    Product focused
+                                  </option>
+                                </select>
+                              </label>
+                            </div>
+                            <Input
+                              value={socialMediaBrief.message || ""}
+                              onChange={(event) =>
+                                setSocialMediaBrief((current) => ({
+                                  ...current,
+                                  message: event.target.value,
+                                }))
+                              }
+                              maxLength={120}
+                              placeholder="Main message (optional — your tagline is used by default)"
+                              className={inputClassName}
+                            />
+                            <Input
+                              value={socialMediaBrief.callToAction || ""}
+                              onChange={(event) =>
+                                setSocialMediaBrief((current) => ({
+                                  ...current,
+                                  callToAction: event.target.value,
+                                }))
+                              }
+                              maxLength={40}
+                              placeholder="Call to action (optional)"
+                              className={inputClassName}
+                            />
+                            <div className="flex flex-wrap gap-4 border-t border-white/[0.04] pt-3">
+                              <label className="text-muted-foreground/70 flex cursor-pointer items-center gap-2 text-[10px]">
+                                <input
+                                  type="checkbox"
+                                  checked={socialMediaBrief.includeLogo}
+                                  onChange={(event) =>
+                                    setSocialMediaBrief((current) => ({
+                                      ...current,
+                                      includeLogo: event.target.checked,
+                                    }))
+                                  }
+                                  className="accent-primary size-3.5"
+                                />
+                                Include original logo
+                              </label>
+                              <label className="text-muted-foreground/70 flex cursor-pointer items-center gap-2 text-[10px]">
+                                <input
+                                  type="checkbox"
+                                  checked={socialMediaBrief.includeTagline}
+                                  onChange={(event) =>
+                                    setSocialMediaBrief((current) => ({
+                                      ...current,
+                                      includeTagline: event.target.checked,
+                                    }))
+                                  }
+                                  className="accent-primary size-3.5"
+                                />
+                                Include message
+                              </label>
+                            </div>
+                            <p className="text-muted-foreground/45 text-[10px] leading-relaxed">
+                              We create two panoramic art directions, select the
+                              strongest one, then compose your real logo and
+                              message into platform-safe layouts.
+                            </p>
+                          </div>
+                        ) : null}
                         {key === "brandPresentation" ? (
                           <div className="space-y-3 pt-2">
                             <input
@@ -681,8 +802,17 @@ export function DeliverablesStep({
           />
         </div>
 
-        {(deliverables.businessCard.enabled ||
-          deliverables.socialMedia.enabled) && (
+        <motion.div
+          initial={false}
+          animate={
+            deliverables.businessCard.enabled ||
+            deliverables.socialMedia.enabled
+              ? { height: "auto", opacity: 1, marginTop: 20 }
+              : { height: 0, opacity: 0, marginTop: 0 }
+          }
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+          className="overflow-hidden"
+        >
           <div className="space-y-1.5 pt-4">
             <div className="text-muted-foreground/50 flex items-center justify-between text-[10px] font-semibold tracking-wider uppercase select-text">
               <span>Brand Profile & Socials</span>
@@ -697,7 +827,7 @@ export function DeliverablesStep({
               onClick={() => setIsBrandProfileOpen(true)}
               className={cn(
                 "group hover:border-primary/40 hover:bg-primary/[0.03] relative flex w-full cursor-pointer items-center justify-between border border-white/[0.08] bg-white/[0.02] p-4 transition-all",
-                (socialError || contactError) &&
+                contactError &&
                   !isBrandProfileOpen &&
                   "border-red-500/50 bg-red-500/[0.03] hover:border-red-500 hover:bg-red-500/[0.05]",
               )}
@@ -706,7 +836,7 @@ export function DeliverablesStep({
                 <div
                   className={cn(
                     "group-hover:bg-primary/10 group-hover:ring-primary/20 flex size-8 items-center justify-center bg-white/[0.02] ring-1 ring-white/[0.06] transition-colors",
-                    (socialError || contactError) &&
+                    contactError &&
                       !isBrandProfileOpen &&
                       "bg-red-500/10 ring-red-500/30",
                   )}
@@ -715,9 +845,7 @@ export function DeliverablesStep({
                     weight="duotone"
                     className={cn(
                       "text-muted-foreground/50 group-hover:text-primary size-4 transition-colors",
-                      (socialError || contactError) &&
-                        !isBrandProfileOpen &&
-                        "text-red-500",
+                      contactError && !isBrandProfileOpen && "text-red-500",
                     )}
                   />
                 </div>
@@ -725,7 +853,7 @@ export function DeliverablesStep({
                   <p
                     className={cn(
                       "group-hover:text-primary font-mono text-[11px] font-bold tracking-widest uppercase transition-colors",
-                      (socialError || contactError) && !isBrandProfileOpen
+                      contactError && !isBrandProfileOpen
                         ? "text-red-500"
                         : "text-foreground/80",
                     )}
@@ -741,27 +869,23 @@ export function DeliverablesStep({
                 <span
                   className={cn(
                     "font-mono text-[9px] tracking-wider uppercase",
-                    socialError || contactError
+                    contactError
                       ? "font-bold text-red-500"
                       : "text-muted-foreground/50",
                   )}
                 >
-                  {socialError || contactError
-                    ? "Required"
-                    : "Required for add-ons"}
+                  {contactError ? "Required" : "Optional profile details"}
                 </span>
                 <ArrowRightIcon
                   className={cn(
                     "text-muted-foreground/30 group-hover:text-primary size-4 transition-transform group-hover:translate-x-0.5",
-                    (socialError || contactError) &&
-                      !isBrandProfileOpen &&
-                      "text-red-500",
+                    contactError && !isBrandProfileOpen && "text-red-500",
                   )}
                 />
               </div>
             </button>
           </div>
-        )}
+        </motion.div>
       </div>
 
       <BrandProfileEditor
@@ -772,7 +896,7 @@ export function DeliverablesStep({
         socials={socials}
         setSocials={setSocials}
         isBusinessCardRequired={deliverables.businessCard.enabled}
-        isSocialMediaRequired={deliverables.socialMedia.enabled}
+        isSocialMediaRequired={false}
       />
 
       {/* Generate Footer */}
@@ -806,8 +930,6 @@ export function DeliverablesStep({
             onClick={async () => {
               if (hasErrors) {
                 const newErrors = new Set<string>();
-                if (deliverables.socialMedia.enabled && !socialHasData)
-                  newErrors.add("socialMedia");
                 if (deliverables.businessCard.enabled && !contactHasData)
                   newErrors.add("businessCard");
                 if (

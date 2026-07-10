@@ -9,7 +9,17 @@ import { FoundationStep } from "./steps/foundation-step";
 import { CreativeDirectionStep } from "./steps/creative-direction-step";
 import { DeliverablesStep } from "./steps/deliverables-step";
 
-import type { StructuredBrandContext } from "@quicklogo/shared";
+import type {
+  SocialMediaBrief,
+  StructuredBrandContext,
+} from "@quicklogo/shared";
+
+const DEFAULT_SOCIAL_MEDIA_BRIEF: SocialMediaBrief = {
+  purpose: "brand-awareness",
+  visualDirection: "auto",
+  includeLogo: true,
+  includeTagline: true,
+};
 
 interface BrandQuestionnaireProps {
   workspaceState: WorkspaceState;
@@ -113,6 +123,9 @@ export function BrandQuestionnaire({
       structuredContext.guidelines?.depth ||
       ("essential" as "essential" | "complete"),
   });
+  const [socialMediaBrief, setSocialMediaBrief] = useState<SocialMediaBrief>(
+    structuredContext.socialMediaBrief || DEFAULT_SOCIAL_MEDIA_BRIEF,
+  );
 
   useEffect(() => {
     // Re-hydrate local state ONLY if an external hydration event occurred (e.g. loading a past brand kit)
@@ -137,6 +150,9 @@ export function BrandQuestionnaire({
         depth: structuredContext.guidelines?.depth || "essential",
       }));
     }
+    if (structuredContext.socialMediaBrief) {
+      setSocialMediaBrief(structuredContext.socialMediaBrief);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structuredContext._hydratedAt]); // Only trigger when hydration timestamp changes
 
@@ -151,6 +167,7 @@ export function BrandQuestionnaire({
       socials,
       contact,
       guidelines,
+      socialMediaBrief,
     });
   }, [
     industry,
@@ -162,8 +179,17 @@ export function BrandQuestionnaire({
     socials,
     contact,
     guidelines,
+    socialMediaBrief,
     updateStructuredContext,
   ]);
+
+  // Keep partially entered questionnaire values recoverable on refresh. The
+  // session owns the versioned localStorage write, so this component only
+  // publishes its local form state after a short idle period.
+  useEffect(() => {
+    const timeout = window.setTimeout(commitToSession, 250);
+    return () => window.clearTimeout(timeout);
+  }, [commitToSession]);
 
   const handleGenerate = useCallback(() => {
     commitToSession();
@@ -180,6 +206,7 @@ export function BrandQuestionnaire({
       socials,
       contact,
       guidelines,
+      socialMediaBrief,
     });
   }, [
     commitToSession,
@@ -193,6 +220,7 @@ export function BrandQuestionnaire({
     socials,
     contact,
     guidelines,
+    socialMediaBrief,
   ]);
 
   const canProceedToCreative =
@@ -203,17 +231,11 @@ export function BrandQuestionnaire({
   const canProceedToDeliverables =
     selectedVibes.length > 0 && typography !== "";
 
-  const socialHasData = Object.values(socials).some((v) => v.trim() !== "");
-  const socialError = deliverables.socialMedia.enabled && !socialHasData;
-
   const contactHasData = Object.values(contact).some((v) => v.trim() !== "");
   const contactError = deliverables.businessCard.enabled && !contactHasData;
 
   const canGenerate =
-    canProceedToCreative &&
-    canProceedToDeliverables &&
-    !socialError &&
-    !contactError;
+    canProceedToCreative && canProceedToDeliverables && !contactError;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -314,6 +336,8 @@ export function BrandQuestionnaire({
               setContact={setContact}
               guidelines={guidelines}
               setGuidelines={setGuidelines}
+              socialMediaBrief={socialMediaBrief}
+              setSocialMediaBrief={setSocialMediaBrief}
               brandPersonality={brandPersonality}
               setBrandPersonality={setBrandPersonality}
               additionalContext={additionalContext}

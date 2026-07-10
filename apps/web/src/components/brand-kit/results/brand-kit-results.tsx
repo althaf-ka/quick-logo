@@ -35,6 +35,11 @@ export interface BrandKitResultsData {
   colorPalette: PaletteColor[];
   typography: TypographyPairing;
   socialMedia?: SocialMediaAsset[];
+  socialMediaKit?: {
+    version: number;
+    selectedDirection?: { title?: string; rationale?: string };
+    quality?: { reviewed?: boolean; score?: number };
+  };
   businessCard?: BusinessCardData;
   favicons?: FaviconSize[];
   brandName?: string;
@@ -249,7 +254,10 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <SocialMediaSection assets={data.socialMedia} />
+                <SocialMediaSection
+                  assets={data.socialMedia}
+                  kitInfo={data.socialMediaKit}
+                />
               </FocusWrapper>
             ) : null}
 

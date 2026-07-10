@@ -10,7 +10,6 @@ import {
   GlobeIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { getSocialAssetTargetId } from "@quicklogo/shared";
 import { useBrandKitSection } from "./section-context";
 import { AssetCard } from "./asset-card";
 
@@ -23,6 +22,10 @@ export interface SocialMediaAsset {
 
 interface SocialMediaSectionProps {
   assets: SocialMediaAsset[];
+  kitInfo?: {
+    selectedDirection?: { title?: string; rationale?: string };
+    quality?: { reviewed?: boolean; score?: number };
+  };
 }
 
 function PlatformIcon({ platform }: { platform: string }) {
@@ -47,7 +50,7 @@ function getRatioLabel(asset: SocialMediaAsset): string {
   if (asset.type === "Profile") return "1:1 Ratio";
   if (asset.dimensions === "1500x500") return "3:1 Ratio";
   if (asset.dimensions === "1584x396") return "4:1 Ratio";
-  if (asset.dimensions === "820x360") return "16:7 Ratio";
+  if (asset.dimensions === "820x312") return "205:78 Ratio";
   if (asset.dimensions === "2560x1440") return "16:9 Ratio";
   const parts = asset.dimensions.split("x").map(Number);
   if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
@@ -58,9 +61,35 @@ function getRatioLabel(asset: SocialMediaAsset): string {
   return "Banner Ratio";
 }
 
-export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
+export function SocialMediaSection({
+  assets,
+  kitInfo,
+}: SocialMediaSectionProps) {
   const { targetSectionId, targetItemId, cancelRefine, onRefine } =
     useBrandKitSection();
+
+  const getTargetItemId = (asset: SocialMediaAsset) => {
+    if (asset.type === "Profile") return "social-profile";
+    const p = asset.platform.toLowerCase();
+    if (p === "twitter" || p === "x") return "twitter-header";
+    if (p === "linkedin") return "linkedin-header";
+    if (p === "facebook") return "facebook-header";
+    if (p === "youtube") return "youtube-channel-art";
+    return "";
+  };
+
+  const isTargeted = (itemId: string) =>
+    targetSectionId === "social-media" &&
+    (!targetItemId || targetItemId === itemId);
+
+  const handleToggleRefine = (itemId: string) => {
+    if (!itemId) return;
+    if (targetSectionId === "social-media" && targetItemId === itemId) {
+      cancelRefine?.();
+    } else {
+      onRefine?.("social-media", itemId);
+    }
+  };
 
   // Sort assets so Profile is first, followed by Facebook banner to sit next to it
   const displayAssets = [...assets].sort((a, b) => {
@@ -76,19 +105,37 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
       <SectionHeader
         title="Social Media Kit"
         sectionId="social-media"
-        refineLabel="Refine All Assets"
+        hideRefine={true}
       />
       <SectionContent sectionId="social-media">
+        {kitInfo?.selectedDirection?.title ? (
+          <div className="border-primary/50 mb-4 flex flex-col gap-1 border-l-2 bg-white/[0.02] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-foreground/80 font-mono text-[10px] font-bold tracking-widest uppercase">
+                {kitInfo.selectedDirection.title}
+              </p>
+              {kitInfo.selectedDirection.rationale ? (
+                <p className="text-muted-foreground/55 mt-1 text-[10px] leading-relaxed">
+                  {kitInfo.selectedDirection.rationale}
+                </p>
+              ) : null}
+            </div>
+            {kitInfo.quality?.reviewed ? (
+              <span className="text-primary/70 shrink-0 font-mono text-[9px] tracking-widest uppercase">
+                Quality reviewed
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {displayAssets.map((asset, i) => {
             const isProfile = asset.type === "Profile";
             // Place the very first banner next to the profile to fill the row perfectly
             const isFirstBanner = !isProfile && i === 1;
             const isPlaceholder = asset.url.includes("placehold.co");
-            const assetTargetId = getSocialAssetTargetId(asset);
-            const isAssetTargeted =
-              targetSectionId === "social-media" &&
-              targetItemId === assetTargetId;
+
+            const itemId = getTargetItemId(asset);
+            const isAssetTargeted = isTargeted(itemId);
 
             const colSpan = isProfile
               ? "col-span-1"
@@ -109,10 +156,8 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
                 icon={<PlatformIcon platform={asset.platform} />}
                 isTargeted={isAssetTargeted}
                 isPlaceholder={isPlaceholder}
-                onToggleRefine={() =>
-                  isAssetTargeted
-                    ? cancelRefine?.()
-                    : onRefine?.("social-media", assetTargetId)
+                onToggleRefine={
+                  itemId ? () => handleToggleRefine(itemId) : undefined
                 }
               >
                 <div
@@ -134,7 +179,6 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
                   >
                     <SectionContent
                       sectionId="social-media"
-                      targetItemId={assetTargetId}
                       className="pointer-events-none absolute inset-0 z-30"
                     />
                     <ZoomableImage
@@ -153,10 +197,11 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
                       <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
                         <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
                         <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
-                          Generation Pending
+                          Asset Unavailable
                         </p>
                         <p className="text-muted-foreground max-w-[180px] font-mono text-[8px]">
-                          AI asset generation is queued or encountered an issue.
+                          This asset did not finish generating. Regenerate the
+                          social media kit to try again.
                         </p>
                       </div>
                     )}

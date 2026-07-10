@@ -1,6 +1,6 @@
 export { WorkersAIProvider } from "./workers-ai";
 export { LeonardoProvider } from "./leonardo";
-export { ReplicateProvider } from "./replicate";
+export { ReplicateProvider, REPLICATE_MODELS } from "./replicate";
 export {
   getModelMapping,
   createProvider,

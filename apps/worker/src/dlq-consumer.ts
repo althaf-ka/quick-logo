@@ -73,6 +73,8 @@ export async function processDlqBatch(
     // Acknowledge the message so it doesn't stay in the DLQ forever
     if (handled) {
       message.ack();
+    } else {
+      message.retry({ delaySeconds: 60 });
     }
   }
 }

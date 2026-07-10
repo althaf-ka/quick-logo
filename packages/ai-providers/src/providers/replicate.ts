@@ -279,6 +279,8 @@ export class ReplicateProvider implements AIProvider {
       logger.info("[Replicate] Running model", {
         model: params.backendModel,
         inputKeys: Object.keys(input),
+        aspectRatio: input.aspect_ratio,
+        size: input.size,
         hasImage: !!(params.referenceImage || params.canvasImage),
       });
 

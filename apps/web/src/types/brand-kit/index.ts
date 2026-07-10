@@ -67,6 +67,7 @@ export interface NormalizedBrandKit extends StructuredBrandContext {
   typographyPreference: TypographyPreference;
   deliverables: DeliverablesConfig;
   status: "pending" | "processing" | "completed" | "failed";
+  errorMessage?: string;
   revisions: Array<{
     id: string;
     isActive: boolean;

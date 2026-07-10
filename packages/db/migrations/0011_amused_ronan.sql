@@ -1,0 +1,1 @@
+ALTER TABLE `brand_kit` ADD `social_media_brief` text;

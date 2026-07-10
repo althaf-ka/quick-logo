@@ -18,6 +18,10 @@ import type {
   RefinementSectionId,
   RestoreSectionId,
 } from "@quicklogo/shared";
+import {
+  computeBrandKitCost,
+  computeBrandKitRefinementCost,
+} from "@quicklogo/shared";
 
 interface UseBrandKitOptions {
   imageId?: string;
@@ -55,12 +59,14 @@ export function useBrandKit({
     setExtractedColors,
     structuredContext,
     updateStructuredContext,
+    clearDraft,
     hydrateFromBrandKit: hydrateSession,
   } = session;
 
   const generation = useBrandKitGeneration({
     brandKitId: initialBrandKitId,
     onGenerationSuccess: () => {
+      clearDraft();
       // Move to generating state while waiting for polling to complete
       setWorkspaceState("generating");
     },
@@ -80,6 +86,9 @@ export function useBrandKit({
   // Track mockup uploads
   const [isUploadingMockups, setIsUploadingMockups] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeOperationCredits, setActiveOperationCredits] = useState<
+    number | null
+  >(null);
 
   const refinement = useBrandKitRefinement({
     brandKitId: brandKitId,
@@ -160,7 +169,7 @@ export function useBrandKit({
       }
 
       const extractedBrandName = img.brandName || img.config?.brandName;
-      if (extractedBrandName && !brandName) {
+      if (extractedBrandName && extractedBrandName !== brandName) {
         setBrandName(extractedBrandName);
       }
 
@@ -169,9 +178,12 @@ export function useBrandKit({
         extractedIndustry &&
         extractedIndustry.trim() !== "" &&
         extractedIndustry.toLowerCase() !== "auto" &&
-        !structuredContext.industry
+        extractedIndustry !== structuredContext.industry
       ) {
-        updateStructuredContext({ industry: extractedIndustry });
+        updateStructuredContext({
+          industry: extractedIndustry,
+          _hydratedAt: Date.now(),
+        });
       }
     }
   }, [
@@ -301,21 +313,22 @@ export function useBrandKit({
     [brandKitId, results, queryClient, mutateRefine],
   );
 
-  // Credit calculation
-  const baseCredits = 5;
-  const regenerationCredits = 2;
-  const extraCredits =
-    (deliverables.logoVariations.enabled ? 2 : 0) +
-    (deliverables.socialMedia.enabled ? 3 : 0) +
-    (deliverables.businessCard.enabled ? 2 : 0) +
-    (deliverables.favicon.enabled ? 1 : 0) +
-    (deliverables.brandGraphics.enabled ? 4 : 0) +
-    (deliverables.brandPresentation.enabled ? 3 : 0);
-
-  const totalCredits =
+  const generationCredits = computeBrandKitCost({
+    logoVariations: deliverables.logoVariations.enabled,
+    socialMedia: deliverables.socialMedia.enabled,
+    businessCard: deliverables.businessCard.enabled,
+    favicon: deliverables.favicon.enabled,
+    brandGraphics: deliverables.brandGraphics.enabled,
+    brandPresentation: deliverables.brandPresentation.enabled,
+    brandGuidelines: deliverables.brandGuidelines.enabled,
+  });
+  const pendingOperationCredits =
     targetSection || brandKitId
-      ? regenerationCredits
-      : baseCredits + extraCredits;
+      ? computeBrandKitRefinementCost(targetSection, targetItemId)
+      : generationCredits;
+  const totalCredits = isGenerating
+    ? (activeOperationCredits ?? pendingOperationCredits)
+    : pendingOperationCredits;
 
   // Conversational Submit Handler
   const handleGenerate = useCallback(
@@ -356,6 +369,12 @@ export function useBrandKit({
       if (customPrompt !== undefined) {
         setPrompt(customPrompt);
       }
+
+      setActiveOperationCredits(
+        targetSection || brandKitId
+          ? computeBrandKitRefinementCost(targetSection, targetItemId)
+          : generationCredits,
+      );
 
       if (targetSection) {
         mutateRefine({
@@ -409,6 +428,7 @@ export function useBrandKit({
       mutateGenerate,
       structuredContext,
       targetItemId,
+      generationCredits,
     ],
   );
 

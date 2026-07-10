@@ -6,6 +6,7 @@ export const REPLICATE_MODELS = {
   IMAGEN_4: "google/imagen-4",
   FLUX_FILL: "black-forest-labs/flux-fill-pro",
   SEEDREAM: "bytedance/seedream-4.5",
+  SEEDREAM_5_LITE: "bytedance/seedream-5-lite",
   GPT_IMAGE_2: "openai/gpt-image-2",
 } as const;
 
@@ -73,6 +74,14 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     defaultOutputFormat: "png",
   },
   [REPLICATE_MODELS.SEEDREAM]: {
+    aspectRatio: true,
+    editingStrategy: {
+      type: "remix-image-array",
+      imageField: "image_input",
+    },
+    defaultOutputFormat: "png",
+  },
+  [REPLICATE_MODELS.SEEDREAM_5_LITE]: {
     aspectRatio: true,
     editingStrategy: {
       type: "remix-image-array",

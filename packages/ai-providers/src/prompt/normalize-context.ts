@@ -61,6 +61,7 @@ export function formatSocialLabel(platform: keyof NormalizedSocials): string {
     instagram: "Instagram",
     twitter: "X/Twitter",
     linkedin: "LinkedIn",
+    facebook: "Facebook",
     youtube: "YouTube",
     tiktok: "TikTok",
   };
@@ -83,6 +84,7 @@ const SOCIAL_KEY_ALIASES: Record<string, keyof NormalizedSocials> = {
 export function normalizeBrandContext(
   brandName: string,
   rawContext: {
+    colors?: string[];
     tagline?: string;
     industry?: string;
     targetAudience?: string;
@@ -102,6 +104,7 @@ export function normalizeBrandContext(
         mappedKey === "instagram" ||
         mappedKey === "twitter" ||
         mappedKey === "linkedin" ||
+        mappedKey === "facebook" ||
         mappedKey === "youtube" ||
         mappedKey === "tiktok"
       ) {
@@ -151,6 +154,11 @@ export function normalizeBrandContext(
 
   return {
     brandName,
+    colors: rawContext.colors
+      ?.filter((color) =>
+        /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color),
+      )
+      .slice(0, 6),
     tagline: rawContext.tagline,
     industry: rawContext.industry,
     targetAudience: rawContext.targetAudience,
@@ -176,5 +184,10 @@ export function buildBrandDesignContext(
     selectedVibes: context.selectedVibes,
     additionalContext: context.additionalContext,
   });
-  return summary ? `\nDesign Context: ${summary}` : "";
+  const colors = context.colors?.length
+    ? `\nApproved Brand Palette: ${context.colors.join(", ")}`
+    : "";
+  return summary || colors
+    ? `\nDesign Context: ${summary || "Use the established brand direction."}${colors}`
+    : "";
 }

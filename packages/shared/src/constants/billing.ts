@@ -16,6 +16,8 @@ export interface PricingTier {
 // only ever computing cost/refunds from these constants.
 
 export const BRAND_KIT_BASE_COST = 5;
+export const BRAND_KIT_REFINEMENT_COST = 2;
+export const SOCIAL_KIT_FULL_REFINEMENT_COST = 3;
 
 export type BrandKitPaidSection =
   | "logoVariations"
@@ -32,7 +34,9 @@ export type BrandKitPaidSection =
  */
 export const BRAND_KIT_SECTION_COSTS: Record<BrandKitPaidSection, number> = {
   logoVariations: 2,
-  socialMedia: 3,
+  // Two panoramic concepts, creative-direction/QA inference, and five final
+  // deterministic platform compositions.
+  socialMedia: 5,
   businessCard: 2,
   favicon: 1,
   brandPresentation: 3,
@@ -51,6 +55,16 @@ export function computeBrandKitCost(
     if (deliverables[key]) cost += BRAND_KIT_SECTION_COSTS[key];
   }
   return cost;
+}
+
+export function computeBrandKitRefinementCost(
+  sectionId?: string | null,
+  targetItemId?: string | null,
+): number {
+  if (sectionId === "social-media" && !targetItemId) {
+    return SOCIAL_KIT_FULL_REFINEMENT_COST;
+  }
+  return BRAND_KIT_REFINEMENT_COST;
 }
 
 /**

@@ -19,16 +19,34 @@
     "consumers": [
       {
         "queue": "image-generation",
-        "max_batch_size": 5,
-        "max_retries": 3,
+        // Brand-kit jobs wait on several external image generations. Keep one
+        // message per invocation so a batch cannot exceed Queues' 15m wall time.
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
         "dead_letter_queue": "image-generation-dlq",
       },
       {
         "queue": "image-generation-dlq",
+        "max_batch_size": 10,
+        "max_retries": 10,
+        "retry_delay": 60,
       },
     ],
   },
   "ai": {
     "binding": "AI",
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01,
+    },
   },
 }
