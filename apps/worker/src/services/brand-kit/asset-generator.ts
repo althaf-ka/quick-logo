@@ -87,6 +87,8 @@ const BANNER_GENERATION_RESOLUTION = "2K";
 
 export const SOCIAL_MEDIA_ASSET_COUNT = 5;
 
+const DEFAULT_BACKGROUND_COLOR = "#111827";
+
 const placeholder = (size: string, label: string) =>
   `https://placehold.co/${size}/000/FFF?text=${label}`;
 
@@ -102,7 +104,8 @@ function buildImageKitCropUrl(sourceUrl: string, dimensions: string): string {
     const existing = url.searchParams.get("tr");
     url.searchParams.set("tr", existing ? `${existing},${crop}` : crop);
     return url.toString();
-  } catch {
+  } catch (error) {
+    logger.warn(`Failed to parse URL for image cropping`, { sourceUrl, error });
     return sourceUrl;
   }
 }
@@ -175,6 +178,29 @@ export async function generateAndUpload(
   return uploaded.url;
 }
 
+async function generateAssetWithTimeout({
+  provider,
+  params,
+  storage,
+  uploadPath,
+  timeoutMs,
+  label,
+}: {
+  provider: AIProvider;
+  params: GenerationParams;
+  storage: StorageProvider;
+  uploadPath: string;
+  timeoutMs: number;
+  label: string;
+}): Promise<string | undefined> {
+  return runAssetOrNull(
+    (signal) =>
+      generateAndUpload(provider, params, storage, uploadPath, signal),
+    timeoutMs,
+    label,
+  );
+}
+
 export async function generateLogoVariations({
   ai,
   db,
@@ -216,24 +242,20 @@ export async function generateLogoVariations({
   const results: { type: string; url: string | undefined }[] = [];
   for (const type of typesToGenerate) {
     const slug = type === "dark-mode" ? "dark" : "icon";
-    const url = await runAssetOrNull(
-      (signal) =>
-        generateAndUpload(
-          provider,
-          buildLogoVariationGenerationParams({
-            variation: type,
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
-          }),
-          storage,
-          `${ASSET_ROOT}/${brandKitId}/logo-${slug}`,
-          signal,
-        ),
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    );
+    const url = await generateAssetWithTimeout({
+      provider,
+      params: buildLogoVariationGenerationParams({
+        variation: type,
+        brandName,
+        sourceLogoUrl,
+        backendModel: mapping.backendModel,
+        defaultParams: mapping.defaultParams,
+      }),
+      storage,
+      uploadPath: `${ASSET_ROOT}/${brandKitId}/logo-${slug}`,
+      timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
+      label: "asset-generator",
+    });
     results.push({ type, url: url ?? undefined });
   }
 
@@ -297,34 +319,30 @@ export async function generateSocialMediaAssets({
     referenceUrl: string,
     includeReferenceImage: boolean,
   ) =>
-    runAssetOrNull(
-      (signal) =>
-        generateAndUpload(
-          bannerProvider,
-          buildSocialMediaGenerationParams({
-            variation,
-            brandName,
-            sourceLogoUrl: referenceUrl,
-            backendModel: seedreamMapping.backendModel,
-            defaultParams: {
-              ...seedreamMapping.defaultParams,
-              providerOptions: {
-                ...(seedreamMapping.defaultParams?.providerOptions || {}),
-                aspect_ratio: aspectRatio,
-                size: BANNER_GENERATION_RESOLUTION,
-              },
-            },
-            refinementPrompt,
-            context,
-            includeReferenceImage,
-          }),
-          storage,
-          `${ASSET_ROOT}/${brandKitId}/social-${pathKey}`,
-          signal,
-        ),
-      SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
-      `social-media:${variation}`,
-    );
+    generateAssetWithTimeout({
+      provider: bannerProvider,
+      params: buildSocialMediaGenerationParams({
+        variation,
+        brandName,
+        sourceLogoUrl: referenceUrl,
+        backendModel: seedreamMapping.backendModel,
+        defaultParams: {
+          ...seedreamMapping.defaultParams,
+          providerOptions: {
+            ...(seedreamMapping.defaultParams?.providerOptions || {}),
+            aspect_ratio: aspectRatio,
+            size: BANNER_GENERATION_RESOLUTION,
+          },
+        },
+        refinementPrompt,
+        context,
+        includeReferenceImage,
+      }),
+      storage,
+      uploadPath: `${ASSET_ROOT}/${brandKitId}/social-${pathKey}`,
+      timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+      label: `social-media:${variation}`,
+    });
 
   const bannerSpecs = [
     {
@@ -430,37 +448,28 @@ export async function generateSocialMediaAssets({
   const artworkProvider = createProvider(ideogramMapping, { ai, env });
   const candidateResults = await Promise.all(
     directions.map(async (direction, index) => {
-      const url = await runAssetOrNull(
-        (signal) =>
-          generateAndUpload(
-            artworkProvider,
-            {
-              ...ideogramMapping.defaultParams,
-              backendModel: ideogramMapping.backendModel,
-              prompt: `${direction.artworkPrompt}
-
-PRODUCTION REQUIREMENTS: Edge-to-edge 3:1 panoramic campaign background. Background artwork only. One clear visual idea with premium commercial art direction and natural depth. Preserve useful negative space around the center-right for a separate logo and message layer. Do not render any text, letters, logo, icon, watermark, border, frame, rounded rectangle, card, panel, mockup, interface, safe-area guide, connected blocks, puzzle pieces, circuitry, or random decorative 3D objects.`,
-              width: 3072,
-              height: 1024,
-              providerOptions: {
-                ...(ideogramMapping.defaultParams.providerOptions || {}),
-                aspect_ratio: "3:1",
-                magic_prompt_option: "Auto",
-                resolution: "None",
-                style_type:
-                  brief.visualDirection === "photographic"
-                    ? "Realistic"
-                    : "Design",
-              },
-              signal,
-            },
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/social-concept-${index + 1}`,
-            signal,
-          ),
-        SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
-        `social-media:concept-${index + 1}`,
-      );
+      const url = await generateAssetWithTimeout({
+        provider: artworkProvider,
+        params: {
+          ...ideogramMapping.defaultParams,
+          backendModel: ideogramMapping.backendModel,
+          prompt: `${direction.artworkPrompt}\n\nPRODUCTION REQUIREMENTS: Edge-to-edge 3:1 panoramic campaign background. Background artwork only. One clear visual idea with premium commercial art direction and natural depth. Preserve useful negative space around the center-right for a separate logo and message layer. Do not render any text, letters, logo, icon, watermark, border, frame, rounded rectangle, card, panel, mockup, interface, safe-area guide, connected blocks, puzzle pieces, circuitry, or random decorative 3D objects.`,
+          width: 3072,
+          height: 1024,
+          providerOptions: {
+            ...(ideogramMapping.defaultParams.providerOptions || {}),
+            aspect_ratio: "3:1",
+            magic_prompt_option: "Auto",
+            resolution: "None",
+            style_type:
+              brief.visualDirection === "photographic" ? "Realistic" : "Design",
+          },
+        },
+        storage,
+        uploadPath: `${ASSET_ROOT}/${brandKitId}/social-concept-${index + 1}`,
+        timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+        label: `social-media:concept-${index + 1}`,
+      });
       return url ? { url, direction } : null;
     }),
   );
@@ -490,41 +499,30 @@ PRODUCTION REQUIREMENTS: Edge-to-edge 3:1 panoramic campaign background. Backgro
       ...selected.candidate.direction,
       id: `${selected.candidate.direction.id}-recovery`,
       title: `${selected.candidate.direction.title} Refined`,
-      artworkPrompt: `${selected.candidate.direction.artworkPrompt}
-
-CREATIVE DIRECTOR CORRECTION: ${selected.quality.notes}. Replace any generic or panel-like composition with a specific, edge-to-edge brand campaign image.`,
+      artworkPrompt: `${selected.candidate.direction.artworkPrompt}\n\nCREATIVE DIRECTOR CORRECTION: ${selected.quality.notes}. Replace any generic or panel-like composition with a specific, edge-to-edge brand campaign image.`,
     };
-    const recoveryUrl = await runAssetOrNull(
-      (signal) =>
-        generateAndUpload(
-          artworkProvider,
-          {
-            ...ideogramMapping.defaultParams,
-            backendModel: ideogramMapping.backendModel,
-            prompt: `${recoveryDirection.artworkPrompt}
-
-BACKGROUND ARTWORK ONLY. 3:1 panoramic, edge-to-edge, one specific visual idea, useful center-right negative space. Absolutely no text, logo, card, panel, frame, mockup, fake UI, safe-area graphic, connected blocks, puzzle pieces, circuitry, or random 3D objects.`,
-            width: 3072,
-            height: 1024,
-            providerOptions: {
-              ...(ideogramMapping.defaultParams.providerOptions || {}),
-              aspect_ratio: "3:1",
-              magic_prompt_option: "Auto",
-              resolution: "None",
-              style_type:
-                brief.visualDirection === "photographic"
-                  ? "Realistic"
-                  : "Design",
-            },
-            signal,
-          },
-          storage,
-          `${ASSET_ROOT}/${brandKitId}/social-concept-recovery`,
-          signal,
-        ),
-      SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
-      "social-media:concept-recovery",
-    );
+    const recoveryUrl = await generateAssetWithTimeout({
+      provider: artworkProvider,
+      params: {
+        ...ideogramMapping.defaultParams,
+        backendModel: ideogramMapping.backendModel,
+        prompt: `${recoveryDirection.artworkPrompt}\n\nBACKGROUND ARTWORK ONLY. 3:1 panoramic, edge-to-edge, one specific visual idea, useful center-right negative space. Absolutely no text, logo, card, panel, frame, mockup, fake UI, safe-area graphic, connected blocks, puzzle pieces, circuitry, or random 3D objects.`,
+        width: 3072,
+        height: 1024,
+        providerOptions: {
+          ...(ideogramMapping.defaultParams.providerOptions || {}),
+          aspect_ratio: "3:1",
+          magic_prompt_option: "Auto",
+          resolution: "None",
+          style_type:
+            brief.visualDirection === "photographic" ? "Realistic" : "Design",
+        },
+      },
+      storage,
+      uploadPath: `${ASSET_ROOT}/${brandKitId}/social-concept-recovery`,
+      timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+      label: "social-media:concept-recovery",
+    });
     if (recoveryUrl) {
       const recoveryCandidate = {
         url: recoveryUrl,
@@ -543,7 +541,7 @@ BACKGROUND ARTWORK ONLY. 3:1 panoramic, edge-to-edge, one specific visual idea, 
     brandKitId,
     backgroundUrl: selected.candidate.url,
     logoUrl: sourceLogoUrl,
-    backgroundColor: context?.colors?.[0] || "#111827",
+    backgroundColor: context?.colors?.[0] || DEFAULT_BACKGROUND_COLOR,
     message: brief.message || context?.tagline,
     brief,
     headingFont,
@@ -619,26 +617,22 @@ export async function generateBrandGraphics({
 
   for (const variant of variants) {
     total++;
-    const url = await runAssetOrNull(
-      (signal) =>
-        generateAndUpload(
-          provider,
-          buildBrandGraphicGenerationParams({
-            variation: variant.variation,
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: mapping.defaultParams,
-            refinementPrompt,
-            context,
-          }),
-          storage,
-          `${ASSET_ROOT}/${brandKitId}/${variant.storageSuffix}`,
-          signal,
-        ),
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    );
+    const url = await generateAssetWithTimeout({
+      provider,
+      params: buildBrandGraphicGenerationParams({
+        variation: variant.variation,
+        brandName,
+        sourceLogoUrl,
+        backendModel: mapping.backendModel,
+        defaultParams: mapping.defaultParams,
+        refinementPrompt,
+        context,
+      }),
+      storage,
+      uploadPath: `${ASSET_ROOT}/${brandKitId}/${variant.storageSuffix}`,
+      timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
+      label: "asset-generator",
+    });
     if (url) urls[toUrlKey(variant.targetId)] = url;
     else failed++;
   }
@@ -686,52 +680,44 @@ export async function generateBusinessCardAssets({
 
   if (!targetItemId || targetItemId === "front") {
     total++;
-    const url = await runAssetOrNull(
-      (signal) =>
-        generateAndUpload(
-          provider,
-          buildBusinessCardGenerationParams({
-            variation: "front",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: cardDefaultParams,
-            refinementPrompt,
-            context,
-          }),
-          storage,
-          `${ASSET_ROOT}/${brandKitId}/business-card-front`,
-          signal,
-        ),
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    );
+    const url = await generateAssetWithTimeout({
+      provider,
+      params: buildBusinessCardGenerationParams({
+        variation: "front",
+        brandName,
+        sourceLogoUrl,
+        backendModel: mapping.backendModel,
+        defaultParams: cardDefaultParams,
+        refinementPrompt,
+        context,
+      }),
+      storage,
+      uploadPath: `${ASSET_ROOT}/${brandKitId}/business-card-front`,
+      timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
+      label: "asset-generator",
+    });
     if (url) frontUrl = url;
     else failed++;
   }
 
   if (!targetItemId || targetItemId === "back") {
     total++;
-    const url = await runAssetOrNull(
-      (signal) =>
-        generateAndUpload(
-          provider,
-          buildBusinessCardGenerationParams({
-            variation: "back",
-            brandName,
-            sourceLogoUrl,
-            backendModel: mapping.backendModel,
-            defaultParams: cardDefaultParams,
-            refinementPrompt,
-            context,
-          }),
-          storage,
-          `${ASSET_ROOT}/${brandKitId}/business-card-back`,
-          signal,
-        ),
-      LOGO_VARIATION_TIMEOUT_MS,
-      "asset-generator",
-    );
+    const url = await generateAssetWithTimeout({
+      provider,
+      params: buildBusinessCardGenerationParams({
+        variation: "back",
+        brandName,
+        sourceLogoUrl,
+        backendModel: mapping.backendModel,
+        defaultParams: cardDefaultParams,
+        refinementPrompt,
+        context,
+      }),
+      storage,
+      uploadPath: `${ASSET_ROOT}/${brandKitId}/business-card-back`,
+      timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
+      label: "asset-generator",
+    });
     if (url) backUrl = url;
     else failed++;
   }

@@ -1,4 +1,4 @@
-import { projects, images, eq, and, desc } from "@quicklogo/db";
+import { projects, images, eq, and, desc, inArray } from "@quicklogo/db";
 import { Hono } from "hono";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
@@ -34,22 +34,8 @@ const batches = new Hono<{ Bindings: Bindings; Variables: Variables }>().get(
     const allImages = await db
       .select()
       .from(images)
-      .where(
-        // D1 doesn't support inArray well, so we use a loop approach
-        eq(images.projectId, projectIds[0]!),
-      )
+      .where(inArray(images.projectId, projectIds))
       .orderBy(desc(images.createdAt));
-
-    if (projectIds.length > 1) {
-      for (const pid of projectIds.slice(1)) {
-        const moreImages = await db
-          .select()
-          .from(images)
-          .where(eq(images.projectId, pid))
-          .orderBy(desc(images.createdAt));
-        allImages.push(...moreImages);
-      }
-    }
 
     const imagesByProject = new Map<string, typeof allImages>();
     for (const img of allImages) {

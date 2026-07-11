@@ -25,10 +25,15 @@ export function isAllowedRedirect(
   try {
     const parsedTarget = new URL(targetUrl);
 
+    // Prevent open redirect chaining and payload injection via query/hash
+    if (parsedTarget.search || parsedTarget.hash) {
+      return false;
+    }
+
     return allowedOrigins.some((origin) => {
       try {
         const parsedAllowed = new URL(origin);
-        return parsedTarget.hostname === parsedAllowed.hostname;
+        return parsedTarget.origin === parsedAllowed.origin;
       } catch {
         return parsedTarget.hostname === origin;
       }

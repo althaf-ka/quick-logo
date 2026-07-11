@@ -38,28 +38,31 @@ export async function refundCreditsOnce(
 ): Promise<boolean> {
   if (params.credits <= 0) return false;
 
-  try {
-    await db.batch([
-      db.insert(creditRefunds).values({
+  const [existing] = await db
+    .select({ id: creditRefunds.id })
+    .from(creditRefunds)
+    .where(eq(creditRefunds.id, params.refundId))
+    .limit(1);
+
+  if (existing) return false;
+
+  await db.batch([
+    db
+      .update(users)
+      .set({ credits: sql`${users.credits} + ${params.credits}` })
+      .where(
+        sql`${users.id} = ${params.userId} AND NOT EXISTS (SELECT 1 FROM ${creditRefunds} WHERE ${creditRefunds.id} = ${params.refundId})`,
+      ),
+    db
+      .insert(creditRefunds)
+      .values({
         id: params.refundId,
         userId: params.userId,
         credits: params.credits,
         reason: params.reason,
-      }),
-      db
-        .update(users)
-        .set({ credits: sql`${users.credits} + ${params.credits}` })
-        .where(eq(users.id, params.userId)),
-    ]);
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.toLowerCase().includes("unique")
-    ) {
-      return false;
-    }
-    throw error;
-  }
+      })
+      .onConflictDoNothing(),
+  ]);
 
   return true;
 }
