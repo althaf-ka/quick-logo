@@ -1,7 +1,6 @@
 import type { GenerationParams } from "../types";
 import {
   LogoVariationKind,
-  SocialMediaVariationKind,
   BrandGraphicVariationKind,
   BusinessCardVariationKind,
   BrandKitSectionKey,
@@ -16,21 +15,6 @@ import {
 import { buildBusinessCardContentStrategy } from "./business-card-strategy";
 
 const JSON_RESPONSE_MAX_TOKENS = 600;
-const SOCIAL_PROMPT_MAX_CHARS = 3800;
-const SOCIAL_REFINEMENT_MAX_CHARS = 800;
-const SOCIAL_PROMPT_TAIL_CHARS = 1200;
-
-function truncatePromptPreservingRules(prompt: string, maxChars: number) {
-  if (prompt.length <= maxChars) return prompt;
-  const tailChars = Math.min(
-    SOCIAL_PROMPT_TAIL_CHARS,
-    Math.floor(maxChars / 3),
-  );
-  const separator = "\n[Design context abbreviated]\n";
-  const headChars = maxChars - tailChars - separator.length;
-  return `${prompt.slice(0, headChars)}${separator}${prompt.slice(-tailChars)}`;
-}
-
 // Orientation presets. gpt-image-2 (the default brand-kit model) only supports
 // 1:1, 3:2, 2:3, so assets are generated at the nearest supported orientation
 // rather than exact platform pixels. See getAspectRatio clamping in replicate.ts.
@@ -46,122 +30,6 @@ export const LOGO_VARIATION_PROMPTS = {
 } satisfies Record<
   LogoVariationKind,
   (context: { brandName: string }) => string
->;
-
-function buildBannerProductionRules(context: ValidatedBrandContext): string {
-  return `${buildBrandDesignContext(context)}
-FINAL PRODUCTION RULES:
-- Deliver a finished, edge-to-edge cover image ready for direct upload, not a presentation mockup or design-board preview.
-- Commit to one strong visual concept with a clear focal hierarchy, intentional negative space, clean edges, and two to four controlled palette colors.
-- Create original campaign artwork from the approved palette and brand mood; do not build the scene out of the logo's symbol, mascot, letterforms, or silhouette.
-- If a reference banner is supplied, treat it as the approved master artwork: preserve its signature motif, palette, lighting, material language, and overall composition. Adapt only what the requested crop or refinement requires.
-- Keep the banner logo-free and text-free unless the platform brief or the user's refinement explicitly requests a small brand signature.
-- Never generate social handles, slogans, fake UI, mockups, repeated emblems, watermarks, or decorative typography automatically.
-- Avoid generic AI-design shortcuts: random 3D blobs, meaningless circuitry, stock skylines, excessive neon, particle fields, lens flares, and pseudo-text.
-- Before finalizing, verify that the banner remains clear at small display sizes, survives the stated crop, contains no malformed text, and has no important detail touching an edge.
-- The platform-specific direction and crop safety rules override any conflicting logo or icon suggestions in the design context.`;
-}
-
-const SOCIAL_PLATFORM_NAMES = [
-  ["instagram", "Instagram"],
-  ["twitter", "X/Twitter"],
-  ["linkedin", "LinkedIn"],
-  ["facebook", "Facebook"],
-  ["youtube", "YouTube"],
-  ["tiktok", "TikTok"],
-] as const;
-
-function usernameOnly(value: string): string {
-  const withoutProtocol = value
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./i, "")
-    .split(/[?#]/, 1)[0];
-  const segments = withoutProtocol?.split("/").filter(Boolean) ?? [];
-  return (segments.at(-1) || withoutProtocol || "").replace(/^@+/, "");
-}
-
-function buildRequestedSocialAccountData(
-  context: ValidatedBrandContext,
-  refinementPrompt?: string,
-): string {
-  if (!refinementPrompt || !context.hasSocials) return "";
-
-  const rejectsAccounts =
-    /\b(?:do not|don't|without|no)\b[\s\S]{0,40}\b(?:social|handle|username|instagram|twitter|linkedin|facebook|youtube|tiktok)\b/i.test(
-      refinementPrompt,
-    );
-  if (rejectsAccounts) return "";
-
-  const explicitlyRequestsAccounts =
-    /\b(?:add|include|show|display|place|render|use)\b[\s\S]{0,100}\b(?:social|handle|username|instagram|twitter|linkedin|facebook|youtube|tiktok)\b/i.test(
-      refinementPrompt,
-    ) ||
-    /\b(?:social|handle|username|instagram|twitter|linkedin|facebook|youtube|tiktok)\b[\s\S]{0,100}\b(?:add|include|show|display|place|render|use)\b/i.test(
-      refinementPrompt,
-    );
-  if (!explicitlyRequestsAccounts) return "";
-
-  const specificallyNamedPlatforms = SOCIAL_PLATFORM_NAMES.filter(
-    ([key, label]) =>
-      new RegExp(`\\b(?:${key}|${label.replace("/", "|")})\\b`, "i").test(
-        refinementPrompt,
-      ),
-  );
-  const candidates =
-    specificallyNamedPlatforms.length > 0
-      ? specificallyNamedPlatforms
-      : SOCIAL_PLATFORM_NAMES;
-  const accounts = candidates
-    .flatMap(([key, label]) => {
-      const value = context.socials[key];
-      const username = value ? usernameOnly(value) : "";
-      return username ? [`${label} username "${username}"`] : [];
-    })
-    .slice(0, specificallyNamedPlatforms.length > 0 ? undefined : 2);
-
-  if (accounts.length === 0) return "";
-  return `\nREQUESTED SOCIAL ACCOUNT CONTENT: ${accounts.join("; ")}. Since the user explicitly requested social account content, render each approved platform's familiar icon followed only by its username. Do not render the @ symbol, a full URL, a platform-name label, a colon, or any account not listed here.`;
-}
-
-export const SOCIAL_MEDIA_PROMPTS = {
-  "social-profile": (context: ValidatedBrandContext) =>
-    `You are a senior brand identity designer creating a production-ready social profile image for "${context.brandName}". Preserve the supplied logo exactly: use it once, centered, upright, and undistorted. Scale it to remain fully legible inside the central 70% of the square so a circular crop cannot clip any part of the mark. Use a simple opaque background derived from the brand palette with strong contrast; a restrained gradient or very subtle texture is acceptable, but the logo must remain the sole focal point. Do not redraw the mark, retype the wordmark, add a slogan, social handle, mockup, border, extra icon, glow, shadow clutter, or transparent background.${buildBrandDesignContext(context)}\nFINAL: The profile image is the only social asset that must display the supplied logo.`,
-  "master-banner": (context: ValidatedBrandContext) =>
-    `You are a senior brand designer creating the single canonical social-media campaign artwork for "${context.brandName}". Translate the brand's industry, audience, personality, and selected vibes into one ownable visual metaphor rather than a generic decorative background. Establish one memorable signature motif, one consistent material and lighting language, and a disciplined palette that can become a repeatable brand device.
-
-MASTER CANVAS SYSTEM:
-- Compose edge-to-edge on a 16:9 master canvas so it can supply YouTube art and panoramic platform headers.
-- Design the centered middle 48% of the width and 23.5% of the height as the universal safe zone. Keep the complete signature motif and every essential detail inside it.
-- Treat the remaining canvas as seamless crop-extension: continue color, atmosphere, texture, and low-importance supporting forms naturally to every edge.
-- Make the center-right the visual anchor and keep the lower-left quiet for platform avatar overlays.
-- The composition must remain intentional when center-cropped to 4:1, 3:1, and 2.63:1. Do not place a second focal point in the crop-extension area.
-
-Avoid defaulting to waves, floating rectangles, modular UI grids, diagonal stripes, or abstract blobs unless the supplied brand context specifically makes that device meaningful. The result should feel art-directed and particular to this brand, not like a reusable technology-company wallpaper.${buildBannerProductionRules(context)}`,
-  "twitter-banner": (context: ValidatedBrandContext) =>
-    `Adapt the supplied approved master artwork into a polished 21:9 X/Twitter header for "${context.brandName}". Preserve the master's exact signature motif, palette, material, lighting, and visual identity; do not invent a new concept. Recompose only as needed for a 3:1 center crop, keeping the lower-left quarter quiet for the profile avatar and all essential detail in the center-right safe area.${buildBannerProductionRules(context)}`,
-  "linkedin-banner": (context: ValidatedBrandContext) =>
-    `Adapt the supplied approved master artwork into premium LinkedIn channel art for "${context.brandName}". Preserve the master's exact signature motif, palette, material, lighting, and visual identity; do not invent a new concept. Recompose only as needed for the centered 4:1 crop, keeping the lower-left quarter quiet for the profile avatar and the focal detail inside the center-right safe area.${buildBannerProductionRules(context)}`,
-  "facebook-banner": (context: ValidatedBrandContext) =>
-    `Adapt the supplied approved master artwork into a professional Facebook cover for "${context.brandName}". Preserve the master's exact signature motif, palette, material, lighting, and visual identity; do not invent a new concept. Recompose only as needed for the approximately 2.63:1 crop and narrower mobile views, keeping the outer 15% nonessential and the lower-left quarter quiet for interface overlays.${buildBannerProductionRules(context)}`,
-  "youtube-banner": (context: ValidatedBrandContext) =>
-    `Adapt the supplied approved master artwork into finished, professional YouTube channel art for "${context.brandName}". Preserve the master's exact signature motif, palette, material, lighting, and visual identity; do not invent a new concept. This must look like a deliberately art-directed channel header, not a movie poster, generic neon cityscape, AI collage, or repeated-logo wallpaper.
-
-CANVAS AND CROP RULES:
-- Compose on a 2560 x 1440 px, 16:9 canvas.
-- The universal safe area is the centered 1235 x 338 px rectangle (approximately x=663-1898 and y=551-889, or the middle 48% of the width and 23.5% of the height).
-- ALL essential content must fit comfortably inside that safe area: the logo, brand name if it is already part of the supplied logo, any requested social handle, and the primary focal detail. Leave internal padding so nothing touches the safe-area boundary.
-- The surrounding canvas is decorative crop-extension only. Continue background color, gradients, texture, and low-importance abstract shapes naturally to every edge so the design still looks intentional in the centered 2560 x 423 desktop strip and 1856 x 423 tablet strip.
-
-ART DIRECTION:
-- Keep the master's existing focal grouping inside the safe area with strong hierarchy and generous negative space.
-- Extend or recompose the approved artwork only where required by the 16:9 canvas and universal safe area.
-- Default to logo-free artwork. Include the supplied logo only when the user's refinement explicitly requests it; then use it exactly once, small, and fully inside the safe area.
-- Avoid excessive glow, random particles, light trails, clutter, and stock-looking scenery.
-- Do not draw safe-area guides, crop marks, frames, device mockups, or dimension labels in the final image.${buildBannerProductionRules(context)}`,
-} satisfies Record<
-  SocialMediaVariationKind,
-  (context: ValidatedBrandContext) => string
 >;
 
 export const BRAND_GRAPHIC_PROMPTS = {
@@ -351,7 +219,7 @@ export function buildLogoStyleAnalysisRequest({
   logoUrl,
 }: BuildLogoStyleAnalysisInput): BrandKitVisionRequest {
   const systemPrompt = `You are an expert brand identity designer and design historian.
-Analyze the provided logo image. Output ONLY valid JSON containing a short, descriptive "style" string.
+Analyze only the graphic-design properties of the provided business logo image. Treat it as ordinary non-sensitive brand artwork and do not infer people, ages, nudity, or sexual content from abstract shapes. Output ONLY valid JSON containing a short, descriptive "style" string.
 Your analysis must describe the visual style, form, texture, geometry, linework, and mood. For example: "A minimalist, geometric sans-serif mark with thick, monolinear strokes and rounded corners" or "An intricate, illustrative badge with organic textures and a vintage woodcut feel." Do NOT use words like "The logo is" or "This image shows". Just the description.
 Schema:
 { "style": "Your description here" }`;
@@ -547,57 +415,6 @@ export function buildLogoVariationGenerationParams({
     ...SQUARE_DIMENSIONS,
     backendModel,
     defaultParams,
-  });
-}
-
-export interface BuildSocialMediaParamsInput {
-  variation: SocialMediaVariationKind;
-  brandName: string;
-  sourceLogoUrl: string;
-  backendModel: string;
-  defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
-  context?: ValidatedBrandContext;
-  includeReferenceImage?: boolean;
-}
-
-export function buildSocialMediaGenerationParams({
-  variation,
-  brandName,
-  sourceLogoUrl,
-  backendModel,
-  defaultParams,
-  refinementPrompt,
-  context,
-  includeReferenceImage = true,
-}: BuildSocialMediaParamsInput & {
-  refinementPrompt?: string;
-}): GenerationParams {
-  const ctx = context || normalizeBrandContext(brandName, {});
-  const safeRefinementPrompt = refinementPrompt
-    ?.trim()
-    .slice(0, SOCIAL_REFINEMENT_MAX_CHARS);
-  const refinementOverhead = safeRefinementPrompt
-    ? safeRefinementPrompt.length + 180
-    : 0;
-  const platformPrompt = truncatePromptPreservingRules(
-    `${SOCIAL_MEDIA_PROMPTS[variation](ctx)}${buildRequestedSocialAccountData(ctx, safeRefinementPrompt)}`,
-    SOCIAL_PROMPT_MAX_CHARS - refinementOverhead,
-  );
-  // Profile is a square avatar; banners are wide → nearest supported landscape.
-  const dimensions =
-    variation === "social-profile" ? SQUARE_DIMENSIONS : LANDSCAPE_DIMENSIONS;
-  return buildAssetParams({
-    prompt: platformPrompt,
-    referenceImage: includeReferenceImage ? sourceLogoUrl : undefined,
-    referenceStrength: includeReferenceImage
-      ? variation === "social-profile"
-        ? 90
-        : 30
-      : undefined,
-    ...dimensions,
-    backendModel,
-    defaultParams,
-    refinementPrompt: safeRefinementPrompt,
   });
 }
 

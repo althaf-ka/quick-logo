@@ -22,10 +22,6 @@ export interface SocialMediaAsset {
 
 interface SocialMediaSectionProps {
   assets: SocialMediaAsset[];
-  kitInfo?: {
-    selectedDirection?: { title?: string; rationale?: string };
-    quality?: { reviewed?: boolean; score?: number };
-  };
 }
 
 function PlatformIcon({ platform }: { platform: string }) {
@@ -61,15 +57,12 @@ function getRatioLabel(asset: SocialMediaAsset): string {
   return "Banner Ratio";
 }
 
-export function SocialMediaSection({
-  assets,
-  kitInfo,
-}: SocialMediaSectionProps) {
+export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
   const { targetSectionId, targetItemId, cancelRefine, onRefine } =
     useBrandKitSection();
 
   const getTargetItemId = (asset: SocialMediaAsset) => {
-    if (asset.type === "Profile") return "social-profile";
+    if (asset.type === "Profile") return "instagram-profile";
     const p = asset.platform.toLowerCase();
     if (p === "twitter" || p === "x") return "twitter-header";
     if (p === "linkedin") return "linkedin-header";
@@ -108,25 +101,6 @@ export function SocialMediaSection({
         hideRefine={true}
       />
       <SectionContent sectionId="social-media">
-        {kitInfo?.selectedDirection?.title ? (
-          <div className="border-primary/50 mb-4 flex flex-col gap-1 border-l-2 bg-white/[0.02] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-foreground/80 font-mono text-[10px] font-bold tracking-widest uppercase">
-                {kitInfo.selectedDirection.title}
-              </p>
-              {kitInfo.selectedDirection.rationale ? (
-                <p className="text-muted-foreground/55 mt-1 text-[10px] leading-relaxed">
-                  {kitInfo.selectedDirection.rationale}
-                </p>
-              ) : null}
-            </div>
-            {kitInfo.quality?.reviewed ? (
-              <span className="text-primary/70 shrink-0 font-mono text-[9px] tracking-widest uppercase">
-                Quality reviewed
-              </span>
-            ) : null}
-          </div>
-        ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {displayAssets.map((asset, i) => {
             const isProfile = asset.type === "Profile";

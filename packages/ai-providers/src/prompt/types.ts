@@ -53,13 +53,6 @@ export interface BusinessCardContentStrategy {
 }
 
 export type LogoVariationKind = "dark-mode" | "icon-only";
-export type SocialMediaVariationKind =
-  | "social-profile"
-  | "master-banner"
-  | "twitter-banner"
-  | "linkedin-banner"
-  | "facebook-banner"
-  | "youtube-banner";
 export type BusinessCardVariationKind = "front" | "back";
 export type BrandGraphicVariationKind =
   | "graphic-backdrop-post"

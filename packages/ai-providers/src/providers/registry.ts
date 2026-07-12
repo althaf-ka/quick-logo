@@ -114,7 +114,7 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
   "quick-seedream": {
     provider: "replicate",
     inputType: "json",
-    backendModel: "bytedance/seedream-4.5",
+    backendModel: "bytedance/seedream-5-lite",
     capabilities: {
       nativePromptEnhancement: true,
       imageToImage: true,
@@ -129,6 +129,11 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     defaultParams: {
       width: 1024,
       height: 1024,
+      providerOptions: {
+        size: "2K",
+        sequential_image_generation: "disabled",
+        max_images: 1,
+      },
     },
   },
   "quick-gpt-image-2": {

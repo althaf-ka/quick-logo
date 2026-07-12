@@ -23,6 +23,21 @@ export class BrandKitRepository {
       .where(eq(brandKits.id, id));
   }
 
+  async updateProgress(
+    id: string,
+    generationProgress: number,
+    generationStage: string,
+  ): Promise<void> {
+    await this.db
+      .update(brandKits)
+      .set({
+        generationProgress: Math.max(0, Math.min(100, generationProgress)),
+        generationStage,
+        updatedAt: new Date(),
+      })
+      .where(eq(brandKits.id, id));
+  }
+
   async getSourceImageUrl(imageId: string): Promise<string | null> {
     const sourceImage = await this.db.query.images.findFirst({
       where: eq(images.id, imageId),
@@ -102,6 +117,8 @@ export class BrandKitRepository {
         .update(brandKits)
         .set({
           status: "completed",
+          generationProgress: 100,
+          generationStage: "Complete",
           errorMessage: opts?.errorMessage ?? null,
           ...(opts?.refundedAt && { refundedAt: opts.refundedAt }),
         })

@@ -140,10 +140,10 @@ export const MODELS: ModelOption[] = [
   },
   {
     id: "quick-seedream",
-    name: "SeeDream 4.5",
+    name: "Seedream 5 Lite",
     label: "Versatile",
     description:
-      "Versatile and highly detailed generations, excellent for both text-to-image and reference edits.",
+      "Fast, detailed generation with strong text-to-image and reference editing.",
     friendlyDescription:
       "Highly detailed - best results when editing existing logos",
     credits: 8,

@@ -17,7 +17,7 @@ import type {
 const DEFAULT_SOCIAL_MEDIA_BRIEF: SocialMediaBrief = {
   purpose: "brand-awareness",
   visualDirection: "auto",
-  includeLogo: true,
+  includeLogo: false,
   includeTagline: true,
 };
 

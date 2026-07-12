@@ -128,7 +128,12 @@ export function useBrandKit({
   }, [normalizedData, hydrateSession, hydrateRefinement]);
 
   useEffect(() => {
-    if (normalizedData?.status === "completed") {
+    if (
+      normalizedData?.status === "pending" ||
+      normalizedData?.status === "processing"
+    ) {
+      setWorkspaceState("generating");
+    } else if (normalizedData?.status === "completed") {
       setWorkspaceState("results");
     }
   }, [normalizedData?.status, setWorkspaceState]);
@@ -327,7 +332,9 @@ export function useBrandKit({
       ? computeBrandKitRefinementCost(targetSection, targetItemId)
       : generationCredits;
   const totalCredits = isGenerating
-    ? (activeOperationCredits ?? pendingOperationCredits)
+    ? (activeOperationCredits ??
+      normalizedData?.creditsUsed ??
+      pendingOperationCredits)
     : pendingOperationCredits;
 
   // Conversational Submit Handler

@@ -37,8 +37,6 @@ export interface BrandKitResultsData {
   socialMedia?: SocialMediaAsset[];
   socialMediaKit?: {
     version: number;
-    selectedDirection?: { title?: string; rationale?: string };
-    quality?: { reviewed?: boolean; score?: number };
   };
   businessCard?: BusinessCardData;
   favicons?: FaviconSize[];
@@ -254,10 +252,7 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <SocialMediaSection
-                  assets={data.socialMedia}
-                  kitInfo={data.socialMediaKit}
-                />
+                <SocialMediaSection assets={data.socialMedia} />
               </FocusWrapper>
             ) : null}
 

@@ -116,6 +116,11 @@ export class BrandKitPipeline {
     };
 
     await this.repository.updateStatus(brandKitId, "processing");
+    await this.repository.updateProgress(
+      brandKitId,
+      5,
+      "Preparing brand assets",
+    );
 
     try {
       let actualLogoUrl = message.customLogoUrl;
@@ -139,6 +144,12 @@ export class BrandKitPipeline {
       const colorOutput = {
         colorPalette: derivePalette(extractedColors || []),
       };
+
+      await this.repository.updateProgress(
+        brandKitId,
+        15,
+        "Analyzing logo and typography",
+      );
 
       // Step 3: Typography via hybrid vision request
       const { key: resolvedStyle, hint: styleHint } =
@@ -174,6 +185,11 @@ export class BrandKitPipeline {
       const fallbackLogoUrl = actualLogoUrl;
 
       let brandPresentationOutput = null;
+      await this.repository.updateProgress(
+        brandKitId,
+        25,
+        "Building the brand system",
+      );
       if (deliverables?.brandPresentation) {
         const presentationRequest = buildBrandPresentationTextRequest({
           brandName,
@@ -277,6 +293,11 @@ export class BrandKitPipeline {
         iconOnlyUrl?: string;
       } | null = null;
       if (deliverables?.logoVariations || deliverables?.favicon) {
+        await this.repository.updateProgress(
+          brandKitId,
+          38,
+          "Generating logo variations",
+        );
         darkAndIconUrls = actualLogoUrl
           ? await generateLogoVariations({
               ai: this.ai,
@@ -336,6 +357,11 @@ export class BrandKitPipeline {
       }
 
       if (deliverables?.socialMedia) {
+        await this.repository.updateProgress(
+          brandKitId,
+          52,
+          "Generating social profile assets",
+        );
         const socialMediaUrls = actualLogoUrl
           ? await generateSocialMediaAssets({
               ai: this.ai,
@@ -344,9 +370,12 @@ export class BrandKitPipeline {
               brandKitId,
               brandName,
               sourceLogoUrl: actualLogoUrl,
+              iconOnlyLogoUrl: darkAndIconUrls?.iconOnlyUrl ?? actualLogoUrl,
+              headingFont: typographyOutput.heading.family,
+              bodyFont: typographyOutput.body.family,
               context: brandAssetContext,
               socialMediaBrief,
-              headingFont: typographyOutput.heading.family,
+              productImageUrls,
             })
           : null;
 
@@ -361,16 +390,19 @@ export class BrandKitPipeline {
           buildSocialMediaAssetList(socialMediaUrls);
         if (socialMediaUrls) {
           finalResultsJSON.socialMediaKit = {
-            version: 2,
+            version: 3,
             brief: socialMediaBrief,
             masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
-            selectedDirection: socialMediaUrls.creativeDirection,
-            quality: socialMediaUrls.quality,
-            candidateUrls: socialMediaUrls.candidateUrls,
+            campaignDirection: socialMediaUrls.campaignDirection,
           };
         }
       }
       if (deliverables?.brandGraphics) {
+        await this.repository.updateProgress(
+          brandKitId,
+          74,
+          "Generating brand graphics",
+        );
         const graphicUrls = actualLogoUrl
           ? await generateBrandGraphics({
               ai: this.ai,
@@ -399,6 +431,11 @@ export class BrandKitPipeline {
         };
       }
       if (deliverables?.businessCard) {
+        await this.repository.updateProgress(
+          brandKitId,
+          86,
+          "Generating business cards",
+        );
         const businessCardUrls = actualLogoUrl
           ? await generateBusinessCardAssets({
               ai: this.ai,
@@ -441,6 +478,11 @@ export class BrandKitPipeline {
       // reason is surfaced via errorMessage (no schema/migration needed).
       let refundedAt: Date | undefined;
       let errorMessage: string | null = null;
+      await this.repository.updateProgress(
+        brandKitId,
+        96,
+        "Finalizing your brand kit",
+      );
       if (refundCredits > 0) {
         const didRefund = await refundCreditsOnce(this.db, {
           refundId: `brand-kit-partial:${brandKitId}`,

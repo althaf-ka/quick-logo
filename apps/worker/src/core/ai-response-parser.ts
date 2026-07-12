@@ -52,24 +52,59 @@ export function extractWorkersAiResponseText(response: unknown): string {
   }
 
   if (typeof response === "object" && response !== null) {
-    const res = response as Record<string, any>;
+    const res = response as Record<string, unknown>;
 
     // 1. OpenAI-compatible format (choices array)
     if (Array.isArray(res.choices) && res.choices.length > 0) {
-      const message = res.choices[0].message || {};
+      const firstChoice = res.choices[0];
+      const message =
+        typeof firstChoice === "object" && firstChoice !== null
+          ? (firstChoice as Record<string, unknown>).message
+          : undefined;
+      const messageRecord =
+        typeof message === "object" && message !== null
+          ? (message as Record<string, unknown>)
+          : {};
 
       // Check content, reasoning_content, and reasoning (some gemma models use this)
       const rawContent =
-        message.content || message.reasoning_content || message.reasoning || "";
+        messageRecord.content ||
+        messageRecord.reasoning_content ||
+        messageRecord.reasoning ||
+        "";
 
       if (typeof rawContent === "string" && rawContent.length > 0) {
         return cleanAiResponse(rawContent);
       }
     }
 
-    // 2. Standard legacy Workers AI format
-    if ("response" in res && typeof res.response === "string") {
-      return cleanAiResponse(res.response);
+    // 2. Workers AI Responses API format (used by GPT-OSS models).
+    if (typeof res.output_text === "string") {
+      return cleanAiResponse(res.output_text);
+    }
+    if (Array.isArray(res.output)) {
+      for (const item of res.output) {
+        if (typeof item !== "object" || item === null) continue;
+        const content = (item as Record<string, unknown>).content;
+        if (!Array.isArray(content)) continue;
+        for (const part of content) {
+          if (typeof part !== "object" || part === null) continue;
+          const text = (part as Record<string, unknown>).text;
+          if (typeof text === "string" && text.length > 0) {
+            return cleanAiResponse(text);
+          }
+        }
+      }
+    }
+
+    // 3. Standard Workers AI format. JSON mode may return an object directly.
+    if ("response" in res) {
+      if (typeof res.response === "string") {
+        return cleanAiResponse(res.response);
+      }
+      if (typeof res.response === "object" && res.response !== null) {
+        return JSON.stringify(res.response);
+      }
     }
 
     if ("result" in res && typeof res.result === "string") {

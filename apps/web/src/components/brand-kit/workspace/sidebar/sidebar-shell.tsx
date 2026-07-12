@@ -43,6 +43,9 @@ export interface SidebarShellProps {
   // Selection state
   deliverables?: DeliverablesConfig;
   totalCredits?: number;
+  generationProgress?: number;
+  generationStage?: string;
+  refundedAt?: string;
 
   className?: string;
 }
@@ -118,6 +121,9 @@ export function SidebarShell({
           <GeneratingSidebar
             deliverables={props.deliverables}
             totalCredits={props.totalCredits}
+            progress={props.generationProgress}
+            stage={props.generationStage}
+            refundedAt={props.refundedAt}
           />
         );
       case "refining":

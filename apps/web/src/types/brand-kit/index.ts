@@ -68,6 +68,10 @@ export interface NormalizedBrandKit extends StructuredBrandContext {
   deliverables: DeliverablesConfig;
   status: "pending" | "processing" | "completed" | "failed";
   errorMessage?: string;
+  creditsUsed: number;
+  generationProgress: number;
+  generationStage: string;
+  refundedAt?: string;
   revisions: Array<{
     id: string;
     isActive: boolean;

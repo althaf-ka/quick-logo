@@ -33,24 +33,51 @@ export async function analyzeLogoStyle({
       }),
     );
     const text = extractWorkersAiResponseText(response);
-    logger.info("Brand logo analysis raw response", {
-      text,
-      prefix: "vision-analysis",
-    });
+    const refusal =
+      /(?:can't|cannot|unable to) (?:engage|assist|comply)|sexual|child nudity|explicit content/i.test(
+        text,
+      );
+    if (refusal) {
+      logger.warn(
+        "Brand logo analysis was declined by the vision safety filter; using typography fallback",
+        { prefix: "vision-analysis" },
+      );
+      return null;
+    }
 
-    const parsed = JSON.parse(text);
-    if (parsed.style && typeof parsed.style === "string") {
-      return parsed.style;
+    try {
+      const parsed = JSON.parse(text) as { style?: unknown };
+      if (parsed.style && typeof parsed.style === "string") {
+        return parsed.style;
+      }
+    } catch {
+      // Some Workers AI vision responses ignore JSON mode but still return a
+      // useful plain-language style description. Accept bounded prose instead
+      // of treating a valid analysis as a pipeline warning.
+      const proseStyle = text
+        .replace(
+          /^(?:the|this)\s+(?:logo|image)\s+(?:is|shows|features)\s*/i,
+          "",
+        )
+        .trim()
+        .slice(0, 500);
+      if (proseStyle) {
+        logger.info("Brand logo analysis returned prose; normalized response", {
+          responseLength: text.length,
+          prefix: "vision-analysis",
+        });
+        return proseStyle;
+      }
     }
 
     logger.warn("Logo analysis style parsing failed", {
-      text,
+      responseLength: text.length,
       prefix: "vision-analysis",
     });
     return null;
   } catch (error) {
     logger.warn("Brand logo analysis failed", {
-      error,
+      error: error instanceof Error ? error.message : String(error),
       prefix: "vision-analysis",
     });
     return null;

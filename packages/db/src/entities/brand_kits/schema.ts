@@ -39,6 +39,9 @@ export const brandKits = sqliteTable("brand_kit", {
     .default("pending"),
   errorMessage: text("error_message"),
   creditsUsed: integer("credits_used").notNull().default(0),
+  requestedDeliverables: text("requested_deliverables", { mode: "json" }),
+  generationProgress: integer("generation_progress").notNull().default(0),
+  generationStage: text("generation_stage").notNull().default("Queued"),
   refundedAt: integer("refunded_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()

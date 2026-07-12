@@ -696,9 +696,10 @@ export function DeliverablesStep({
                               </label>
                             </div>
                             <p className="text-muted-foreground/45 text-[10px] leading-relaxed">
-                              We create two panoramic art directions, select the
-                              strongest one, then compose your real logo and
-                              message into platform-safe layouts.
+                              We create one campaign master, review it for
+                              platform-safe copy placement, then render each
+                              final asset with AI. Empty social handles are
+                              never added. Logo inclusion is optional.
                             </p>
                           </div>
                         ) : null}

@@ -31,6 +31,7 @@ export interface ModelCapability {
    * table is used.
    */
   supportedAspectRatios?: readonly string[];
+  maxPromptLength?: number;
 }
 
 export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
@@ -88,6 +89,7 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
       imageField: "image_input",
     },
     defaultOutputFormat: "png",
+    maxPromptLength: 4000,
   },
   [REPLICATE_MODELS.GPT_IMAGE_2]: {
     aspectRatio: true,
@@ -108,8 +110,13 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
       "1024x1024",
       "1536x1024",
       "1024x1536",
+      "1536x1152",
+      "1152x1536",
+      "2048x2048",
       "1152x2048",
       "2048x1152",
+      "3840x2160",
+      "2160x3840",
     ],
   },
 } as const;

@@ -1,14 +1,11 @@
 import {
   getModelMapping,
   createProvider,
-  REPLICATE_MODELS,
 } from "@quicklogo/ai-providers/providers";
 import {
   buildLogoVariationGenerationParams,
-  buildSocialMediaGenerationParams,
   buildBusinessCardGenerationParams,
   buildBrandGraphicGenerationParams,
-  type SocialMediaVariationKind,
 } from "@quicklogo/ai-providers/prompt";
 import type {
   AIProvider,
@@ -24,27 +21,31 @@ import {
 } from "../../core/pipeline-helpers";
 import { PipelineError } from "../../core/errors";
 import {
-  createSocialCreativeDirections,
-  type SocialCreativeDirection,
+  createSocialCampaignDirection,
+  buildSocialPlatformPlans,
+  type SocialCampaignDirection,
 } from "./social-creative-director";
-import {
-  selectBestSocialArtwork,
-  type SocialArtworkQuality,
-} from "./social-artwork-quality";
-import { composeSocialMediaAssets } from "./social-banner-compositor";
 
 import { findReusableLogoVariationUrls } from "./reusable-url-finder";
 import type { Database } from "@quicklogo/db";
-import type { ValidatedBrandContext } from "@quicklogo/ai-providers/prompt";
+import {
+  normalizeBrandContext,
+  type ValidatedBrandContext,
+} from "@quicklogo/ai-providers/prompt";
 
 import { createLogger } from "@quicklogo/server-telemetry";
 
 const logger = createLogger("worker");
 
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
-// A single master generation now serves all platform crops.
 const SOCIAL_MEDIA_GENERATION_TIMEOUT_MS = 180000;
 const ASSET_ROOT = "quick-logo/brand-kits";
+
+const compactPromptValue = (
+  value: string | undefined,
+  fallback: string,
+  maxLength: number,
+) => (value?.trim() || fallback).slice(0, maxLength);
 
 /**
  * Per-section outcome. `failed`/`total` drive partial-refund accounting in the
@@ -72,9 +73,7 @@ export interface SocialMediaAssetUrls {
   linkedinBannerUrl?: string;
   facebookBannerUrl?: string;
   youtubeBannerUrl?: string;
-  creativeDirection?: SocialCreativeDirection;
-  quality?: SocialArtworkQuality;
-  candidateUrls?: string[];
+  campaignDirection?: SocialCampaignDirection;
 }
 
 const SOCIAL_PROFILE_SIZE = "1024x1024";
@@ -82,30 +81,72 @@ const TWITTER_BANNER_SIZE = "1500x500"; // 3:1
 const LINKEDIN_BANNER_SIZE = "1584x396"; // 4:1
 const FACEBOOK_COVER_SIZE = "820x312"; // ~2.6:1
 const YOUTUBE_ART_SIZE = "2560x1440"; // 16:9
-// Seedream 5 Lite only accepts the documented 2K and 3K size presets.
-const BANNER_GENERATION_RESOLUTION = "2K";
 
 export const SOCIAL_MEDIA_ASSET_COUNT = 5;
 
-const DEFAULT_BACKGROUND_COLOR = "#111827";
+const SOCIAL_ASSET_SPECS = [
+  {
+    targetId: "twitter-header",
+    platform: "twitter" as const,
+    outputKey: "twitterBannerUrl" as const,
+    storageKey: "social-twitter-banner",
+    dimensions: TWITTER_BANNER_SIZE,
+    aspectRatio: "21:9",
+    width: 1500,
+    height: 500,
+  },
+  {
+    targetId: "linkedin-header",
+    platform: "linkedin" as const,
+    outputKey: "linkedinBannerUrl" as const,
+    storageKey: "social-linkedin-banner",
+    dimensions: LINKEDIN_BANNER_SIZE,
+    aspectRatio: "21:9",
+    width: 1584,
+    height: 396,
+  },
+  {
+    targetId: "facebook-header",
+    platform: "facebook" as const,
+    outputKey: "facebookBannerUrl" as const,
+    storageKey: "social-facebook-banner",
+    dimensions: FACEBOOK_COVER_SIZE,
+    aspectRatio: "21:9",
+    width: 820,
+    height: 312,
+  },
+  {
+    targetId: "youtube-channel-art",
+    platform: "youtube" as const,
+    outputKey: "youtubeBannerUrl" as const,
+    storageKey: "social-youtube-banner",
+    dimensions: YOUTUBE_ART_SIZE,
+    aspectRatio: "16:9",
+    width: 2560,
+    height: 1440,
+  },
+] as const;
 
 const placeholder = (size: string, label: string) =>
   `https://placehold.co/${size}/000/FFF?text=${label}`;
 
-function buildImageKitCropUrl(sourceUrl: string, dimensions: string): string {
-  const [width, height] = dimensions.split("x").map(Number);
-  if (!width || !height) return sourceUrl;
-
+function buildPlatformDeliveryUrl(
+  sourceUrl: string,
+  dimensions: string,
+): string {
   try {
     const url = new URL(sourceUrl);
-    // Both dimensions plus a focus produce the exact centered crop required
-    // by each platform. `c-maintain_ratio` can return smaller dimensions.
-    const crop = `w-${width},h-${height},fo-center,q-90`;
+    if (!url.hostname.endsWith("imagekit.io")) return sourceUrl;
+    const [width, height] = dimensions.split("x").map(Number);
+    if (!width || !height) return sourceUrl;
+    const deliveryTransform = `w-${width},h-${height},fo-center,q-90,f-jpg`;
     const existing = url.searchParams.get("tr");
-    url.searchParams.set("tr", existing ? `${existing},${crop}` : crop);
+    url.searchParams.set(
+      "tr",
+      existing ? `${existing},${deliveryTransform}` : deliveryTransform,
+    );
     return url.toString();
-  } catch (error) {
-    logger.warn(`Failed to parse URL for image cropping`, { sourceUrl, error });
+  } catch {
     return sourceUrl;
   }
 }
@@ -276,12 +317,17 @@ export async function generateSocialMediaAssets({
   brandKitId,
   brandName,
   sourceLogoUrl,
+  iconOnlyLogoUrl,
+  headingFont,
+  bodyFont,
   refinementPrompt,
   context,
   socialMediaBrief,
-  headingFont,
   targetItemId,
   existingTargetAssetUrl,
+  existingMasterBannerUrl,
+  existingCampaignDirection,
+  productImageUrls,
 }: {
   ai: Ai;
   env: Env;
@@ -289,272 +335,262 @@ export async function generateSocialMediaAssets({
   brandKitId: string;
   brandName: string;
   sourceLogoUrl: string;
+  iconOnlyLogoUrl?: string;
+  headingFont?: string;
+  bodyFont?: string;
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
   socialMediaBrief?: SocialMediaBrief;
-  headingFont?: string;
   targetItemId?: string;
   existingTargetAssetUrl?: string;
+  existingMasterBannerUrl?: string;
+  existingCampaignDirection?: SocialCampaignDirection;
+  productImageUrls?: string[];
 }): Promise<SocialMediaAssetUrls & AssetSectionTally> {
-  const baseSeedreamMapping = getModelMapping("quick-seedream");
-  // Never mutate the shared model registry: Workers reuse isolates across
-  // queue messages, so a request-local override must remain request-local.
-  const seedreamMapping = {
-    ...baseSeedreamMapping,
-    backendModel: REPLICATE_MODELS.SEEDREAM_5_LITE,
-    defaultParams: {
-      ...baseSeedreamMapping.defaultParams,
-      providerOptions: {
-        ...(baseSeedreamMapping.defaultParams.providerOptions || {}),
-      },
-    },
-  };
-  const bannerProvider = createProvider(seedreamMapping, { ai, env });
-
-  const urls: SocialMediaAssetUrls = {};
-  const generatePlatformAsset = (
-    variation: SocialMediaVariationKind,
-    aspectRatio: string,
-    pathKey: string,
-    referenceUrl: string,
-    includeReferenceImage: boolean,
-  ) =>
-    generateAssetWithTimeout({
-      provider: bannerProvider,
-      params: buildSocialMediaGenerationParams({
-        variation,
-        brandName,
-        sourceLogoUrl: referenceUrl,
-        backendModel: seedreamMapping.backendModel,
-        defaultParams: {
-          ...seedreamMapping.defaultParams,
-          providerOptions: {
-            ...(seedreamMapping.defaultParams?.providerOptions || {}),
-            aspect_ratio: aspectRatio,
-            size: BANNER_GENERATION_RESOLUTION,
-          },
-        },
-        refinementPrompt,
-        context,
-        includeReferenceImage,
-      }),
-      storage,
-      uploadPath: `${ASSET_ROOT}/${brandKitId}/social-${pathKey}`,
-      timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
-      label: `social-media:${variation}`,
-    });
-
-  const bannerSpecs = [
-    {
-      targetId: "twitter-header",
-      variation: "twitter-banner",
-      aspectRatio: "21:9",
-      outputDimensions: TWITTER_BANNER_SIZE,
-      pathKey: "twitter-banner",
-      urlKey: "twitterBannerUrl",
-    },
-    {
-      targetId: "linkedin-header",
-      variation: "linkedin-banner",
-      aspectRatio: "21:9",
-      outputDimensions: LINKEDIN_BANNER_SIZE,
-      pathKey: "linkedin-banner",
-      urlKey: "linkedinBannerUrl",
-    },
-    {
-      targetId: "facebook-header",
-      variation: "facebook-banner",
-      aspectRatio: "21:9",
-      outputDimensions: FACEBOOK_COVER_SIZE,
-      pathKey: "facebook-banner",
-      urlKey: "facebookBannerUrl",
-    },
-    {
-      targetId: "youtube-channel-art",
-      variation: "youtube-banner",
-      aspectRatio: "16:9",
-      outputDimensions: YOUTUBE_ART_SIZE,
-      pathKey: "youtube-banner",
-      urlKey: "youtubeBannerUrl",
-    },
-  ] as const;
-
-  if (targetItemId) {
-    const referenceUrl =
-      existingTargetAssetUrl && !existingTargetAssetUrl.includes("placehold.co")
-        ? existingTargetAssetUrl
-        : sourceLogoUrl;
-
-    if (targetItemId.endsWith("-profile")) {
-      const profileUrl = await generatePlatformAsset(
-        "social-profile",
-        "1:1",
-        "profile",
-        referenceUrl,
-        true,
-      );
-      return {
-        socialProfileUrl: profileUrl,
-        failed: profileUrl ? 0 : 1,
-        total: 1,
-      };
-    }
-
-    const spec = bannerSpecs.find((item) => item.targetId === targetItemId);
-    if (!spec) {
-      throw new PipelineError(
-        `Unsupported social media target: ${targetItemId}`,
-        false,
-      );
-    }
-
-    const url = await generatePlatformAsset(
-      spec.variation,
-      spec.aspectRatio,
-      spec.pathKey,
-      referenceUrl,
-      true,
-    );
-    if (url) {
-      urls[spec.urlKey] = buildImageKitCropUrl(url, spec.outputDimensions);
-    }
-    return { ...urls, failed: url ? 0 : 1, total: 1 };
+  // The social profile is the already-generated icon-only brand mark. It does
+  // not need a creative brief, master artwork, or another image-model call.
+  if (targetItemId === "instagram-profile") {
+    return {
+      socialProfileUrl: iconOnlyLogoUrl,
+      failed: iconOnlyLogoUrl ? 0 : 1,
+      total: 1,
+    };
   }
 
   const brief: SocialMediaBrief = socialMediaBrief || {
     purpose: "brand-awareness",
     visualDirection: "auto",
-    includeLogo: true,
+    includeLogo: false,
     includeTagline: true,
   };
+  const normalizedContext =
+    context || normalizeBrandContext(brandName, { colors: [] });
   const creativeContext = {
-    industry: context?.industry,
-    tagline: context?.tagline,
-    targetAudience: context?.targetAudience,
-    selectedVibes: context?.selectedVibes,
-    brandPersonality: context?.brandPersonality,
-    additionalContext: [context?.additionalContext, refinementPrompt]
+    industry: normalizedContext.industry,
+    tagline: normalizedContext.tagline,
+    targetAudience: normalizedContext.targetAudience,
+    selectedVibes: normalizedContext.selectedVibes,
+    brandPersonality: normalizedContext.brandPersonality,
+    additionalContext: [normalizedContext.additionalContext, refinementPrompt]
       .filter(Boolean)
       .join("\n"),
     socialMediaBrief: brief,
   };
-  const directions = await createSocialCreativeDirections({
-    ai,
-    brandName,
-    context: creativeContext,
-    brief,
-  });
-  const ideogramMapping = getModelMapping("quick-ideogram");
-  const artworkProvider = createProvider(ideogramMapping, { ai, env });
-  const candidateResults = await Promise.all(
-    directions.map(async (direction, index) => {
-      const url = await generateAssetWithTimeout({
-        provider: artworkProvider,
-        params: {
-          ...ideogramMapping.defaultParams,
-          backendModel: ideogramMapping.backendModel,
-          prompt: `${direction.artworkPrompt}\n\nPRODUCTION REQUIREMENTS: Edge-to-edge 3:1 panoramic campaign background. Background artwork only. One clear visual idea with premium commercial art direction and natural depth. Preserve useful negative space around the center-right for a separate logo and message layer. Do not render any text, letters, logo, icon, watermark, border, frame, rounded rectangle, card, panel, mockup, interface, safe-area guide, connected blocks, puzzle pieces, circuitry, or random decorative 3D objects.`,
-          width: 3072,
-          height: 1024,
-          providerOptions: {
-            ...(ideogramMapping.defaultParams.providerOptions || {}),
-            aspect_ratio: "3:1",
-            magic_prompt_option: "Auto",
-            resolution: "None",
-            style_type:
-              brief.visualDirection === "photographic" ? "Realistic" : "Design",
-          },
-        },
-        storage,
-        uploadPath: `${ASSET_ROOT}/${brandKitId}/social-concept-${index + 1}`,
-        timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
-        label: `social-media:concept-${index + 1}`,
-      });
-      return url ? { url, direction } : null;
-    }),
-  );
-  const candidates = candidateResults.filter(
-    (candidate): candidate is NonNullable<typeof candidate> => !!candidate,
-  );
-
-  if (candidates.length === 0) {
+  const campaignDirection =
+    existingCampaignDirection ??
+    (await createSocialCampaignDirection({
+      ai,
+      brandName,
+      context: creativeContext,
+      brief,
+    }));
+  const selectedSpec = targetItemId
+    ? SOCIAL_ASSET_SPECS.find((item) => item.targetId === targetItemId)
+    : undefined;
+  if (targetItemId && !selectedSpec) {
     throw new PipelineError(
-      "Social media kit incomplete: no artwork concept could be generated",
+      `Unsupported social media target: ${targetItemId}`,
+      false,
+    );
+  }
+
+  const masterImageMapping = getModelMapping("quick-seedream");
+  const masterImageProvider = createProvider(masterImageMapping, { ai, env });
+  const finalImageMapping = getModelMapping("quick-gpt-image-2");
+  const finalImageProvider = createProvider(finalImageMapping, { ai, env });
+  const usableExistingMaster =
+    existingMasterBannerUrl && !existingMasterBannerUrl.includes("placehold.co")
+      ? existingMasterBannerUrl
+      : undefined;
+  const usableExistingTarget =
+    existingTargetAssetUrl && !existingTargetAssetUrl.includes("placehold.co")
+      ? existingTargetAssetUrl
+      : undefined;
+  let masterBannerUrl = targetItemId ? usableExistingMaster : undefined;
+
+  const generateMaster = async (): Promise<string | undefined> => {
+    const productReference =
+      brief.purpose === "product-promotion" ? productImageUrls?.[0] : undefined;
+    return runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          masterImageProvider,
+          {
+            ...masterImageMapping.defaultParams,
+            backendModel: masterImageMapping.backendModel,
+            prompt: `You are a senior brand campaign art director creating the ONE canonical social-media master background for "${brandName}".
+
+BRAND FACTS — interpret these visually; never render them as text:
+- Industry: ${compactPromptValue(normalizedContext.industry, "not specified", 120)}
+- Audience: ${compactPromptValue(normalizedContext.targetAudience, "not specified", 280)}
+- Personality: ${compactPromptValue(normalizedContext.brandPersonality, "refined and professional", 280)}
+- Desired mood: ${compactPromptValue(normalizedContext.selectedVibes?.join(", "), "refined", 180)}
+- Requested visual treatment: ${brief.visualDirection}
+- Campaign purpose: ${brief.purpose}
+- Approved palette: ${normalizedContext.colors?.join(", ") || "use a disciplined, brand-appropriate palette"}
+- Additional direction: ${compactPromptValue(normalizedContext.additionalContext, "none", 420)}
+
+CAMPAIGN CONCEPT — use this as the strategic creative hook, then elevate it with your own visual reasoning:
+- Concept: ${campaignDirection.conceptTitle}
+- Art direction: ${campaignDirection.artDirection || "Invent a distinctive, brand-specific visual metaphor directly from the brand facts above."}
+
+PRODUCTION REQUIREMENTS:
+Create one original, immediately memorable campaign key visual that expresses the brand promise without illustrating the industry literally. Treat the campaign concept as strategic intent, not a rigid scene description: improve its composition, originality, material realism, and visual impact where helpful. Create premium editorial advertising art with authentic detail, meaningful foreground-to-background relationships, layered depth, purposeful contrast, controlled cinematic lighting, subtle visual movement, and a sophisticated two-to-four-color palette derived from the approved colors. The image should imply a story, transformation, or point of view at first glance and feel art-directed for a global campaign.
+
+COMPOSITION SYSTEM:
+- Reserve the left 40% as calm but visually rich typography space—subtle atmosphere, tonal texture, and depth, never a blank wall or a visible panel.
+- Place the signature focal motif center-right, with its essential form still intersecting the centered crop-safe band.
+- Keep all essential visual information within the centered middle 76% width and 40% height so it survives wide social crops.
+- Extend atmosphere and only nonessential details to every outer edge.
+- Use asymmetry, depth cues, scale contrast, selective focus, and material transitions to create visual tension without clutter.
+- Make the composition feel dynamic, premium, ownable, and campaign-ready rather than symmetrical product photography.
+
+BACKGROUND ARTWORK ONLY. Render no text, letters, logos, social icons, watermarks, UI, panels, frames, mockups, crop guides, or dimension labels. Avoid literal industry shorthand, generic corporate/AI motifs, isolated product-on-pedestal scenes, staged office stock imagery, and empty studio atmosphere. Do not interpret negative space as a blank half-canvas. The output must look like memorable premium campaign key art—not a reusable background template or literal industry illustration.`,
+            width: 2048,
+            height: 1152,
+            providerOptions: {
+              ...(masterImageMapping.defaultParams.providerOptions || {}),
+              aspect_ratio: "16:9",
+              size: "3K",
+              max_images: 1,
+              sequential_image_generation: "disabled",
+            },
+            ...(productReference && {
+              referenceImage: productReference,
+              referenceStrength: 35,
+              canvasMode: "img2img" as const,
+            }),
+            signal,
+          },
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/social-master`,
+          signal,
+        ),
+      SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+      "social-media:master",
+    );
+  };
+
+  if (!masterBannerUrl) {
+    masterBannerUrl = (await generateMaster()) || usableExistingTarget;
+  }
+
+  if (!masterBannerUrl) {
+    throw new PipelineError(
+      "Social profile kit incomplete: master banner generation failed",
       true,
     );
   }
 
-  let selected = await selectBestSocialArtwork({
-    ai,
-    candidates,
-    brandContext: `${brandName}; ${context?.industry || ""}; ${context?.targetAudience || ""}; ${(context?.selectedVibes || []).join(", ")}`,
+  const specsToGenerate = selectedSpec ? [selectedSpec] : SOCIAL_ASSET_SPECS;
+  const layoutBrief: SocialMediaBrief = {
+    ...brief,
+    message: campaignDirection.headline || undefined,
+    callToAction: campaignDirection.callToAction || undefined,
+  };
+  const layoutPlans = buildSocialPlatformPlans({
+    context: {
+      ...creativeContext,
+      socials: normalizedContext.socials,
+    },
+    brief: layoutBrief,
+    platforms: specsToGenerate.map((spec) => ({
+      platform: spec.platform,
+      dimensions: spec.dimensions,
+      aspectRatio: spec.aspectRatio,
+    })),
   });
-  if (
-    selected.quality.reviewed &&
-    (selected.quality.score < 65 ||
-      selected.quality.hasForbiddenElements ||
-      selected.quality.genericness > 55)
-  ) {
-    const recoveryDirection: SocialCreativeDirection = {
-      ...selected.candidate.direction,
-      id: `${selected.candidate.direction.id}-recovery`,
-      title: `${selected.candidate.direction.title} Refined`,
-      artworkPrompt: `${selected.candidate.direction.artworkPrompt}\n\nCREATIVE DIRECTOR CORRECTION: ${selected.quality.notes}. Replace any generic or panel-like composition with a specific, edge-to-edge brand campaign image.`,
-    };
-    const recoveryUrl = await generateAssetWithTimeout({
-      provider: artworkProvider,
-      params: {
-        ...ideogramMapping.defaultParams,
-        backendModel: ideogramMapping.backendModel,
-        prompt: `${recoveryDirection.artworkPrompt}\n\nBACKGROUND ARTWORK ONLY. 3:1 panoramic, edge-to-edge, one specific visual idea, useful center-right negative space. Absolutely no text, logo, card, panel, frame, mockup, fake UI, safe-area graphic, connected blocks, puzzle pieces, circuitry, or random 3D objects.`,
-        width: 3072,
-        height: 1024,
-        providerOptions: {
-          ...(ideogramMapping.defaultParams.providerOptions || {}),
-          aspect_ratio: "3:1",
-          magic_prompt_option: "Auto",
-          resolution: "None",
-          style_type:
-            brief.visualDirection === "photographic" ? "Realistic" : "Design",
-        },
-      },
-      storage,
-      uploadPath: `${ASSET_ROOT}/${brandKitId}/social-concept-recovery`,
-      timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
-      label: "social-media:concept-recovery",
-    });
-    if (recoveryUrl) {
-      const recoveryCandidate = {
-        url: recoveryUrl,
-        direction: recoveryDirection,
-      };
-      candidates.push(recoveryCandidate);
-      selected = await selectBestSocialArtwork({
-        ai,
-        candidates: [selected.candidate, recoveryCandidate],
-        brandContext: `${brandName}; ${context?.industry || ""}; ${context?.targetAudience || ""}`,
-      });
+  const generated: Partial<SocialMediaAssetUrls> = {
+    socialProfileUrl: iconOnlyLogoUrl,
+  };
+  let failed = iconOnlyLogoUrl ? 0 : 1;
+
+  // Keep provider traffic strictly sequential. Each final image is a direct
+  // GPT Image 2 render from the approved master, never an SVG composition.
+  for (const spec of specsToGenerate) {
+    const plan = layoutPlans.find((item) => item.platform === spec.platform);
+    if (!plan) {
+      failed++;
+      continue;
     }
+    const isTargetRefinement = !!targetItemId && !!usableExistingTarget;
+    const artworkReference = isTargetRefinement
+      ? usableExistingTarget
+      : masterBannerUrl;
+    const references = brief.includeLogo
+      ? [artworkReference, sourceLogoUrl]
+      : [artworkReference];
+    const logoInstruction = brief.includeLogo
+      ? "Figure 2 is the exact approved logo. Place it once, unchanged, undistorted, fully legible, and with generous clear space. Do not redraw or retype it."
+      : "Do not add any logo, wordmark, emblem, or invented brand mark.";
+    const typographyInstruction = `Use ${headingFont || "a refined brand-appropriate display typeface"} for the headline and ${bodyFont || "a clean complementary sans-serif"} for supporting copy. Match the selected brand typography's character, weight, spacing, and hierarchy consistently.`;
+    const platformSafetyInstruction =
+      spec.platform === "youtube"
+        ? "YOUTUBE DELIVERY REQUIREMENT: compose for a 2560 x 1440 canvas. Keep every critical element—including headline, call to action, social identities, and optional logo—fully inside the centered 1546 x 423 pixel safe zone. Outside that zone, render background artwork only. Keep the result visually calm and balanced on desktop, mobile, and television."
+        : `Keep all critical elements inside the centered safe area for the requested ${spec.dimensions} platform crop.`;
+    const approvedCopy = [
+      plan.headline ? `Headline: "${plan.headline}"` : "",
+      plan.callToAction ? `Call to action: "${plan.callToAction}"` : "",
+    ].filter(Boolean);
+    const url = await runAssetOrNull(
+      (signal) =>
+        generateAndUpload(
+          finalImageProvider,
+          {
+            ...finalImageMapping.defaultParams,
+            backendModel: finalImageMapping.backendModel,
+            prompt: `${isTargetRefinement ? "Refine" : "Create"} the final production-ready ${spec.platform} banner for the ${spec.dimensions} (${spec.aspectRatio}) platform crop.
+
+Figure 1 is ${isTargetRefinement ? "the current approved platform banner" : "the approved canonical campaign master"} and its artwork is PIXEL-LOCKED. Use it as the full-bleed background. Do not regenerate, reinterpret, replace, move, remove, redraw, crop out, or repaint its focal motif, palette, lighting, texture, or environment. ${isTargetRefinement && refinementPrompt ? `Apply this requested revision precisely while preserving everything unrelated: ${compactPromptValue(refinementPrompt, "", 700)}` : "Your job is limited to adding the approved typography, requested social identities, and optional approved logo."} Do not present it inside a mockup.
+
+${logoInstruction}
+
+TYPOGRAPHY SYSTEM:
+${typographyInstruction}
+
+PLATFORM SAFETY:
+${platformSafetyInstruction}
+
+LAYOUT PLAN:
+${plan.compositionPrompt}
+
+${approvedCopy.length > 0 ? `RENDER ONLY THIS APPROVED COPY, spelled exactly as written:\n${approvedCopy.join("\n")}` : "Do not render a headline or call to action."}
+
+${plan.socialText ? `SOCIAL IDENTITY ROW: ${plan.socialText}. Render each official platform icon followed only by its exact handle. Make this row a quiet tertiary detail: icons and handles approximately 55–65% of the supporting-copy size, optically aligned, evenly spaced, and positioned near the lower-right edge with 4–6% safe padding. Do not spell platform names and do not render an @ symbol. For YouTube, measure this lower-right placement against the centered 1546 x 423 safe zone, never the full canvas.` : "Do not render social icons, handles, platform names, or an @ symbol."}
+
+Make all approved copy highly legible, professionally typeset, correctly spelled, and naturally integrated with the artwork. Keep the call to action as restrained supporting text—never a large button, pill, outlined control, or dominant element. Never invent or repeat text, usernames, URLs, contact details, claims, logos, or unrequested icons. No crop guides, safe-area boxes, borders, UI, watermarks, or dimension labels. Keep all identity and typography inside the safe area for the requested platform crop. Deliver only the finished edge-to-edge asset.`,
+            referenceImages: references,
+            canvasMode: "img2img",
+            width: spec.width,
+            height: spec.height,
+            providerOptions: {
+              ...(finalImageMapping.defaultParams.providerOptions || {}),
+              quality: "low",
+            },
+            signal,
+          },
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/${spec.storageKey}`,
+          signal,
+        ),
+      SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+      `social-media:${spec.platform}`,
+    );
+
+    if (url) {
+      generated[spec.outputKey] = buildPlatformDeliveryUrl(
+        url,
+        spec.dimensions,
+      );
+    } else failed++;
   }
-  const composed = await composeSocialMediaAssets({
-    storage,
-    brandKitId,
-    backgroundUrl: selected.candidate.url,
-    logoUrl: sourceLogoUrl,
-    backgroundColor: context?.colors?.[0] || DEFAULT_BACKGROUND_COLOR,
-    message: brief.message || context?.tagline,
-    brief,
-    headingFont,
-  });
 
   return {
-    ...composed,
-    masterBannerUrl: selected.candidate.url,
-    creativeDirection: selected.candidate.direction,
-    quality: selected.quality,
-    candidateUrls: candidates.map((candidate) => candidate.url),
-    failed: 0,
-    total: SOCIAL_MEDIA_ASSET_COUNT,
+    ...generated,
+    masterBannerUrl,
+    campaignDirection,
+    failed,
+    total: targetItemId ? 1 : SOCIAL_MEDIA_ASSET_COUNT,
   };
 }
 

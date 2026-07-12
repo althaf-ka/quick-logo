@@ -14,9 +14,15 @@ import { GENERATING_TIPS } from "@quicklogo/shared";
 export function GeneratingSidebar({
   deliverables,
   totalCredits,
+  progress,
+  stage,
+  refundedAt,
 }: {
   deliverables?: DeliverablesConfig;
   totalCredits?: number;
+  progress?: number;
+  stage?: string;
+  refundedAt?: string;
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
@@ -59,7 +65,10 @@ export function GeneratingSidebar({
             :{(elapsed % 60).toString().padStart(2, "0")}
           </div>
           <span className="text-primary/60 font-mono text-[9px] font-bold tracking-widest uppercase">
-            Crafting Brand Kit
+            {stage || "Crafting Brand Kit"}
+          </span>
+          <span className="text-muted-foreground mt-2 font-mono text-xs font-black tabular-nums">
+            {progress ?? 0}% complete
           </span>
         </div>
       </div>
@@ -107,7 +116,7 @@ export function GeneratingSidebar({
             {totalCredits !== undefined ? (
               <motion.div variants={staggerItem} className="pt-2">
                 <span className="text-muted-foreground/50 mb-1 block font-mono text-[9px] tracking-widest uppercase">
-                  Total Cost
+                  Credits Used
                 </span>
                 <div className="text-foreground flex items-center gap-1.5 font-mono text-sm font-black uppercase">
                   <LightningIcon
@@ -116,6 +125,11 @@ export function GeneratingSidebar({
                   />
                   {totalCredits} Credits
                 </div>
+                {refundedAt ? (
+                  <p className="mt-1 font-mono text-[9px] text-emerald-400/70">
+                    A generation refund was applied.
+                  </p>
+                ) : null}
               </motion.div>
             ) : null}
           </div>

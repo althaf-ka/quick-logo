@@ -94,12 +94,22 @@ export async function mergeRevisionResults({
       brandName:
         currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
       sourceLogoUrl: actualLogoUrl,
+      iconOnlyLogoUrl:
+        newMergedJSON.logoVariations?.find(
+          (variation: any) => variation.id === "icon",
+        )?.url ?? actualLogoUrl,
+      headingFont: newMergedJSON.typography?.heading?.family,
+      bodyFont: newMergedJSON.typography?.body?.family,
       refinementPrompt,
       context: brandAssetContext,
       socialMediaBrief: currentBrandKit?.socialMediaBrief,
-      headingFont: newMergedJSON.typography?.heading?.family,
       targetItemId,
       existingTargetAssetUrl,
+      existingMasterBannerUrl:
+        newMergedJSON.socialMediaKit?.masterBackgroundUrl,
+      existingCampaignDirection:
+        newMergedJSON.socialMediaKit?.campaignDirection,
+      productImageUrls: currentBrandKit?.productImageUrls,
     });
 
     // Refinement is atomic from the user's perspective. Never charge for and
@@ -149,12 +159,10 @@ export async function mergeRevisionResults({
     } else {
       newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
       newMergedJSON.socialMediaKit = {
-        version: 2,
+        version: 3,
         brief: currentBrandKit?.socialMediaBrief,
         masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
-        selectedDirection: socialMediaUrls.creativeDirection,
-        quality: socialMediaUrls.quality,
-        candidateUrls: socialMediaUrls.candidateUrls,
+        campaignDirection: socialMediaUrls.campaignDirection,
       };
     }
   } else if (sectionId === "brand-graphics") {

@@ -40,7 +40,7 @@ export function useBrandKitGeneration({
     refetchInterval: (query) => {
       const data = query.state.data as NormalizedBrandKit | null;
       const status = data?.status;
-      if (status === "pending" || status === "processing") return 15000;
+      if (status === "pending" || status === "processing") return 2500;
       return false;
     },
     enabled: !!brandKitId,

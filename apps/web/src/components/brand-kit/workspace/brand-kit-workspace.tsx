@@ -97,6 +97,8 @@ export function BrandKitWorkspace({
               >
                 <GeneratingState
                   hasSocialMedia={bk.deliverables.socialMedia.enabled}
+                  progress={bk.normalizedData?.generationProgress}
+                  stage={bk.normalizedData?.generationStage}
                 />
               </motion.div>
             ) : bk.results ? (
@@ -258,6 +260,9 @@ export function BrandKitWorkspace({
           onRestoreRevision={bk.handleRestoreFull}
           deliverables={bk.deliverables}
           totalCredits={bk.totalCredits}
+          generationProgress={bk.normalizedData?.generationProgress}
+          generationStage={bk.normalizedData?.generationStage}
+          refundedAt={bk.normalizedData?.refundedAt}
         />
       ) : null}
 
@@ -291,6 +296,9 @@ export function BrandKitWorkspace({
                 onRestoreRevision={bk.handleRestoreFull}
                 deliverables={bk.deliverables}
                 totalCredits={bk.totalCredits}
+                generationProgress={bk.normalizedData?.generationProgress}
+                generationStage={bk.normalizedData?.generationStage}
+                refundedAt={bk.normalizedData?.refundedAt}
                 className="h-auto max-h-none w-full overflow-visible border-none"
               />
             </div>
@@ -311,7 +319,15 @@ const BASE_GENERATING_STEPS = [
   "Finalizing brand kit",
 ];
 
-function GeneratingState({ hasSocialMedia }: { hasSocialMedia: boolean }) {
+function GeneratingState({
+  hasSocialMedia,
+  progress,
+  stage,
+}: {
+  hasSocialMedia: boolean;
+  progress?: number;
+  stage?: string;
+}) {
   const [step, setStep] = useState(0);
 
   const steps = hasSocialMedia
@@ -356,6 +372,21 @@ function GeneratingState({ hasSocialMedia }: { hasSocialMedia: boolean }) {
 
       {/* Steps */}
       <div className="flex w-full max-w-sm flex-col gap-5">
+        <div className="mb-2 space-y-2">
+          <div className="flex items-center justify-between font-mono text-[10px] font-bold tracking-wider uppercase">
+            <span className="text-primary">{stage || "Queued"}</span>
+            <span className="text-muted-foreground tabular-nums">
+              {progress ?? 0}%
+            </span>
+          </div>
+          <div className="h-1.5 overflow-hidden bg-white/[0.06]">
+            <motion.div
+              className="bg-primary h-full"
+              animate={{ width: `${progress ?? 0}%` }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+          </div>
+        </div>
         {steps.map((text, i) => (
           <motion.div
             key={i}

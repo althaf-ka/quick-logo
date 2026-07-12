@@ -47,7 +47,11 @@ export async function updateBrandKitStatus(
 ): Promise<void> {
   await db
     .update(brandKits)
-    .set({ status, ...(errorMessage && { errorMessage }) })
+    .set({
+      status,
+      generationStage: "Generation failed",
+      ...(errorMessage && { errorMessage }),
+    })
     .where(eq(brandKits.id, brandKitId));
 }
 
@@ -185,6 +189,7 @@ export async function failBrandKitGenerationAndRefundCredits(
     .update(brandKits)
     .set({
       status: "failed",
+      generationStage: "Generation failed",
       errorMessage,
       ...(refunded && { refundedAt: new Date() }),
     })

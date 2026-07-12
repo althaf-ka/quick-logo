@@ -80,7 +80,9 @@ export class ReplicateProvider implements AIProvider {
     const model = params.backendModel;
     const caps = MODEL_CAPABILITIES[model];
     const input: Record<string, unknown> = {
-      prompt: params.prompt,
+      prompt: caps?.maxPromptLength
+        ? this.truncatePrompt(params.prompt, caps.maxPromptLength)
+        : params.prompt,
     };
 
     if (!caps) {
@@ -119,6 +121,19 @@ export class ReplicateProvider implements AIProvider {
     return input;
   }
 
+  private truncatePrompt(prompt: string, maxLength: number): string {
+    if (prompt.length <= maxLength) return prompt;
+
+    const suffix =
+      "\n\nFinal requirements: preserve the approved brand identity and composition; no text, logos, watermarks, UI, frames, or crop guides.";
+    const available = Math.max(0, maxLength - suffix.length);
+    logger.warn("[Replicate] Prompt exceeded model limit; truncating", {
+      originalLength: prompt.length,
+      maxLength,
+    });
+    return `${prompt.slice(0, available).trimEnd()}${suffix}`;
+  }
+
   private applyModelSpecificParams(
     model: string,
     input: Record<string, unknown>,
@@ -148,7 +163,9 @@ export class ReplicateProvider implements AIProvider {
     const isImplicitRemix =
       !mode &&
       strategy.type.startsWith("remix") &&
-      (params.referenceImage || params.canvasImage);
+      (params.referenceImage ||
+        params.referenceImages?.length ||
+        params.canvasImage);
 
     if (mode !== "inpaint" && mode !== "img2img" && !isImplicitRemix) return;
 
@@ -163,12 +180,22 @@ export class ReplicateProvider implements AIProvider {
       }
       case "remix-image":
       case "remix-image-array": {
-        const refUrl = params.referenceImage || params.canvasImage;
-        if (refUrl) {
+        const referenceImages = [
+          ...(params.referenceImages || []),
+          ...(!params.referenceImages?.length && params.referenceImage
+            ? [params.referenceImage]
+            : []),
+          ...(!params.referenceImages?.length &&
+          !params.referenceImage &&
+          params.canvasImage
+            ? [params.canvasImage]
+            : []),
+        ].filter(Boolean);
+        if (referenceImages.length > 0) {
           if (strategy.type === "remix-image-array") {
-            input[strategy.imageField] = [refUrl];
+            input[strategy.imageField] = referenceImages;
           } else {
-            input[strategy.imageField] = refUrl;
+            input[strategy.imageField] = referenceImages[0];
           }
         }
 
@@ -281,7 +308,11 @@ export class ReplicateProvider implements AIProvider {
         inputKeys: Object.keys(input),
         aspectRatio: input.aspect_ratio,
         size: input.size,
-        hasImage: !!(params.referenceImage || params.canvasImage),
+        hasImage: !!(
+          params.referenceImage ||
+          params.referenceImages?.length ||
+          params.canvasImage
+        ),
       });
 
       let predictTime: number | undefined;
@@ -325,19 +356,27 @@ export class ReplicateProvider implements AIProvider {
       const response = (
         error as { response?: { status?: number; retry_after?: number } }
       )?.response;
-      const status = response?.status;
+      const message = error instanceof Error ? error.message : "";
+      const statusFromMessage = message.match(/status (\d{3})/i)?.[1];
+      const status =
+        response?.status ??
+        (statusFromMessage
+          ? Number.parseInt(statusFromMessage, 10)
+          : undefined);
       const isRetryable =
         error instanceof ReplicateParseError
           ? false
           : status
             ? status === 429 || status >= 500
-            : true;
+            : !/input (?:was invalid|validation failed)|ModelError.*E006/i.test(
+                message,
+              );
 
       // Extract retry_after. Replicate might send it in response.retry_after,
       // or we might need to parse it from the message if it's not structured.
       let retryAfter = response?.retry_after;
       if (!retryAfter && error instanceof Error) {
-        const match = error.message.match(/retry_after":\s*(\d+)/);
+        const match = error.message.match(/retry_after"?:\s*(\d+)/);
         if (match && match[1]) {
           retryAfter = parseInt(match[1], 10);
         }

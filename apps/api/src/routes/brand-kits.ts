@@ -93,6 +93,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           .update(brandKits)
           .set({
             status: "failed",
+            generationStage: "Unable to start generation",
             errorMessage: "Unable to queue brand kit generation",
             ...(refunded && { refundedAt: new Date() }),
           })
@@ -125,6 +126,9 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           ),
           industry: brandKits.industry,
           status: brandKits.status,
+          generationProgress: brandKits.generationProgress,
+          generationStage: brandKits.generationStage,
+          creditsUsed: brandKits.creditsUsed,
           createdAt: brandKits.createdAt,
           updatedAt: brandKits.updatedAt,
         })

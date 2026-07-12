@@ -5,6 +5,8 @@ export interface GenerationParams {
   style?: string;
   magicPrompt?: boolean;
   referenceImage?: string;
+  /** Ordered references for models that support multi-image editing. */
+  referenceImages?: string[];
   referenceStrength?: number;
   steps?: number;
   width?: number;
