@@ -31,7 +31,11 @@ export class ImageKitProvider implements StorageProvider {
   ): Promise<{ url: string; fileId: string; thumbnail: string }> {
     try {
       const { folder, fileName } = this.splitPath(path);
-      const file = await toFile(data, fileName);
+      const file = await toFile(
+        data,
+        fileName,
+        options?.contentType ? { type: options.contentType } : undefined,
+      );
 
       // When overwriting, disable unique filenames so the deterministic
       // folder+name is reused (ImageKit overwrites the existing object),

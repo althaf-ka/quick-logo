@@ -5,6 +5,8 @@ export interface UploadOptions {
    * Use for idempotent, retry-safe assets (e.g. brand-kit assets).
    */
   overwrite?: boolean;
+  /** MIME type for object stores such as R2; inferred from the path if absent. */
+  contentType?: string;
 }
 
 export interface StorageProvider {

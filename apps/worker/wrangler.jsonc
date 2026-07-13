@@ -7,6 +7,10 @@
   },
   "compatibility_date": "2026-02-14",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    // Keep local banner iterations inexpensive; override to medium/high in production.
+    "SOCIAL_BANNER_QUALITY": "low",
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -37,6 +41,9 @@
   },
   "ai": {
     "binding": "AI",
+  },
+  "images": {
+    "binding": "IMAGES",
   },
   "observability": {
     "enabled": true,

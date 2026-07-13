@@ -46,7 +46,7 @@ function getRatioLabel(asset: SocialMediaAsset): string {
   if (asset.type === "Profile") return "1:1 Ratio";
   if (asset.dimensions === "1500x500") return "3:1 Ratio";
   if (asset.dimensions === "1584x396") return "4:1 Ratio";
-  if (asset.dimensions === "820x312") return "205:78 Ratio";
+  if (asset.dimensions === "820x360") return "41:18 Ratio";
   if (asset.dimensions === "2560x1440") return "16:9 Ratio";
   const parts = asset.dimensions.split("x").map(Number);
   if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {

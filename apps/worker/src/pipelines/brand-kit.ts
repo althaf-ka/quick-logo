@@ -390,7 +390,7 @@ export class BrandKitPipeline {
           buildSocialMediaAssetList(socialMediaUrls);
         if (socialMediaUrls) {
           finalResultsJSON.socialMediaKit = {
-            version: 3,
+            version: 4,
             brief: socialMediaBrief,
             masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
             campaignDirection: socialMediaUrls.campaignDirection,

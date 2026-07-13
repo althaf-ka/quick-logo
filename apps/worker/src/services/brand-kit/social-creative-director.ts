@@ -31,6 +31,13 @@ export interface SocialPlatformLayoutPlan {
   compositionPrompt: string;
 }
 
+export interface SocialMasterLayoutPlan {
+  headline: string;
+  callToAction: string;
+  socialText: string;
+  compositionPrompt: string;
+}
+
 type SocialPlanningContext = Omit<StructuredBrandContext, "socials"> & {
   socials?: NormalizedSocials;
 };
@@ -57,6 +64,25 @@ const cleanText = (value: unknown, fallback: string, maxLength: number) =>
     ? value.trim().slice(0, maxLength)
     : fallback;
 
+function cleanDisplayCopy(
+  value: unknown,
+  fallback: string,
+  maxLength: number,
+): string {
+  const normalized = (typeof value === "string" ? value : fallback)
+    .replace(/\s+/g, " ")
+    .replace(/\b(?:on|in)\s+today\b/gi, "today")
+    .replace(/\b([a-z]+)(?:\s+\1\b)+/gi, "$1")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/^["'“”]+|["'“”]+$/g, "")
+    .trim();
+  if (normalized.length <= maxLength) return normalized;
+  const clipped = normalized.slice(0, maxLength + 1);
+  return (
+    clipped.replace(/\s+\S*$/, "").trim() || normalized.slice(0, maxLength)
+  );
+}
+
 const PURPOSE_CTA: Record<SocialMediaBrief["purpose"], string> = {
   "brand-awareness": "Discover our story",
   "product-promotion": "Explore the collection",
@@ -74,12 +100,19 @@ function fallbackDirection(
   return {
     headline:
       brief.includeTagline && suppliedHeadline
-        ? suppliedHeadline.slice(0, 120)
+        ? cleanDisplayCopy(suppliedHeadline, "", 64)
         : brief.includeTagline
-          ? `${brandName}, made for what comes next`
+          ? cleanDisplayCopy(
+              `${brandName}, made for what comes next`,
+              "Made for what comes next",
+              64,
+            )
           : "",
-    callToAction:
-      brief.callToAction?.trim().slice(0, 40) || PURPOSE_CTA[brief.purpose],
+    callToAction: cleanDisplayCopy(
+      brief.callToAction,
+      PURPOSE_CTA[brief.purpose],
+      28,
+    ),
     conceptTitle: "Signature Campaign",
     artDirection: "",
   };
@@ -106,14 +139,14 @@ Do not return generic mood-board language. Describe the actual hero scene: focal
 
 Copy rules:
 - When includeMessage is true and suppliedMessage is non-empty, professionally correct obvious spelling, filler words, capitalization, and grammar while preserving the intended meaning and tone.
-- When includeMessage is true and suppliedMessage is empty, write a specific, attractive headline (maximum 90 characters) based on the brand.
+- When includeMessage is true and suppliedMessage is empty, write a specific, attractive headline (maximum 64 characters) based on the brand.
 - When includeMessage is false, headline must be an empty string.
-- Professionally correct a supplied callToAction without changing its intent. Otherwise create a concise call to action (maximum 32 characters) appropriate to the purpose.
+- Professionally correct a supplied callToAction without changing its intent. Otherwise create a concise call to action (maximum 28 characters) appropriate to the purpose.
 - Never invent social usernames or contact details.
-- Prefer natural, confident English. Reject awkward phrases such as "Join us on today" or vague slogans that do not communicate a clear benefit.
+- Prefer natural, confident English. The headline must communicate a recognizable customer benefit, outcome, or brand promise—not an empty word pairing. Reject awkward phrases such as "Join us on today" and vague slogans that do not communicate a clear benefit.
 
 Return only valid JSON matching this exact shape:
-{"headline":"approved campaign headline or empty string","callToAction":"concise call to action","conceptTitle":"2-5 word internal concept name","artDirection":"one concrete production-ready hero-scene direction, maximum 900 characters"}`;
+{"headline":"approved campaign headline or empty string","callToAction":"concise call to action","conceptTitle":"2-5 word internal concept name","artDirection":"one concrete production-ready hero-scene direction, maximum 450 characters"}`;
 
   const userPrompt = JSON.stringify({
     brandName,
@@ -147,11 +180,15 @@ Return only valid JSON matching this exact shape:
 
     return {
       headline: brief.includeTagline
-        ? cleanText(value.headline, fallback.headline, 120)
+        ? cleanDisplayCopy(value.headline, fallback.headline, 64)
         : "",
-      callToAction: cleanText(value.callToAction, fallback.callToAction, 40),
-      conceptTitle: cleanText(value.conceptTitle, fallback.conceptTitle, 80),
-      artDirection: cleanText(value.artDirection, fallback.artDirection, 900),
+      callToAction: cleanDisplayCopy(
+        value.callToAction,
+        fallback.callToAction,
+        28,
+      ),
+      conceptTitle: cleanText(value.conceptTitle, fallback.conceptTitle, 60),
+      artDirection: cleanText(value.artDirection, fallback.artDirection, 450),
     };
   } catch (error) {
     logger.warn("Social campaign direction failed; using fallback", {
@@ -166,16 +203,55 @@ function allowedSocialText(
   socials: NormalizedSocials,
   currentPlatform: SocialPlatform,
 ): string {
-  return Object.entries(socials)
-    .filter(
-      (entry): entry is [keyof NormalizedSocials, string] =>
-        entry[0] !== currentPlatform && !!entry[1]?.trim(),
-    )
-    .map(
-      ([platform, value]) =>
-        `official ${platform} icon followed by the exact handle "${value.trim().replace(/^@+/, "")}"`,
-    )
-    .slice(0, 3)
+  const maximumAccounts = currentPlatform === "youtube" ? 3 : 2;
+  const platformOrder: Array<keyof NormalizedSocials> = [
+    "instagram",
+    "twitter",
+    "linkedin",
+    "facebook",
+    "youtube",
+    "tiktok",
+  ];
+  return platformOrder
+    .filter((platform) => platform !== currentPlatform)
+    .flatMap((platform) => {
+      const value = socials[platform]?.trim();
+      return value ? ([[platform, value]] as const) : [];
+    })
+    .map(([platform, value]) => {
+      const iconName =
+        platform === "twitter"
+          ? "current official X icon (never the legacy Twitter bird)"
+          : `official ${platform} icon`;
+      return `${iconName} followed by the exact handle "${value.replace(/^@+/, "").slice(0, 64)}"`;
+    })
+    .slice(0, maximumAccounts)
+    .join("; ");
+}
+
+function universalSocialText(socials: NormalizedSocials): string {
+  const platformOrder: Array<keyof NormalizedSocials> = [
+    "instagram",
+    "twitter",
+    "linkedin",
+    "facebook",
+    "youtube",
+    "tiktok",
+  ];
+
+  return platformOrder
+    .flatMap((platform) => {
+      const value = socials[platform]?.trim();
+      return value ? ([[platform, value]] as const) : [];
+    })
+    .map(([platform, value]) => {
+      const iconName =
+        platform === "twitter"
+          ? "current official X icon (never the legacy Twitter bird)"
+          : `official ${platform} icon`;
+      return `${iconName} followed by the exact handle "${value.replace(/^@+/, "").slice(0, 64)}"`;
+    })
+    .slice(0, 2)
     .join("; ");
 }
 
@@ -188,20 +264,20 @@ function fallbackPlatformPlan(
     instagram:
       "Keep the focal mark centered with generous clear space and no campaign copy.",
     twitter:
-      "Use the master unchanged. Set the headline in the upper-left typography zone and supporting copy beneath it. Keep the bottom-left profile-overlay area clear. Place one small, understated social row near the lower-right edge with safe padding.",
+      "Preserve the master's visual identity while recomposing it full-bleed for the X delivery crop. Set the headline in the left typography zone, vertically centered inside the crop-safe region, with supporting copy beneath it. Keep the bottom-left profile-overlay area clear. Place one small, understated social row near the lower-right of the same safe region.",
     linkedin:
-      "Use the master unchanged. Set the headline in the upper-left typography zone with restrained supporting copy below. Allow generous left inset for profile overlays. Place one small, understated social row near the lower-right edge with safe padding.",
+      "Preserve the master's visual identity while recomposing it full-bleed for a LinkedIn profile cover. Set the headline in the left typography zone, vertically centered inside the crop-safe region, with restrained supporting copy below. Allow generous left inset for the profile overlay. Place one small, understated social row near the lower-right of the same safe region.",
     facebook:
-      "Use the master unchanged. Set a compact headline and supporting copy in the left typography zone. Place one small, understated social row near the lower-right edge, inset enough to survive the 820 x 312 crop.",
+      "Preserve the master's visual identity while recomposing it full-bleed for the responsive Facebook cover. Keep the compact headline, supporting copy, optional logo, and focal subject inside the centered 640 x 312 cross-device intersection. Place one small social row near that safe region's lower-right edge. Fill the full 820 x 360 canvas with background artwork.",
     youtube:
-      "Use the master unchanged. Inside the centered 1546 x 423 safe zone only, place the headline on the left half and supporting copy directly beneath. Place one small, understated social row along the lower-right edge of that safe zone—not the canvas edge. Keep the focal motif on the right half of the safe zone and render background artwork only outside it.",
+      "Preserve the master's visual identity while recomposing it full-bleed for YouTube. Inside the centered 1546 x 423 safe zone only, place a compact headline on the left half and supporting copy directly beneath. Place one small social row along the lower-right edge of that zone—not the canvas edge. Keep the recognizable focal motif on the right half and render background artwork only outside the zone.",
   };
   return {
     platform: request.platform,
     headline: brief.includeTagline
-      ? (brief.message || context.tagline || "").trim().slice(0, 100)
+      ? cleanDisplayCopy(brief.message, context.tagline || "", 64)
       : "",
-    callToAction: (brief.callToAction || "").trim().slice(0, 40),
+    callToAction: cleanDisplayCopy(brief.callToAction, "", 28),
     socialText: allowedSocialText(context.socials || {}, request.platform),
     compositionPrompt: compositionByPlatform[request.platform],
   };
@@ -224,4 +300,27 @@ export function buildSocialPlatformPlans({
   return platforms.map((platform) =>
     fallbackPlatformPlan(platform, brief, context),
   );
+}
+
+/**
+ * Defines the immutable content and crop-safe composition for the canonical
+ * social master. Every platform header is cut from this same rendered image,
+ * so the identity row must never vary by destination platform.
+ */
+export function buildSocialMasterPlan({
+  context,
+  brief,
+}: {
+  context: SocialPlanningContext;
+  brief: SocialMediaBrief;
+}): SocialMasterLayoutPlan {
+  return {
+    headline: brief.includeTagline
+      ? cleanDisplayCopy(brief.message, context.tagline || "", 64)
+      : "",
+    callToAction: cleanDisplayCopy(brief.callToAction, "", 28),
+    socialText: universalSocialText(context.socials || {}),
+    compositionPrompt:
+      "Inside the centered universal safe band, compose a compact typography group on the left half and the recognizable campaign motif on the right half. Keep the call to action directly beneath the headline, the optional logo as a restrained signature, and one quiet social identity row near the lower-right. Use the surrounding 16:9 area only for continuous atmosphere and nonessential detail.",
+  };
 }

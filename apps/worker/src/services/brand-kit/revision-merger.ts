@@ -159,7 +159,7 @@ export async function mergeRevisionResults({
     } else {
       newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
       newMergedJSON.socialMediaKit = {
-        version: 3,
+        version: 4,
         brief: currentBrandKit?.socialMediaBrief,
         masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
         campaignDirection: socialMediaUrls.campaignDirection,
