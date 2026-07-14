@@ -3,6 +3,7 @@ import type { AIProvider } from "../types";
 import { WorkersAIProvider } from "./workers-ai";
 import { LeonardoProvider } from "./leonardo";
 import { ReplicateProvider } from "./replicate";
+import { REPLICATE_MODELS } from "./models";
 
 export interface ModelMapping {
   provider: "workers-ai" | "leonardo" | "replicate";
@@ -34,6 +35,54 @@ export interface ModelMapping {
     providerOptions?: Record<string, unknown>;
   };
 }
+
+/** Replicate-hosted GPT Image 2 creates the complete YouTube master. */
+export const SOCIAL_BANNER_MASTER_MODEL_MAPPING: ModelMapping = {
+  provider: "replicate",
+  inputType: "json",
+  backendModel: REPLICATE_MODELS.GPT_IMAGE_2,
+  capabilities: {
+    nativePromptEnhancement: true,
+    imageToImage: true,
+    editingStrategy: "remix-image-array",
+    promptTemplate: {
+      figureNaming: "figure-number",
+    },
+  },
+  defaultParams: {
+    providerOptions: {
+      quality: "low",
+      output_format: "png",
+      background: "opaque",
+      number_of_images: 1,
+      moderation: "auto",
+    },
+  },
+};
+
+/** Replicate-hosted GPT Image 2 reframes the master for every platform. */
+export const SOCIAL_BANNER_REFRAME_MODEL_MAPPING: ModelMapping = {
+  provider: "replicate",
+  inputType: "json",
+  backendModel: REPLICATE_MODELS.GPT_IMAGE_2,
+  capabilities: {
+    nativePromptEnhancement: true,
+    imageToImage: true,
+    editingStrategy: "remix-image-array",
+    promptTemplate: {
+      figureNaming: "figure-number",
+    },
+  },
+  defaultParams: {
+    providerOptions: {
+      quality: "low",
+      output_format: "png",
+      background: "opaque",
+      number_of_images: 1,
+      moderation: "auto",
+    },
+  },
+};
 
 const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
   "quick-v1": {

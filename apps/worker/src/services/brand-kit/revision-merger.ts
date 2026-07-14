@@ -16,6 +16,7 @@ import {
   generateBrandGraphics,
   generateBusinessCardAssets,
   buildSocialMediaAssetList,
+  SOCIAL_MEDIA_PIPELINE_VERSION,
 } from "./asset-generator";
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -107,8 +108,7 @@ export async function mergeRevisionResults({
       existingTargetAssetUrl,
       existingMasterBannerUrl:
         newMergedJSON.socialMediaKit?.masterBackgroundUrl,
-      existingCampaignDirection:
-        newMergedJSON.socialMediaKit?.campaignDirection,
+      existingApprovedCopy: newMergedJSON.socialMediaKit?.approvedCopy,
       productImageUrls: currentBrandKit?.productImageUrls,
     });
 
@@ -156,13 +156,23 @@ export async function mergeRevisionResults({
           return asset;
         },
       );
+      if (socialMediaUrls.approvedCopy) {
+        newMergedJSON.socialMediaKit = {
+          ...newMergedJSON.socialMediaKit,
+          version: SOCIAL_MEDIA_PIPELINE_VERSION,
+          masterBackgroundUrl:
+            socialMediaUrls.masterBannerUrl ??
+            newMergedJSON.socialMediaKit?.masterBackgroundUrl,
+          approvedCopy: socialMediaUrls.approvedCopy,
+        };
+      }
     } else {
       newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
       newMergedJSON.socialMediaKit = {
-        version: 4,
+        version: SOCIAL_MEDIA_PIPELINE_VERSION,
         brief: currentBrandKit?.socialMediaBrief,
         masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
-        campaignDirection: socialMediaUrls.campaignDirection,
+        approvedCopy: socialMediaUrls.approvedCopy,
       };
     }
   } else if (sectionId === "brand-graphics") {

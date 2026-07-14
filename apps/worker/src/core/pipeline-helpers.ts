@@ -9,6 +9,7 @@ import type {
 } from "@quicklogo/ai-providers/types";
 
 const logger = createLogger("worker");
+const RETRY_AFTER_SAFETY_BUFFER_MS = 1500;
 
 export async function withRetry<T>(
   operation: () => Promise<T>,
@@ -54,7 +55,7 @@ export async function withTimeout<T>(
 export async function withRetryableGeneration(
   provider: AIProvider,
   params: GenerationParams,
-  maxRetries = 2,
+  maxRetries = 3,
   baseDelayMs = 1000,
 ): Promise<GenerationResult> {
   let attempt = 0;
@@ -74,7 +75,7 @@ export async function withRetryableGeneration(
     }
 
     const delay = result.retryAfter
-      ? result.retryAfter * 1000
+      ? result.retryAfter * 1000 + RETRY_AFTER_SAFETY_BUFFER_MS
       : baseDelayMs * Math.pow(2, attempt - 1);
 
     logger.warn(

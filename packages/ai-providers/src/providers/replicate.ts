@@ -200,7 +200,8 @@ export class ReplicateProvider implements AIProvider {
         }
 
         if (
-          model === REPLICATE_MODELS.SEEDREAM &&
+          (model === REPLICATE_MODELS.SEEDREAM_4 ||
+            model === REPLICATE_MODELS.SEEDREAM_4_5) &&
           params.width &&
           params.height
         ) {

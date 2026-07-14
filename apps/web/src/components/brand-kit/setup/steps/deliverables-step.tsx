@@ -649,7 +649,7 @@ export function DeliverablesStep({
                                   message: event.target.value,
                                 }))
                               }
-                              maxLength={120}
+                              maxLength={64}
                               placeholder="Main message (optional — your tagline is used by default)"
                               className={inputClassName}
                             />
@@ -661,7 +661,7 @@ export function DeliverablesStep({
                                   callToAction: event.target.value,
                                 }))
                               }
-                              maxLength={40}
+                              maxLength={28}
                               placeholder="Call to action (optional)"
                               className={inputClassName}
                             />
@@ -696,10 +696,11 @@ export function DeliverablesStep({
                               </label>
                             </div>
                             <p className="text-muted-foreground/45 text-[10px] leading-relaxed">
-                              We create one campaign master, review it for
-                              platform-safe copy placement, then render each
-                              final asset with AI. Empty social handles are
-                              never added. Logo inclusion is optional.
+                              We proofread your requested banner text, create a
+                              mobile-safe YouTube channel banner, then use that
+                              exact artwork as the reference for coordinated X,
+                              LinkedIn, and Facebook reframes. Logo inclusion is
+                              optional.
                             </p>
                           </div>
                         ) : null}

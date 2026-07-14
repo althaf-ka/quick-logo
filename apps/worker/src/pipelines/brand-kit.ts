@@ -27,6 +27,7 @@ import {
   generateBrandGraphics,
   buildSocialMediaAssetList,
   SOCIAL_MEDIA_ASSET_COUNT,
+  SOCIAL_MEDIA_PIPELINE_VERSION,
 } from "../services/brand-kit/asset-generator";
 import { generateBrandPresentationImage } from "../services/brand-kit/brand-presentation-generator";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
@@ -390,10 +391,10 @@ export class BrandKitPipeline {
           buildSocialMediaAssetList(socialMediaUrls);
         if (socialMediaUrls) {
           finalResultsJSON.socialMediaKit = {
-            version: 4,
+            version: SOCIAL_MEDIA_PIPELINE_VERSION,
             brief: socialMediaBrief,
             masterBackgroundUrl: socialMediaUrls.masterBannerUrl,
-            campaignDirection: socialMediaUrls.campaignDirection,
+            approvedCopy: socialMediaUrls.approvedCopy,
           };
         }
       }

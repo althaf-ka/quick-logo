@@ -5,7 +5,8 @@ export const REPLICATE_MODELS = {
   FLUX_2_PRO: "black-forest-labs/flux-2-pro",
   IMAGEN_4: "google/imagen-4",
   FLUX_FILL: "black-forest-labs/flux-fill-pro",
-  SEEDREAM: "bytedance/seedream-4.5",
+  SEEDREAM_4: "bytedance/seedream-4",
+  SEEDREAM_4_5: "bytedance/seedream-4.5",
   SEEDREAM_5_LITE: "bytedance/seedream-5-lite",
   GPT_IMAGE_2: "openai/gpt-image-2",
 } as const;
@@ -74,13 +75,22 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     },
     defaultOutputFormat: "png",
   },
-  [REPLICATE_MODELS.SEEDREAM]: {
+  [REPLICATE_MODELS.SEEDREAM_4]: {
     aspectRatio: true,
     editingStrategy: {
       type: "remix-image-array",
       imageField: "image_input",
     },
-    defaultOutputFormat: "png",
+    defaultOutputFormat: "",
+    maxPromptLength: 4000,
+  },
+  [REPLICATE_MODELS.SEEDREAM_4_5]: {
+    aspectRatio: true,
+    editingStrategy: {
+      type: "remix-image-array",
+      imageField: "image_input",
+    },
+    defaultOutputFormat: "",
   },
   [REPLICATE_MODELS.SEEDREAM_5_LITE]: {
     aspectRatio: true,
@@ -98,25 +108,8 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
       imageField: "input_images",
     },
     defaultOutputFormat: "png",
-    // Replicate's gpt-image-2 supports these aspect ratios & resolutions
-    supportedAspectRatios: [
-      "1:1",
-      "3:2",
-      "2:3",
-      "4:3",
-      "3:4",
-      "16:9",
-      "9:16",
-      "1024x1024",
-      "1536x1024",
-      "1024x1536",
-      "1536x1152",
-      "1152x1536",
-      "2048x2048",
-      "1152x2048",
-      "2048x1152",
-      "3840x2160",
-      "2160x3840",
-    ],
+    // The Replicate wrapper currently exposes only these aspect-ratio values,
+    // even though OpenAI's native API accepts additional custom resolutions.
+    supportedAspectRatios: ["1:1", "3:2", "2:3"],
   },
 } as const;
