@@ -36,26 +36,25 @@ export interface ModelMapping {
   };
 }
 
-/** Replicate-hosted GPT Image 2 creates the complete YouTube master. */
+/** Ideogram V3 Turbo creates the canonical text-complete YouTube master. */
 export const SOCIAL_BANNER_MASTER_MODEL_MAPPING: ModelMapping = {
   provider: "replicate",
   inputType: "json",
-  backendModel: REPLICATE_MODELS.GPT_IMAGE_2,
+  backendModel: REPLICATE_MODELS.IDEOGRAM_V3,
   capabilities: {
     nativePromptEnhancement: true,
-    imageToImage: true,
-    editingStrategy: "remix-image-array",
-    promptTemplate: {
-      figureNaming: "figure-number",
-    },
+    imageToImage: false,
   },
   defaultParams: {
     providerOptions: {
-      quality: "low",
-      output_format: "png",
-      background: "opaque",
-      number_of_images: 1,
-      moderation: "auto",
+      aspect_ratio: "16:9",
+      resolution: "None",
+      // Gemma supplies a concise concept seed; Ideogram expands it into the
+      // production image prompt while exact quoted copy remains explicit.
+      magic_prompt_option: "Auto",
+      // Let the art direction choose photographic, illustrative, or material
+      // language instead of forcing Ideogram's flat poster-oriented Design mode.
+      style_type: "None",
     },
   },
 };

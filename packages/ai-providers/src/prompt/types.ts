@@ -69,19 +69,3 @@ export interface BrandKitJsonRequest {
   response_format: { type: "json_object" };
   max_tokens?: number;
 }
-
-export interface BrandKitVisionMessage {
-  role: "system" | "user";
-  content:
-    | string
-    | Array<
-        | { type: "text"; text: string }
-        | { type: "image_url"; image_url: { url: string } }
-      >;
-}
-
-export interface BrandKitVisionRequest {
-  messages: BrandKitVisionMessage[];
-  max_tokens?: number;
-  response_format?: { type: "json_object" };
-}

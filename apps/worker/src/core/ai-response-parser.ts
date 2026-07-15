@@ -39,6 +39,111 @@ export function cleanAiResponse(text: string): string {
   return cleaned;
 }
 
+function parseJsonText(text: string): unknown | null {
+  const cleaned = cleanAiResponse(text);
+  if (!cleaned) return null;
+
+  try {
+    return JSON.parse(cleaned) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts structured JSON from the response shapes used by Workers AI's
+ * native and OpenAI-compatible APIs. JSON mode may return the schema object
+ * directly instead of serializing it into a text field.
+ */
+export function extractWorkersAiResponseJson(
+  response: unknown,
+): unknown | null {
+  if (typeof response === "string") return parseJsonText(response);
+  if (!response || typeof response !== "object") return null;
+
+  const res = response as Record<string, unknown>;
+
+  if (Array.isArray(res.choices)) {
+    for (const choice of res.choices) {
+      if (!choice || typeof choice !== "object") continue;
+      const message = (choice as Record<string, unknown>).message;
+      if (!message || typeof message !== "object") continue;
+      const content = (message as Record<string, unknown>).content;
+      if (typeof content === "string") {
+        const parsed = parseJsonText(content);
+        if (parsed !== null) return parsed;
+      }
+      if (content && typeof content === "object" && !Array.isArray(content)) {
+        return content;
+      }
+      if (Array.isArray(content)) {
+        for (const part of content) {
+          if (!part || typeof part !== "object") continue;
+          const text = (part as Record<string, unknown>).text;
+          if (typeof text !== "string") continue;
+          const parsed = parseJsonText(text);
+          if (parsed !== null) return parsed;
+        }
+      }
+    }
+  }
+
+  if ("response" in res) {
+    if (typeof res.response === "string") return parseJsonText(res.response);
+    if (res.response && typeof res.response === "object") return res.response;
+  }
+
+  if (typeof res.output_text === "string") {
+    const parsed = parseJsonText(res.output_text);
+    if (parsed !== null) return parsed;
+  }
+
+  if (Array.isArray(res.output)) {
+    for (const item of res.output) {
+      if (!item || typeof item !== "object") continue;
+      const content = (item as Record<string, unknown>).content;
+      if (!Array.isArray(content)) continue;
+      for (const part of content) {
+        if (!part || typeof part !== "object") continue;
+        const text = (part as Record<string, unknown>).text;
+        if (typeof text !== "string") continue;
+        const parsed = parseJsonText(text);
+        if (parsed !== null) return parsed;
+      }
+    }
+  }
+
+  if (typeof res.result === "string") return parseJsonText(res.result);
+  if (res.result && typeof res.result === "object") return res.result;
+
+  const knownWrapperKeys = [
+    "choices",
+    "output",
+    "output_text",
+    "response",
+    "result",
+    "usage",
+  ];
+  return knownWrapperKeys.some((key) => key in res) ? null : res;
+}
+
+export function describeWorkersAiResponseShape(response: unknown): string {
+  if (response === null) return "null";
+  if (Array.isArray(response)) return "array";
+  if (typeof response !== "object") return typeof response;
+
+  const keys = [
+    "choices",
+    "output",
+    "output_text",
+    "reasoning",
+    "response",
+    "result",
+    "usage",
+  ].filter((key) => key in response);
+  return keys.length ? `object(${keys.join(",")})` : "object(direct)";
+}
+
 /**
  * Robustly extracts the JSON or text content from various Workers AI response formats.
  * Handles legacy formats, OpenAI-compatible formats, and "thinking" models

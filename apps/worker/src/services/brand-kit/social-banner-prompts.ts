@@ -1,5 +1,5 @@
-import type { SocialMediaBrief } from "@quicklogo/shared";
 import type { ValidatedBrandContext } from "@quicklogo/ai-providers/prompt";
+import { extractUsername } from "@quicklogo/shared";
 import type { VerifiedSocialCopy } from "./social-banner-copy";
 
 export interface SocialBannerPromptSpec {
@@ -14,87 +14,12 @@ export interface SocialBannerPromptSpec {
 const compact = (value: string | undefined, maxLength: number) =>
   value?.trim().slice(0, maxLength) || undefined;
 
-function describeColor(value: string): string {
-  const match = value.trim().match(/^#([\da-f]{3}|[\da-f]{6})$/i);
-  if (!match?.[1]) return compact(value, 40) || "brand color";
-
-  const hex =
-    match[1].length === 3
-      ? [...match[1]].map((character) => character.repeat(2)).join("")
-      : match[1];
-  const [red, green, blue] = [0, 2, 4].map((offset) =>
-    Number.parseInt(hex.slice(offset, offset + 2), 16),
-  ) as [number, number, number];
-  const max = Math.max(red, green, blue);
-  const min = Math.min(red, green, blue);
-  const lightness = (max + min) / 510;
-  if (max - min < 18) {
-    if (lightness < 0.2) return "near-black charcoal";
-    if (lightness < 0.45) return "dark gray";
-    if (lightness < 0.75) return "soft gray";
-    return "near-white gray";
+function requiredBrandName(value: string): string {
+  const brandName = compact(value, 100);
+  if (!brandName) {
+    throw new Error("A brand name is required for social banner typography");
   }
-
-  const delta = max - min;
-  let hue =
-    max === red
-      ? ((green - blue) / delta) % 6
-      : max === green
-        ? (blue - red) / delta + 2
-        : (red - green) / delta + 4;
-  hue = (hue * 60 + 360) % 360;
-  const hueName =
-    hue < 15 || hue >= 345
-      ? "red"
-      : hue < 40
-        ? "orange"
-        : hue < 65
-          ? "gold"
-          : hue < 90
-            ? "yellow"
-            : hue < 150
-              ? "green"
-              : hue < 190
-                ? "teal"
-                : hue < 225
-                  ? "blue"
-                  : hue < 265
-                    ? "indigo"
-                    : hue < 305
-                      ? "violet"
-                      : "magenta";
-  const tone = lightness < 0.32 ? "deep" : lightness > 0.72 ? "pale" : "vivid";
-  return `${tone} ${hueName}`;
-}
-
-function brandBrief(
-  brandName: string,
-  context: ValidatedBrandContext,
-  brief: SocialMediaBrief,
-): string {
-  const identity = compact(brandName, 100) || "the brand";
-  const industry = compact(context.industry, 120);
-  const audience = compact(context.targetAudience, 180);
-  const personality = compact(context.brandPersonality, 220);
-  const vibes = context.selectedVibes?.slice(0, 8).join(", ");
-  const palette = context.colors?.slice(0, 6).map(describeColor).join(", ");
-  const promise = compact(context.tagline, 160);
-  const visualPreference =
-    brief.visualDirection === "auto" ? undefined : brief.visualDirection;
-
-  return [
-    `${identity}${industry ? ` operates in ${industry}` : ""}${audience ? ` for ${audience}` : ""}.`,
-    promise ? `Its established brand promise is ${promise}.` : undefined,
-    personality ? `The personality should feel ${personality}.` : undefined,
-    vibes ? `Relevant emotional cues are ${vibes}.` : undefined,
-    palette ? `Use a visual palette characterized by ${palette}.` : undefined,
-    `The campaign purpose is ${brief.purpose}.`,
-    visualPreference
-      ? `The user prefers a ${visualPreference} visual direction.`
-      : undefined,
-  ]
-    .filter((line): line is string => Boolean(line))
-    .join(" ");
+  return brandName;
 }
 
 function exactCopy(copy: VerifiedSocialCopy): string {
@@ -103,42 +28,114 @@ function exactCopy(copy: VerifiedSocialCopy): string {
     copy.callToAction ? `Call to action: "${copy.callToAction}"` : undefined,
   ].filter((value): value is string => Boolean(value));
   return values.length
-    ? `Render only this approved display copy, with every character exactly as written:\n${values.join("\n")}`
-    : "Do not render a headline, tagline, call to action, or other display copy.";
+    ? `Validation-only transcription of display copy already rendered in Figure 1; never typeset it again:\n${values.join("\n")}`
+    : "Figure 1 has no approved headline, tagline, or call to action; do not invent one during reframing.";
 }
 
-const SOCIAL_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  twitter: "X",
-  linkedin: "LinkedIn",
-  facebook: "Facebook",
-  youtube: "YouTube",
-  tiktok: "TikTok",
-};
-
-function socialIdentityCopy(context: ValidatedBrandContext): string {
-  const identities = Object.entries(context.socials)
-    .filter((entry): entry is [string, string] => Boolean(entry[1]?.trim()))
-    .slice(0, 6)
-    .map(
-      ([platform, identity]) =>
-        `${SOCIAL_LABELS[platform] || platform}: "${identity.trim().slice(0, 120)}"`,
-    );
-  return identities.length
-    ? `Render one compact social identity row containing every entry below exactly once. Use a restrained platform label or recognizable icon followed by its exact identity:\n${identities.join("\n")}`
-    : "Do not render a social identity row because the user supplied no social profiles.";
+function mandatoryVisibleCopy(
+  brandName: string,
+  copy: VerifiedSocialCopy,
+): string {
+  const exactBrandName = requiredBrandName(brandName);
+  const lines = [
+    `Render the exact brand-name text ${JSON.stringify(exactBrandName)} once as expressive, professionally typeset text—never as a logo or invented symbol.`,
+    copy.headline
+      ? `Render the exact headline text ${JSON.stringify(copy.headline)} once as the dominant reading level.`
+      : undefined,
+    copy.callToAction
+      ? `Render the exact call-to-action text ${JSON.stringify(copy.callToAction)} once as a clearly legible secondary reading level.`
+      : undefined,
+  ].filter((line): line is string => Boolean(line));
+  return `REQUIRED VISIBLE TYPOGRAPHY — the image is incomplete if any listed line is missing:\n${lines.join("\n")}\nPreserve every character exactly. Do not render the instructional phrases around the quoted strings.`;
 }
 
 function typographyCopy(headingFont?: string, bodyFont?: string): string {
   return `Headline typeface: ${headingFont || "choose a distinctive brand-appropriate display face"}.
-Supporting and social-row typeface: ${bodyFont || "choose a clean, compatible supporting face"}.`;
+Supporting typeface: ${bodyFont || "choose a clean, compatible supporting face"}.`;
+}
+
+const SOCIAL_PLATFORM_LABELS: Record<
+  keyof ValidatedBrandContext["socials"],
+  string
+> = {
+  instagram: "Instagram",
+  youtube: "YouTube",
+  twitter: "X",
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+};
+
+function socialIdentityGroups(context: ValidatedBrandContext): Array<{
+  identity: string;
+  platforms: Array<keyof ValidatedBrandContext["socials"]>;
+}> {
+  const grouped = new Map<
+    string,
+    Array<keyof ValidatedBrandContext["socials"]>
+  >();
+  for (const [platform, rawIdentity] of Object.entries(
+    context.socials,
+  ) as Array<[keyof ValidatedBrandContext["socials"], string | undefined]>) {
+    if (!rawIdentity) continue;
+    const identity = extractUsername(rawIdentity)
+      .trim()
+      .replace(/^@+/, "")
+      .slice(0, 40);
+    if (!identity) continue;
+    const platforms = grouped.get(identity) || [];
+    platforms.push(platform);
+    grouped.set(identity, platforms);
+  }
+  return [...grouped.entries()].map(([identity, platforms]) => ({
+    identity,
+    platforms,
+  }));
+}
+
+function masterSocialIdentityCopy(context: ValidatedBrandContext): string {
+  const groups = socialIdentityGroups(context);
+  if (!groups.length) {
+    return "Do not render social-media icons, usernames, handles, platform names, or a social row.";
+  }
+
+  const rows = groups.map(({ identity, platforms }) => {
+    const iconNames = platforms
+      .map((platform) => `${SOCIAL_PLATFORM_LABELS[platform]} icon`)
+      .join(" + ");
+    return `${iconNames}, followed by the exact plain username ${JSON.stringify(identity)}.`;
+  });
+  return `REQUIRED SOCIAL IDENTITY — integrate this as a small, tasteful supporting element in the same visual language as the master:\n${rows.join("\n")}\nRender recognizable platform icons, but do not print platform names or an @ symbol. Render each quoted username exactly once and do not invent any other handle.`;
+}
+
+function reframeSocialIdentityCopy(context: ValidatedBrandContext): string {
+  const groups = socialIdentityGroups(context);
+  if (!groups.length) {
+    return "Figure 1 contains no approved social identity; do not invent one.";
+  }
+  return `Figure 1 already contains the approved social identity (${groups
+    .map(
+      ({ identity, platforms }) =>
+        `${platforms.map((platform) => SOCIAL_PLATFORM_LABELS[platform]).join("+")} icons with username ${JSON.stringify(identity)}`,
+    )
+    .join(
+      "; ",
+    )}). Preserve its icons, exact usernames, visual treatment, and hierarchy without adding an @ symbol or platform-name text.`;
+}
+
+function masterLogoPolicy(logoFigure?: number): string {
+  if (logoFigure) {
+    return `LOGO POLICY\nFigure ${logoFigure} is the approved logo. Reproduce that supplied logo exactly once without redrawing, restyling, simplifying, or replacing it. If its wordmark already contains the brand name, do not add a second brand-name line.`;
+  }
+
+  return `LOGO POLICY\nNo approved logo image is attached to this generation. Do not create, infer, approximate, or decorate with a logo, logomark, emblem, monogram, badge, mascot mark, or invented brand symbol. The required brand-name string is ordinary typeset text, not a request to design a logo.`;
 }
 
 export function buildYoutubeBannerPrompt({
   brandName,
   context,
-  brief,
   copy,
+  artDirection,
   headingFont,
   bodyFont,
   logoFigure,
@@ -146,53 +143,38 @@ export function buildYoutubeBannerPrompt({
 }: {
   brandName: string;
   context: ValidatedBrandContext;
-  brief: SocialMediaBrief;
   copy: VerifiedSocialCopy;
+  artDirection: string;
   headingFont?: string;
   bodyFont?: string;
   logoFigure?: number;
   productFigures: number[];
 }): string {
   const references = [
-    logoFigure
-      ? `Figure ${logoFigure} is the approved logo. Use it exactly once, unchanged and undistorted.`
-      : brief.includeLogo
-        ? "The requested logo reference is unavailable; do not invent a replacement logo."
-        : "Do not add a logo or invented brand mark.",
     productFigures.length
-      ? `${productFigures.map((figure) => `Figure ${figure}`).join(", ")} are approved product references. Preserve their identity and proportions if you use them.`
+      ? `${productFigures.map((figure) => `Figure ${figure}`).join(", ")} are approved products; preserve their identity and proportions.`
       : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  return `GOAL
-Create one complete, premium YouTube channel-art master designed for 3840 x 2160 pixel delivery (16:9). This first image is the canonical campaign design from which every other social banner will be reframed. The Replicate GPT Image 2 wrapper returns a 3:2 working canvas, so place the complete 16:9 master composition inside an invisible centered, full-width band occupying the middle 84.4% of canvas height. Continue only flexible background into the remaining space above and below. Render the finished artwork itself—not a preview, mockup, device, interface, template sheet, or design presentation.
+  return `Create one visually ambitious, premium, full-bleed 16:9 channel-art master. The composition must be scene-led rather than template-led: use a decisive focal idea, foreground-to-background depth, tactile detail, expressive lighting, purposeful negative space, and a brand-specific visual metaphor. Never resolve this as large text on a flat color field, a split-color poster, a generic gradient layout, or a stack of centered text bands.
 
-BRAND BRIEF
-${brandBrief(brandName, context, brief)}
+ART DIRECTION — execute this as the dominant visual story:
 
-APPROVED CONTENT MANIFEST — render all applicable content now
-Brand name spelling: "${compact(brandName, 100) || "Brand"}". ${logoFigure ? "Use the exact supplied logo as the brand signature; if its wordmark already contains the name, do not type the name a second time." : "Render the brand name exactly once as the brand signature."}
-${exactCopy(copy)}
-${socialIdentityCopy(context)}
+${artDirection}
+
+EXACT VISIBLE CONTENT — integrate all applicable items into that scene:
+${mandatoryVisibleCopy(brandName, copy)}
+${masterSocialIdentityCopy(context)}
+${masterLogoPolicy(logoFigure)}
 ${typographyCopy(headingFont, bodyFont)}
-${copy.additionalInstructions ? `Follow this corrected user direction: ${copy.additionalInstructions}` : "There are no additional user instructions."}
+${copy.additionalInstructions ? `Apply this corrected user direction as private visual/layout guidance without adding unrelated copy: ${copy.additionalInstructions}` : "No additional revision is requested."}
 ${references}
 
-RESPONSIVE CROP CONSTRAINT — this is a layout rule, never a visual subject
-Inside the centered 16:9 master band, keep every essential element—the complete approved text, logo, social identity row, product, face, focal subject, and any detail required to understand the design—fully inside an invisible centered mobile-safe region occupying approximately 60% of the full canvas width and 25% of the full canvas height. Treat all canvas area outside that mobile-safe region as background-only extension: continue the same environment, color, light, texture, or nonessential decoration there, with no important content. Never visualize, outline, label, or explain either region.
+COMPOSITION — keep every written string, social identity, face, and essential product detail inside the short centered mobile-safe area occupying about 60% of the width and 29% of the height. Use expressive scale, rhythm, contrast, and spatial interaction with the focal scene rather than a generic centered stack. The hero scene and nonessential visual energy may extend across the full canvas; the outer side fields remain meaningful background extension without critical content.
 
-CREATIVE MANDATE
-Act as an exceptional brand campaign art director, not a template generator. Before rendering, silently consider at least three genuinely different visual ideas derived from this brand's purpose, audience, personality, product, and message. Reject the predictable ideas and render only the single most ownable concept. Do not show alternatives or explain the reasoning.
-
-Build the design around one clear visual thesis: a memorable metaphor, scene, material language, or art-directed focal moment that communicates this specific brand promise. Establish intentional hierarchy, confident negative space, depth, lighting, scale, and a refined relationship between typography and imagery. The headline is the primary reading level; brand signature, call to action, and social row form a disciplined secondary system. Make the result feel commissioned and culturally aware. Let the subject matter determine the medium and visual language rather than defaulting to a fashionable preset. Use the approved palette as art direction, never as a color-swatch display.
-
-QUALITY FILTER
-Avoid generic AI-banner habits: centered logo-plus-slogan layouts, decorative gradient blobs, random waves or floating shapes, stock-office scenes, feature grids, presentation slides, data boards, and mockup-style compositions. The artwork itself must occupy the complete canvas; never present it as content displayed inside another object.
-
-NON-PRINTING RULES
-The brand brief is private art direction, not visible content. Visible text is limited to the approved brand signature, headline, call to action, social identities, and anything explicitly requested in the corrected user direction. Platform identifiers are allowed only inside the approved social identity row; never create a platform interface or unrelated platform advertisement. Do not render written color values, metadata, or safe-area explanations. Do not invent claims, words, handles, URLs, contact details, logos, or products. Do not add borders, watermarks, crop marks, safe-area guides, letterboxing, padding, or blank bands. Fill the entire canvas with one polished, full-bleed final artwork.`;
+OUTPUT CONTRACT — render only one full-bleed finished artwork. The only visible letters or words permitted are the exact quoted brand name, approved headline, approved call to action, and approved usernames above. Do not add decorative microcopy, body copy, captions, lorem ipsum, fake writing, URLs, platform names, or an @ symbol. Exclude device screens, interfaces, mockups, presentation boards, frames, watermarks, crop guides, padding, and blank bands.`;
 }
 
 export function buildSocialReframePrompt({
@@ -221,15 +203,17 @@ Replicate GPT Image 2 working canvas: ${spec.renderWidth} x ${spec.renderHeight}
 Platform-safe placement: ${spec.safeArea}
 
 APPROVED CONTENT MANIFEST — preserve every item exactly
-Brand name spelling: "${compact(brandName, 100) || "Brand"}".
+Validation-only transcription of brand-name text already rendered in Figure 1: "${requiredBrandName(brandName)}". Never typeset it again.
 ${exactCopy(copy)}
-${socialIdentityCopy(context)}
 ${typographyCopy(headingFont, bodyFont)}
+${reframeSocialIdentityCopy(context)}
 
-${refinementPrompt?.trim() ? `Apply this additional revision request while preserving everything unrelated: ${refinementPrompt.trim().slice(0, 700)}` : "No additional revision is requested."}
+${refinementPrompt?.trim() ? `Apply only the non-text aspects of this additional revision request: ${refinementPrompt.trim().slice(0, 700)}. Ignore any instruction that would alter, replace, remove, or add visible text or social identity.` : "No additional revision is requested."}
 
 REFRAME RULES
-Preserve the same visual thesis, subjects, logo, products, complete approved content, font character, hierarchy, palette, materials, lighting, depth, texture, and finish from Figure 1. Recompose and scale only as required by the requested canvas and safe placement. Flexible background may be extended or compressed; essential content may not be lost. For a model-limited working canvas whose ratio differs from the delivery ratio, build the complete final composition inside the stated platform-safe band and keep everything outside it background-only.
+Preserve the same visual thesis, subjects, products, complete visible content, social identity, font character, hierarchy, palette, materials, lighting, depth, texture, and finish already present in Figure 1. Recompose and scale only as required by the requested canvas and safe placement. Flexible background may be extended or compressed; essential content may not be lost. For a model-limited working canvas whose ratio differs from the delivery ratio, build the complete final composition inside the stated platform-safe band and keep everything outside it background-only.
 
-Do not add, remove, rewrite, misspell, or duplicate display content. Do not reinterpret the logo, replace the scene, or introduce a new visual idea. Do not introduce platform branding beyond the already-approved social identity row, playback symbols, written color values, metadata, presentation frames, or unrelated objects or claims. Do not add a mockup, crop guide, safe-area overlay, watermark, letterboxing, padding, or blank bands. Return only the full-bleed finished banner.`;
+TEXT FREEZE — Figure 1 is the sole source of truth for every visible glyph, word, icon, and social handle. Treat all typography and social-identity regions as immutable flattened artwork. Preserve their exact pixels, spelling, capitalization, punctuation, font appearance, relative spacing, and grouping. You may move or uniformly scale each complete flattened text lockup only when needed for safe placement. Never erase, regenerate, retype, restyle, paraphrase, correct, reconstruct, crop, add, remove, rewrite, misspell, or duplicate any text or icon. The manifest above is only for validation and must not be rendered a second time.
+
+Never add an @ symbol. Never introduce a logo, logomark, emblem, monogram, badge, or brand symbol that is not already visibly present in Figure 1. Do not replace the scene or introduce a new visual idea. Do not introduce platform branding, playback symbols, written color values, metadata, presentation frames, or unrelated objects or claims. Do not add a mockup, crop guide, safe-area overlay, watermark, letterboxing, padding, or blank bands. Return only the full-bleed finished banner.`;
 }

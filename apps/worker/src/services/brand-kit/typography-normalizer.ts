@@ -5,11 +5,11 @@ export const FALLBACK_TYPOGRAPHY = {
   body: { name: "Roboto", family: "Roboto", weight: "400" },
 };
 
-export function normalizeTypographyOutput(response: unknown) {
+export function tryNormalizeTypographyOutput(response: unknown) {
   const result = brandKitTypographyResponseSchema.safeParse(response);
 
   if (!result.success) {
-    return FALLBACK_TYPOGRAPHY;
+    return null;
   }
 
   const parsed = result.data;
@@ -17,7 +17,7 @@ export function normalizeTypographyOutput(response: unknown) {
   const bodyFamily = parsed.body.family.trim();
 
   if (!headingFamily || !bodyFamily) {
-    return FALLBACK_TYPOGRAPHY;
+    return null;
   }
 
   return {
@@ -32,4 +32,8 @@ export function normalizeTypographyOutput(response: unknown) {
       weight: parsed.body.weight?.trim() || "400",
     },
   };
+}
+
+export function normalizeTypographyOutput(response: unknown) {
+  return tryNormalizeTypographyOutput(response) ?? FALLBACK_TYPOGRAPHY;
 }

@@ -3,7 +3,7 @@ import type { GenerationParams } from "../types";
 
 export class IdeogramAdapter implements ModelAdapter {
   applyParams(input: Record<string, unknown>, params: GenerationParams): void {
-    // For logos, Design is objectively the best base style type
+    // Design is the most appropriate base style for logos and branded artwork.
     input.style_type = "Design";
 
     // The user's selected nativeStyle now maps directly to Ideogram's style_presets

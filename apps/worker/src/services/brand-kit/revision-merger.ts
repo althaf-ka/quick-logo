@@ -4,9 +4,19 @@ import {
 } from "@quicklogo/ai-providers/prompt";
 import { buildBrandKitRefinementRequest } from "@quicklogo/ai-providers/prompt";
 import { resolveTypographyStyle } from "./typography-resolver";
-import { normalizeTypographyOutput } from "./typography-normalizer";
-import { runVisionTypographyRequest } from "./vision-analysis";
-import { extractWorkersAiResponseText } from "../../core/ai-response-parser";
+import {
+  normalizeTypographyOutput,
+  tryNormalizeTypographyOutput,
+} from "./typography-normalizer";
+import {
+  runTypographySelectionRequest,
+  TYPOGRAPHY_MODEL,
+} from "./typography-selection";
+import {
+  describeWorkersAiResponseShape,
+  extractWorkersAiResponseJson,
+  extractWorkersAiResponseText,
+} from "../../core/ai-response-parser";
 import {
   brandKitColorPaletteResponseSchema,
   brandKitGlobalRefinementResponseSchema,
@@ -247,39 +257,45 @@ export async function mergeRevisionResults({
     sectionId === "typography" &&
     refinementPrompt === "__AI_SUGGEST_TYPOGRAPHY__"
   ) {
-    const logoUrl =
-      newMergedJSON.logoVariations?.[0]?.url || currentBrandKit?.customLogoUrl;
+    const typographyStyle = currentBrandKit?.typographyStyle ?? "";
+    const { key: resolvedStyle, hint: styleHint } =
+      resolveTypographyStyle(typographyStyle);
 
-    if (logoUrl) {
-      const typographyStyle = currentBrandKit?.typographyStyle ?? "";
-      const { key: resolvedStyle, hint: styleHint } =
-        resolveTypographyStyle(typographyStyle);
+    const typographyResponse = await runTypographySelectionRequest({
+      ai,
+      brandName:
+        currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+      description:
+        currentBrandKit?.prompt || newMergedJSON.brandName || "Brand identity",
+      typographyStyleHint: styleHint,
+      typographyStyleKey: resolvedStyle,
+      industry: currentBrandKit?.industry,
+      tagline: currentBrandKit?.tagline,
+      targetAudience: currentBrandKit?.targetAudience,
+      selectedVibes: currentBrandKit?.selectedVibes,
+      brandPersonality: currentBrandKit?.brandPersonality,
+    });
 
-      const visionResponse = await runVisionTypographyRequest({
-        ai,
-        brandName:
-          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
-        description:
-          currentBrandKit?.prompt ||
-          newMergedJSON.brandName ||
-          "Brand identity",
-        typographyStyleHint: styleHint,
-        typographyStyleKey: resolvedStyle,
-        logoUrl,
-      });
-
-      if (visionResponse) {
-        const typographyText = extractWorkersAiResponseText(visionResponse);
-        try {
-          const newTypography = normalizeTypographyOutput(
-            JSON.parse(typographyText),
-          );
-          newMergedJSON.typography = newTypography;
-        } catch {
-          logger.warn(
-            "[revision-merger] AI suggest typography parse failed; keeping current",
-          );
-        }
+    if (typographyResponse) {
+      const typographyText = extractWorkersAiResponseText(typographyResponse);
+      const typographyJson = extractWorkersAiResponseJson(typographyResponse);
+      const newTypography = tryNormalizeTypographyOutput(typographyJson);
+      if (newTypography) {
+        newMergedJSON.typography = newTypography;
+        logger.info("Created revised brand typography selection", {
+          model: TYPOGRAPHY_MODEL,
+          headingFont: newTypography.heading.family,
+          bodyFont: newTypography.body.family,
+        });
+      } else {
+        logger.warn(
+          "[revision-merger] AI suggest typography parse failed; keeping current",
+          {
+            reason: typographyJson === null ? "missing-json" : "invalid-schema",
+            responseShape: describeWorkersAiResponseShape(typographyResponse),
+            responseTextLength: typographyText.length,
+          },
+        );
       }
     }
   } else if (sectionId === "global") {

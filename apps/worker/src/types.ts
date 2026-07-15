@@ -6,4 +6,5 @@ export interface Env {
   LEONARDO_API_KEY?: string;
   REPLICATE_API_TOKEN?: string;
   SOCIAL_BANNER_QUALITY?: "low" | "medium" | "high" | "auto";
+  LOG_SOCIAL_ART_DIRECTION?: "true" | "false";
 }

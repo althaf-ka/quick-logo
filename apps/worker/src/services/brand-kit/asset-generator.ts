@@ -1,6 +1,7 @@
 import {
   getModelMapping,
   createProvider,
+  REPLICATE_MODELS,
   SOCIAL_BANNER_MASTER_MODEL_MAPPING,
   SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
 } from "@quicklogo/ai-providers/providers";
@@ -27,6 +28,7 @@ import {
   verifySocialBannerCopy,
   type VerifiedSocialCopy,
 } from "./social-banner-copy";
+import { createSocialMasterArtDirection } from "./social-banner-art-direction";
 import {
   buildSocialReframePrompt,
   buildYoutubeBannerPrompt,
@@ -97,7 +99,7 @@ const FACEBOOK_COVER_SIZE = "820x360"; // 41:18
 const YOUTUBE_ART_SIZE = "2560x1440"; // 16:9
 
 export const SOCIAL_MEDIA_ASSET_COUNT = 5;
-export const SOCIAL_MEDIA_PIPELINE_VERSION = 10;
+export const SOCIAL_MEDIA_PIPELINE_VERSION = 27;
 
 const SOCIAL_ASSET_SPECS: readonly (SocialBannerPromptSpec & {
   targetId: string;
@@ -208,7 +210,6 @@ export function buildSocialMediaAssetList(
 
 interface UploadedGeneratedAsset {
   url: string;
-  imageData: Uint8Array;
 }
 
 async function generateAndUploadResult(
@@ -232,7 +233,14 @@ async function generateAndUploadResult(
     overwrite: true,
     ...(pngBinding && { contentType: "image/png" }),
   });
-  return { url: uploaded.url, imageData };
+  if (pngBinding) {
+    logger.info("Stored generated asset as PNG", {
+      key,
+      sourceFormat: result.format ?? "unknown",
+      outputFormat: "png",
+    });
+  }
+  return { url: uploaded.url };
 }
 
 /**
@@ -378,17 +386,25 @@ export async function generateSocialMediaAssets({
   existingApprovedCopy?: VerifiedSocialCopy;
   productImageUrls?: string[];
 }): Promise<SocialMediaAssetUrls & AssetSectionTally> {
+  if (!brandName.trim()) {
+    throw new PipelineError(
+      "A brand name is required for social media generation",
+      false,
+    );
+  }
+
   logger.info("Starting social media kit generation", {
     brandKitId,
     pipelineVersion: SOCIAL_MEDIA_PIPELINE_VERSION,
-    workflow: "gpt-image-2-master-reference-reframes",
+    workflow:
+      "gemma-4-concept-seed-ideogram-v3-turbo-magic-prompt-text-complete-master-gpt-2-text-frozen-reference-reframes",
     targetItemId: targetItemId ?? null,
   });
 
   const createSocialProvider = (mapping: ModelMapping): AIProvider => {
     if (mapping.provider === "replicate" && !env.REPLICATE_API_TOKEN) {
       throw new PipelineError(
-        "REPLICATE_API_TOKEN is required for GPT Image 2 social assets",
+        "REPLICATE_API_TOKEN is required for social media generation",
         false,
       );
     }
@@ -500,6 +516,18 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
         ).additionalInstructions
       : undefined;
 
+  logger.info("Prepared social master content manifest", {
+    brandKitId,
+    brandNameCharacters: brandName.trim().length,
+    headlineCharacters: approvedCopy.headline.length,
+    callToActionCharacters: approvedCopy.callToAction.length,
+    requestedLogo: brief.includeLogo,
+    attachedLogoReference: false,
+    masterTextRequired: true,
+    socialIdentityIncludedInMaster: normalizedContext.hasSocials,
+    normalizedSocialNetworks: Object.keys(normalizedContext.socials),
+  });
+
   const masterProvider = createSocialProvider(
     SOCIAL_BANNER_MASTER_MODEL_MAPPING,
   );
@@ -512,9 +540,16 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
   if (!youtubeSpec) {
     throw new PipelineError("YouTube banner specification is missing", false);
   }
+  // Ideogram uses these dimensions to derive its supported 16:9 label. The
+  // mapping explicitly leaves resolution as "None" because a resolution preset
+  // would override the requested aspect ratio.
+  const youtubeMasterSpec = {
+    ...youtubeSpec,
+    renderWidth: 2560,
+    renderHeight: 1440,
+  };
 
-  const fitPrompt = (prompt: string) => {
-    const maxLength = 8000;
+  const fitPrompt = (prompt: string, maxLength: number) => {
     const suffix =
       "\n\nPreserve exact approved copy and references. Return only full-bleed finished banner artwork with no frame, watermark, crop guide, padding, or blank band.";
     if (prompt.length <= maxLength) return prompt;
@@ -578,48 +613,49 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
         };
         const defaultProviderOptions =
           mapping.defaultParams.providerOptions || {};
-        return (
-          await generateAndUploadResult(
-            rateLimitedProvider,
-            {
-              ...mapping.defaultParams,
-              backendModel: mapping.backendModel,
-              prompt: fitPrompt(prompt),
-              width: spec.renderWidth,
-              height: spec.renderHeight,
-              providerOptions: {
-                ...defaultProviderOptions,
+        return generateAndUploadResult(
+          rateLimitedProvider,
+          {
+            ...mapping.defaultParams,
+            backendModel: mapping.backendModel,
+            prompt: fitPrompt(prompt, 8000),
+            width: spec.renderWidth,
+            height: spec.renderHeight,
+            providerOptions: {
+              ...defaultProviderOptions,
+              ...(mapping.backendModel === REPLICATE_MODELS.GPT_IMAGE_2 && {
                 quality:
                   env.SOCIAL_BANNER_QUALITY ||
                   defaultProviderOptions.quality ||
                   "low",
-              },
-              ...(referenceImages?.length
-                ? {
-                    referenceImages,
-                    canvasMode: "img2img" as const,
-                  }
-                : { canvasMode: "text2img" as const }),
-              signal,
+              }),
             },
-            storage,
-            `${ASSET_ROOT}/${brandKitId}/${storageKey}`,
+            ...(referenceImages?.length
+              ? {
+                  referenceImages,
+                  canvasMode: "img2img" as const,
+                }
+              : { canvasMode: "text2img" as const }),
             signal,
-            env.IMAGES,
-          )
-        ).url;
+          },
+          storage,
+          `${ASSET_ROOT}/${brandKitId}/${storageKey}`,
+          signal,
+          env.IMAGES,
+        );
       },
       SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
       label,
     );
 
   let masterBannerUrl = usableExistingMaster;
+  let youtubeBannerUrl: string | undefined;
   const isYoutubeRevision =
     selectedSpec?.platform === "youtube" &&
     Boolean(correctedRefinementPrompt?.trim());
   if (!targetItemId || !masterBannerUrl || isYoutubeRevision) {
     if (isYoutubeRevision && masterBannerUrl) {
-      masterBannerUrl = await generateBanner({
+      const revisedMaster = await generateBanner({
         provider: reframeProvider,
         mapping: SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
         spec: youtubeSpec,
@@ -633,37 +669,51 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
           refinementPrompt: correctedRefinementPrompt,
         }),
         referenceImages: [masterBannerUrl],
-        storageKey: youtubeSpec.storageKey,
+        storageKey: "social-youtube-master-base",
         label: "social-media:youtube:refinement",
       });
+      masterBannerUrl = revisedMaster?.url;
     } else {
-      const productReferences = (productImageUrls || []).slice(0, 4);
-      const referenceImages = [
-        ...(brief.includeLogo ? [sourceLogoUrl] : []),
-        ...productReferences,
-      ];
-      const logoFigure = brief.includeLogo ? 1 : undefined;
-      const firstProductFigure = logoFigure ? 2 : 1;
-      masterBannerUrl = await generateBanner({
+      if (brief.includeLogo || productImageUrls?.length) {
+        logger.info(
+          "Ideogram V3 Turbo master does not use content-image references",
+          {
+            brandKitId,
+            requestedLogoReference: brief.includeLogo,
+            requestedProductReferences: productImageUrls?.length || 0,
+          },
+        );
+      }
+      const artDirection = await createSocialMasterArtDirection({
+        ai,
+        brandName,
+        context: normalizedContext,
+        brief,
+        copy: approvedCopy,
+        headingFont,
+        bodyFont,
+        hasLogoReference: false,
+        productReferenceCount: 0,
+        logGeneratedDirection: env.LOG_SOCIAL_ART_DIRECTION === "true",
+      });
+      const generatedMaster = await generateBanner({
         provider: masterProvider,
         mapping: SOCIAL_BANNER_MASTER_MODEL_MAPPING,
-        spec: youtubeSpec,
+        spec: youtubeMasterSpec,
         prompt: buildYoutubeBannerPrompt({
           brandName,
           context: normalizedContext,
-          brief,
           copy: approvedCopy,
+          artDirection,
           headingFont,
           bodyFont,
-          logoFigure,
-          productFigures: productReferences.map(
-            (_, index) => firstProductFigure + index,
-          ),
+          logoFigure: undefined,
+          productFigures: [],
         }),
-        referenceImages,
-        storageKey: youtubeSpec.storageKey,
+        storageKey: "social-youtube-master-base",
         label: "social-media:youtube-master",
       });
+      masterBannerUrl = generatedMaster?.url;
     }
   }
 
@@ -674,12 +724,16 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     );
   }
 
+  if (!targetItemId || selectedSpec?.platform === "youtube") {
+    youtubeBannerUrl = masterBannerUrl;
+  }
+
   if (selectedSpec?.platform === "youtube") {
     return {
-      youtubeBannerUrl: masterBannerUrl,
+      youtubeBannerUrl,
       masterBannerUrl,
       approvedCopy,
-      failed: 0,
+      failed: youtubeBannerUrl ? 0 : 1,
       total: 1,
     };
   }
@@ -694,25 +748,27 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
   for (const spec of specsToReframe) {
     reframeResults.push({
       spec,
-      url: await generateBanner({
-        provider: reframeProvider,
-        mapping: SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
-        spec,
-        prompt: buildSocialReframePrompt({
+      url: (
+        await generateBanner({
+          provider: reframeProvider,
+          mapping: SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
           spec,
-          brandName,
-          context: normalizedContext,
-          copy: approvedCopy,
-          headingFont,
-          bodyFont,
-          refinementPrompt: selectedSpec
-            ? correctedRefinementPrompt
-            : undefined,
-        }),
-        referenceImages: [masterBannerUrl],
-        storageKey: spec.storageKey,
-        label: `social-media:${spec.platform}:reframe`,
-      }),
+          prompt: buildSocialReframePrompt({
+            spec,
+            brandName,
+            context: normalizedContext,
+            copy: approvedCopy,
+            headingFont,
+            bodyFont,
+            refinementPrompt: selectedSpec
+              ? correctedRefinementPrompt
+              : undefined,
+          }),
+          referenceImages: [masterBannerUrl],
+          storageKey: spec.storageKey,
+          label: `social-media:${spec.platform}:reframe`,
+        })
+      )?.url,
     });
   }
 
@@ -720,7 +776,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     ? {}
     : {
         socialProfileUrl: iconOnlyLogoUrl || sourceLogoUrl,
-        youtubeBannerUrl: masterBannerUrl,
+        youtubeBannerUrl,
       };
   for (const result of reframeResults) {
     if (result.url) generated[result.spec.outputKey] = result.url;

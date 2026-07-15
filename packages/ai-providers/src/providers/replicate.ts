@@ -25,8 +25,11 @@ interface AspectRatioEntry {
 }
 
 const ASPECT_RATIOS: readonly AspectRatioEntry[] = [
+  { ratio: 3, label: "3:1" },
   { ratio: 21 / 9, label: "21:9" },
+  { ratio: 2, label: "2:1" },
   { ratio: 16 / 9, label: "16:9" },
+  { ratio: 16 / 10, label: "16:10" },
   { ratio: 3 / 2, label: "3:2" },
   { ratio: 4 / 3, label: "4:3" },
   { ratio: 5 / 4, label: "5:4" },
@@ -34,8 +37,11 @@ const ASPECT_RATIOS: readonly AspectRatioEntry[] = [
   { ratio: 4 / 5, label: "4:5" },
   { ratio: 3 / 4, label: "3:4" },
   { ratio: 2 / 3, label: "2:3" },
+  { ratio: 10 / 16, label: "10:16" },
   { ratio: 9 / 16, label: "9:16" },
+  { ratio: 1 / 2, label: "1:2" },
   { ratio: 9 / 21, label: "9:21" },
+  { ratio: 1 / 3, label: "1:3" },
 ] as const;
 
 export class ReplicateProvider implements AIProvider {
@@ -125,7 +131,7 @@ export class ReplicateProvider implements AIProvider {
     if (prompt.length <= maxLength) return prompt;
 
     const suffix =
-      "\n\nFinal requirements: preserve the approved brand identity and composition; no text, logos, watermarks, UI, frames, or crop guides.";
+      "\n\nFinal requirements: preserve approved display copy and supplied logos exactly; do not invent extra text, marks, UI, frames, watermarks, or crop guides.";
     const available = Math.max(0, maxLength - suffix.length);
     logger.warn("[Replicate] Prompt exceeded model limit; truncating", {
       originalLength: prompt.length,
@@ -308,7 +314,10 @@ export class ReplicateProvider implements AIProvider {
         model: params.backendModel,
         inputKeys: Object.keys(input),
         aspectRatio: input.aspect_ratio,
+        magicPromptOption: input.magic_prompt_option,
+        resolution: input.resolution,
         size: input.size,
+        styleType: input.style_type,
         hasImage: !!(
           params.referenceImage ||
           params.referenceImages?.length ||

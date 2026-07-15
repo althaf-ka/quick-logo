@@ -700,7 +700,9 @@ export function DeliverablesStep({
                               mobile-safe YouTube channel banner, then use that
                               exact artwork as the reference for coordinated X,
                               LinkedIn, and Facebook reframes. Logo inclusion is
-                              optional.
+                              optional. Social platform icons and usernames are
+                              integrated into the master when at least one
+                              social handle is configured in Brand Profile.
                             </p>
                           </div>
                         ) : null}

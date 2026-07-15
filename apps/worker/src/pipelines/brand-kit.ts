@@ -11,14 +11,21 @@ import type {
 } from "@quicklogo/shared";
 import type { Env } from "../types";
 import { normalizeBrandContext } from "@quicklogo/ai-providers/prompt";
-import { extractWorkersAiResponseText } from "../core/ai-response-parser";
+import {
+  describeWorkersAiResponseShape,
+  extractWorkersAiResponseJson,
+  extractWorkersAiResponseText,
+} from "../core/ai-response-parser";
 import { createLogger } from "@quicklogo/server-telemetry";
 import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
 import {
-  normalizeTypographyOutput,
+  tryNormalizeTypographyOutput,
   FALLBACK_TYPOGRAPHY,
 } from "../services/brand-kit/typography-normalizer";
-import { runVisionTypographyRequest } from "../services/brand-kit/vision-analysis";
+import {
+  runTypographySelectionRequest,
+  TYPOGRAPHY_MODEL,
+} from "../services/brand-kit/typography-selection";
 import { mergeRevisionResults } from "../services/brand-kit/revision-merger";
 import {
   generateLogoVariations,
@@ -149,36 +156,52 @@ export class BrandKitPipeline {
       await this.repository.updateProgress(
         brandKitId,
         15,
-        "Analyzing logo and typography",
+        "Selecting brand typography",
       );
 
-      // Step 3: Typography via hybrid vision request
+      // Typography is a core brand-kit decision. Run it independently of the
+      // optional social-media deliverable so every kit gets a font pairing.
       const { key: resolvedStyle, hint: styleHint } =
         resolveTypographyStyle(typographyStyle);
 
-      const typographyResponse = actualLogoUrl
-        ? await runVisionTypographyRequest({
-            ai: this.ai,
-            brandName,
-            description: prompt,
-            typographyStyleHint: styleHint,
-            typographyStyleKey: resolvedStyle,
-            logoUrl: actualLogoUrl,
-          })
-        : Promise.resolve(null);
+      const typographyResponse = await runTypographySelectionRequest({
+        ai: this.ai,
+        brandName,
+        description: prompt,
+        typographyStyleHint: styleHint,
+        typographyStyleKey: resolvedStyle,
+        industry,
+        tagline,
+        targetAudience,
+        selectedVibes,
+        brandPersonality,
+      });
 
       let typographyOutput = FALLBACK_TYPOGRAPHY;
       if (typographyResponse) {
         const typographyText = extractWorkersAiResponseText(typographyResponse);
+        const typographyJson = extractWorkersAiResponseJson(typographyResponse);
+        const normalizedTypography =
+          tryNormalizeTypographyOutput(typographyJson);
 
-        try {
-          typographyOutput = normalizeTypographyOutput(
-            JSON.parse(typographyText),
-          );
-        } catch {
+        if (normalizedTypography) {
+          typographyOutput = normalizedTypography;
+          this.logger.info("Created brand typography selection", {
+            brandKitId,
+            model: TYPOGRAPHY_MODEL,
+            headingFont: normalizedTypography.heading.family,
+            bodyFont: normalizedTypography.body.family,
+          });
+        } else {
           this.logger.warn(
-            "[brand-kit-pipeline] Vision typography parse failed; using fallback",
-            { brandKitId },
+            "[brand-kit-pipeline] Typography response was unusable; using fallback",
+            {
+              brandKitId,
+              reason:
+                typographyJson === null ? "missing-json" : "invalid-schema",
+              responseShape: describeWorkersAiResponseShape(typographyResponse),
+              responseTextLength: typographyText.length,
+            },
           );
         }
       }
