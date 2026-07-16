@@ -32,21 +32,23 @@ function exactCopy(copy: VerifiedSocialCopy): string {
     : "Figure 1 has no approved headline, tagline, or call to action; do not invent one during reframing.";
 }
 
-function mandatoryVisibleCopy(
+function masterVisibleTypography(
   brandName: string,
   copy: VerifiedSocialCopy,
 ): string {
   const exactBrandName = requiredBrandName(brandName);
-  const lines = [
-    `Render the exact brand-name text ${JSON.stringify(exactBrandName)} once as expressive, professionally typeset text—never as a logo or invented symbol.`,
+  const sentences = [
     copy.headline
-      ? `Render the exact headline text ${JSON.stringify(copy.headline)} once as the dominant reading level.`
+      ? `The main headline reads ${JSON.stringify(copy.headline)}.`
+      : `The main title reads ${JSON.stringify(exactBrandName)}.`,
+    copy.headline
+      ? `A smaller brand signature reads ${JSON.stringify(exactBrandName)}.`
       : undefined,
     copy.callToAction
-      ? `Render the exact call-to-action text ${JSON.stringify(copy.callToAction)} once as a clearly legible secondary reading level.`
+      ? `A smaller call to action reads ${JSON.stringify(copy.callToAction)}.`
       : undefined,
-  ].filter((line): line is string => Boolean(line));
-  return `REQUIRED VISIBLE TYPOGRAPHY — the image is incomplete if any listed line is missing:\n${lines.join("\n")}\nPreserve every character exactly. Do not render the instructional phrases around the quoted strings.`;
+  ].filter((sentence): sentence is string => Boolean(sentence));
+  return `${sentences.join(" ")} Show every quoted phrase once, spelled exactly as written.`;
 }
 
 function typographyCopy(headingFont?: string, bodyFont?: string): string {
@@ -72,7 +74,10 @@ function socialIdentityGroups(context: ValidatedBrandContext): Array<{
 }> {
   const grouped = new Map<
     string,
-    Array<keyof ValidatedBrandContext["socials"]>
+    {
+      identity: string;
+      platforms: Array<keyof ValidatedBrandContext["socials"]>;
+    }
   >();
   for (const [platform, rawIdentity] of Object.entries(
     context.socials,
@@ -83,29 +88,27 @@ function socialIdentityGroups(context: ValidatedBrandContext): Array<{
       .replace(/^@+/, "")
       .slice(0, 40);
     if (!identity) continue;
-    const platforms = grouped.get(identity) || [];
-    platforms.push(platform);
-    grouped.set(identity, platforms);
+    const groupKey = identity.toLocaleLowerCase("en-US");
+    const group = grouped.get(groupKey) || { identity, platforms: [] };
+    group.platforms.push(platform);
+    grouped.set(groupKey, group);
   }
-  return [...grouped.entries()].map(([identity, platforms]) => ({
-    identity,
-    platforms,
-  }));
+  return [...grouped.values()];
 }
 
 function masterSocialIdentityCopy(context: ValidatedBrandContext): string {
   const groups = socialIdentityGroups(context);
   if (!groups.length) {
-    return "Do not render social-media icons, usernames, handles, platform names, or a social row.";
+    return "";
   }
 
-  const rows = groups.map(({ identity, platforms }) => {
+  const sentences = groups.map(({ identity, platforms }) => {
     const iconNames = platforms
-      .map((platform) => `${SOCIAL_PLATFORM_LABELS[platform]} icon`)
-      .join(" + ");
-    return `${iconNames}, followed by the exact plain username ${JSON.stringify(identity)}.`;
+      .map((platform) => SOCIAL_PLATFORM_LABELS[platform])
+      .join(", ");
+    return `Place the recognizable ${iconNames} icons together as one compact icon cluster. Immediately after the final icon, write the shared username ${JSON.stringify(identity)} one time. This is one shared handle, not separate icon-and-username pairs.`;
   });
-  return `REQUIRED SOCIAL IDENTITY — integrate this as a small, tasteful supporting element in the same visual language as the master:\n${rows.join("\n")}\nRender recognizable platform icons, but do not print platform names or an @ symbol. Render each quoted username exactly once and do not invent any other handle.`;
+  return `${sentences.join(" ")} Show each quoted username once without an @ symbol or written platform name.`;
 }
 
 function reframeSocialIdentityCopy(context: ValidatedBrandContext): string {
@@ -158,17 +161,20 @@ export function buildYoutubeBannerPrompt({
     .filter(Boolean)
     .join("\n");
 
-  return `Create one visually ambitious, premium, full-bleed 16:9 channel-art master. The composition must be scene-led rather than template-led: use a decisive focal idea, foreground-to-background depth, tactile detail, expressive lighting, purposeful negative space, and a brand-specific visual metaphor. Never resolve this as large text on a flat color field, a split-color poster, a generic gradient layout, or a stack of centered text bands.
+  return `Create one visually ambitious, premium, full-bleed 16:9 channel-art banner.
+
+The visible typography is part of the finished artwork. ${masterVisibleTypography(brandName, copy)} ${masterSocialIdentityCopy(context)} Keep the complete typography group clear and readable in the short center of the banner. Use at most two balanced headline lines at a controlled display scale. Keep the hero scene equally prominent; the headline must not occupy most of the canvas.
+
+${typographyCopy(headingFont, bodyFont)}
+
+The composition is scene-led rather than template-led. Use a decisive focal idea, foreground-to-background depth, tactile detail, expressive lighting, purposeful negative space, and a brand-specific visual metaphor. Never resolve this as large text on a flat color field, a split-color poster, a generic gradient layout, or a stack of centered text bands.
 
 ART DIRECTION — execute this as the dominant visual story:
 
 ${artDirection}
 
-EXACT VISIBLE CONTENT — integrate all applicable items into that scene:
-${mandatoryVisibleCopy(brandName, copy)}
-${masterSocialIdentityCopy(context)}
+BRAND TREATMENT:
 ${masterLogoPolicy(logoFigure)}
-${typographyCopy(headingFont, bodyFont)}
 ${copy.additionalInstructions ? `Apply this corrected user direction as private visual/layout guidance without adding unrelated copy: ${copy.additionalInstructions}` : "No additional revision is requested."}
 ${references}
 

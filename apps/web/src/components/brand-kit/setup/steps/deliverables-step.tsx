@@ -696,13 +696,10 @@ export function DeliverablesStep({
                               </label>
                             </div>
                             <p className="text-muted-foreground/45 text-[10px] leading-relaxed">
-                              We proofread your requested banner text, create a
-                              mobile-safe YouTube channel banner, then use that
-                              exact artwork as the reference for coordinated X,
-                              LinkedIn, and Facebook reframes. Logo inclusion is
-                              optional. Social platform icons and usernames are
-                              integrated into the master when at least one
-                              social handle is configured in Brand Profile.
+                              We’ll proofread your text and create a mobile-safe
+                              YouTube banner with matching social covers. Your
+                              logo and configured social handles can be included
+                              automatically.
                             </p>
                           </div>
                         ) : null}

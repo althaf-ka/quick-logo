@@ -99,7 +99,7 @@ const FACEBOOK_COVER_SIZE = "820x360"; // 41:18
 const YOUTUBE_ART_SIZE = "2560x1440"; // 16:9
 
 export const SOCIAL_MEDIA_ASSET_COUNT = 5;
-export const SOCIAL_MEDIA_PIPELINE_VERSION = 27;
+export const SOCIAL_MEDIA_PIPELINE_VERSION = 33;
 
 const SOCIAL_ASSET_SPECS: readonly (SocialBannerPromptSpec & {
   targetId: string;
@@ -397,7 +397,7 @@ export async function generateSocialMediaAssets({
     brandKitId,
     pipelineVersion: SOCIAL_MEDIA_PIPELINE_VERSION,
     workflow:
-      "gemma-4-concept-seed-ideogram-v3-turbo-magic-prompt-text-complete-master-gpt-2-text-frozen-reference-reframes",
+      "gemma-4-coherent-scene-direction-ideogram-v3-turbo-text-first-master-unified-social-lockup-gpt-2-reframes",
     targetItemId: targetItemId ?? null,
   });
 

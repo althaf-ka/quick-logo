@@ -6,7 +6,6 @@ import {
   eq,
   and,
   sql,
-  systemLogs,
 } from "@quicklogo/db";
 
 export class BrandKitRepository {

@@ -42,16 +42,16 @@ export const SOCIAL_BANNER_MASTER_MODEL_MAPPING: ModelMapping = {
   inputType: "json",
   backendModel: REPLICATE_MODELS.IDEOGRAM_V3,
   capabilities: {
-    nativePromptEnhancement: true,
+    nativePromptEnhancement: false,
     imageToImage: false,
   },
   defaultParams: {
     providerOptions: {
       aspect_ratio: "16:9",
       resolution: "None",
-      // Gemma supplies a concise concept seed; Ideogram expands it into the
-      // production image prompt while exact quoted copy remains explicit.
-      magic_prompt_option: "Auto",
+      // Gemma supplies the complete production art direction. Disable a second
+      // model-side rewrite so exact copy and safe-zone constraints stay intact.
+      magic_prompt_option: "Off",
       // Let the art direction choose photographic, illustrative, or material
       // language instead of forcing Ideogram's flat poster-oriented Design mode.
       style_type: "None",
