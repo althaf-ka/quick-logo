@@ -25,6 +25,8 @@ export interface GenerationResult {
   format?: "png" | "jpeg" | "webp" | "jpg";
   error?: string;
   isRetryable?: boolean;
+  /** True only when the provider confirms no prediction was created. */
+  isSafeToRetry?: boolean;
   retryAfter?: number;
   metadata?: {
     model: string;

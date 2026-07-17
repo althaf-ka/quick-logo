@@ -8,6 +8,16 @@ import {
   sql,
 } from "@quicklogo/db";
 
+interface SocialMasterCheckpoint {
+  url: string;
+  approvedCopy: {
+    headline: string;
+    callToAction: string;
+    additionalInstructions: string;
+  };
+  pipelineVersion: number;
+}
+
 export class BrandKitRepository {
   constructor(private db: Database) {}
 
@@ -56,6 +66,89 @@ export class BrandKitRepository {
         eq(brandKitRevisions.brandKitId, brandKitId),
         eq(brandKitRevisions.isActive, true),
       ),
+    });
+  }
+
+  async getSocialMasterCheckpoint(
+    brandKitId: string,
+  ): Promise<SocialMasterCheckpoint | undefined> {
+    const revision = await this.db.query.brandKitRevisions.findFirst({
+      where: and(
+        eq(brandKitRevisions.brandKitId, brandKitId),
+        eq(brandKitRevisions.triggerType, "initial_generation"),
+      ),
+    });
+    const socialMediaKit = (
+      revision?.results as
+        | {
+            socialMediaKit?: {
+              masterBackgroundUrl?: unknown;
+              approvedCopy?: {
+                headline?: unknown;
+                callToAction?: unknown;
+                additionalInstructions?: unknown;
+              };
+              version?: unknown;
+            };
+          }
+        | undefined
+    )?.socialMediaKit;
+    const copy = socialMediaKit?.approvedCopy;
+    if (
+      typeof socialMediaKit?.masterBackgroundUrl !== "string" ||
+      typeof socialMediaKit.version !== "number" ||
+      typeof copy?.headline !== "string" ||
+      typeof copy.callToAction !== "string"
+    ) {
+      return undefined;
+    }
+    return {
+      url: socialMediaKit.masterBackgroundUrl,
+      approvedCopy: {
+        headline: copy.headline,
+        callToAction: copy.callToAction,
+        additionalInstructions:
+          typeof copy.additionalInstructions === "string"
+            ? copy.additionalInstructions
+            : "",
+      },
+      pipelineVersion: socialMediaKit.version,
+    };
+  }
+
+  async saveSocialMasterCheckpoint(
+    brandKitId: string,
+    checkpoint: SocialMasterCheckpoint,
+  ): Promise<void> {
+    const existing = await this.db.query.brandKitRevisions.findFirst({
+      where: and(
+        eq(brandKitRevisions.brandKitId, brandKitId),
+        eq(brandKitRevisions.triggerType, "initial_generation"),
+      ),
+    });
+    const results = {
+      socialMediaKit: {
+        version: checkpoint.pipelineVersion,
+        masterBackgroundUrl: checkpoint.url,
+        approvedCopy: checkpoint.approvedCopy,
+      },
+    };
+
+    // This inactive partial revision is the retry checkpoint; finalization
+    // overwrites and activates the same initial_generation revision.
+    if (existing) {
+      await this.db
+        .update(brandKitRevisions)
+        .set({ isActive: false, results })
+        .where(eq(brandKitRevisions.id, existing.id));
+      return;
+    }
+    await this.db.insert(brandKitRevisions).values({
+      brandKitId,
+      isActive: false,
+      revisionNumber: 1,
+      triggerType: "initial_generation",
+      results,
     });
   }
 

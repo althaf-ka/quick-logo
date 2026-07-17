@@ -399,6 +399,10 @@ export class ReplicateProvider implements AIProvider {
             ? error.message
             : "Replicate generation failed",
         isRetryable,
+        // A 429 rejects prediction creation before model work starts. Network
+        // errors and 5xx responses are ambiguous and must not be treated as
+        // duplicate-safe, even when they may be transient.
+        isSafeToRetry: status === 429,
         retryAfter,
         metadata: { model: params.backendModel, duration: Date.now() - start },
       };

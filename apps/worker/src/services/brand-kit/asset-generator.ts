@@ -22,13 +22,15 @@ import type { Env } from "../../types";
 import {
   runAssetOrNull,
   withRetryableGeneration,
+  type GenerationRetryOptions,
 } from "../../core/pipeline-helpers";
 import { PipelineError } from "../../core/errors";
 import {
+  createSocialBannerCopyFallback,
   verifySocialBannerCopy,
   type VerifiedSocialCopy,
 } from "./social-banner-copy";
-import { createSocialMasterArtDirection } from "./social-banner-art-direction";
+import { createSocialMasterProductionPlan } from "./social-banner-art-direction";
 import {
   buildSocialReframePrompt,
   buildYoutubeBannerPrompt,
@@ -51,7 +53,7 @@ const logger = createLogger("worker");
 const LOGO_VARIATION_TIMEOUT_MS = 120000;
 const SOCIAL_MEDIA_GENERATION_TIMEOUT_MS = 180000;
 // Keep expensive image calls serialized and leave a small request-scoped gap
-// between attempts so retries and platform reframes cannot create a burst.
+// between attempts so retries and explicit refinements cannot create a burst.
 const SOCIAL_PREDICTION_MIN_INTERVAL_MS = 12_500;
 const ASSET_ROOT = "quick-logo/brand-kits";
 
@@ -60,6 +62,50 @@ const compactPromptValue = (
   fallback: string,
   maxLength: number,
 ) => (value?.trim() || fallback).slice(0, maxLength);
+
+function imageStream(data: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+}
+
+function parseAssetDimensions(dimensions: string): {
+  width: number;
+  height: number;
+} {
+  const match = dimensions.match(/^(\d+)x(\d+)$/);
+  if (!match) throw new Error(`Invalid social asset dimensions: ${dimensions}`);
+  return {
+    width: Number.parseInt(match[1], 10),
+    height: Number.parseInt(match[2], 10),
+  };
+}
+
+function centeredAspectTrim(
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+): { top?: number; right?: number; bottom?: number; left?: number } | null {
+  const sourceRatio = sourceWidth / sourceHeight;
+  const targetRatio = targetWidth / targetHeight;
+  if (Math.abs(sourceRatio - targetRatio) < 0.001) return null;
+
+  if (sourceRatio > targetRatio) {
+    const cropWidth = Math.max(1, Math.round(sourceHeight * targetRatio));
+    const excess = Math.max(0, sourceWidth - cropWidth);
+    const left = Math.floor(excess / 2);
+    return { left, right: excess - left };
+  }
+
+  const cropHeight = Math.max(1, Math.round(sourceWidth / targetRatio));
+  const excess = Math.max(0, sourceHeight - cropHeight);
+  const top = Math.floor(excess / 2);
+  return { top, bottom: excess - top };
+}
 
 /**
  * Per-section outcome. `failed`/`total` drive partial-refund accounting in the
@@ -75,7 +121,7 @@ export interface SocialMediaAsset {
   type: string;
   dimensions: string;
   url: string;
-  /** YouTube master artwork used as the reference for coordinated reframes. */
+  /** Source artwork used for coordinated platform exports. */
   masterUrl?: string;
 }
 
@@ -99,7 +145,7 @@ const FACEBOOK_COVER_SIZE = "820x360"; // 41:18
 const YOUTUBE_ART_SIZE = "2560x1440"; // 16:9
 
 export const SOCIAL_MEDIA_ASSET_COUNT = 5;
-export const SOCIAL_MEDIA_PIPELINE_VERSION = 33;
+export const SOCIAL_MEDIA_PIPELINE_VERSION = 37;
 
 const SOCIAL_ASSET_SPECS: readonly (SocialBannerPromptSpec & {
   targetId: string;
@@ -219,8 +265,13 @@ async function generateAndUploadResult(
   key: string,
   signal?: AbortSignal,
   pngBinding?: ImagesBinding,
+  retryOptions?: GenerationRetryOptions,
 ): Promise<UploadedGeneratedAsset> {
-  const result = await withRetryableGeneration(provider, { ...params, signal });
+  const result = await withRetryableGeneration(
+    provider,
+    { ...params, signal },
+    retryOptions,
+  );
   if (!result.success || !result.imageData) {
     throw new Error(result.error ?? "Asset generation failed");
   }
@@ -367,6 +418,7 @@ export async function generateSocialMediaAssets({
   existingMasterBannerUrl,
   existingApprovedCopy,
   productImageUrls,
+  onMasterGenerated,
 }: {
   ai: Ai;
   env: Env;
@@ -385,6 +437,10 @@ export async function generateSocialMediaAssets({
   existingMasterBannerUrl?: string;
   existingApprovedCopy?: VerifiedSocialCopy;
   productImageUrls?: string[];
+  onMasterGenerated?: (
+    url: string,
+    approvedCopy: VerifiedSocialCopy,
+  ) => Promise<void>;
 }): Promise<SocialMediaAssetUrls & AssetSectionTally> {
   if (!brandName.trim()) {
     throw new PipelineError(
@@ -397,7 +453,7 @@ export async function generateSocialMediaAssets({
     brandKitId,
     pipelineVersion: SOCIAL_MEDIA_PIPELINE_VERSION,
     workflow:
-      "gemma-4-coherent-scene-direction-ideogram-v3-turbo-text-first-master-unified-social-lockup-gpt-2-reframes",
+      "gemma-4-restrained-creative-plan-seedream-5-pro-1k-master-explicit-center-crop-exports",
     targetItemId: targetItemId ?? null,
   });
 
@@ -478,7 +534,13 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     existingMasterBannerUrl && !existingMasterBannerUrl.includes("placehold.co")
       ? existingMasterBannerUrl
       : undefined;
-  const approvedCopy =
+  if (targetItemId && !usableExistingMaster) {
+    throw new PipelineError(
+      "Cannot refine this social asset because its saved master banner is unavailable",
+      false,
+    );
+  }
+  let approvedCopy =
     existingApprovedCopy &&
     typeof existingApprovedCopy.headline === "string" &&
     typeof existingApprovedCopy.callToAction === "string"
@@ -490,12 +552,11 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
               ? existingApprovedCopy.additionalInstructions
               : "",
         }
-      : await verifySocialBannerCopy({
-          ai,
+      : createSocialBannerCopyFallback(
           brief,
-          context: normalizedContext,
-          refinementPrompt: targetItemId ? undefined : refinementPrompt,
-        });
+          normalizedContext,
+          targetItemId ? undefined : refinementPrompt,
+        );
   const correctedRefinementPrompt =
     targetItemId && refinementPrompt?.trim()
       ? (
@@ -516,18 +577,6 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
         ).additionalInstructions
       : undefined;
 
-  logger.info("Prepared social master content manifest", {
-    brandKitId,
-    brandNameCharacters: brandName.trim().length,
-    headlineCharacters: approvedCopy.headline.length,
-    callToActionCharacters: approvedCopy.callToAction.length,
-    requestedLogo: brief.includeLogo,
-    attachedLogoReference: false,
-    masterTextRequired: true,
-    socialIdentityIncludedInMaster: normalizedContext.hasSocials,
-    normalizedSocialNetworks: Object.keys(normalizedContext.socials),
-  });
-
   const masterProvider = createSocialProvider(
     SOCIAL_BANNER_MASTER_MODEL_MAPPING,
   );
@@ -540,9 +589,8 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
   if (!youtubeSpec) {
     throw new PipelineError("YouTube banner specification is missing", false);
   }
-  // Ideogram uses these dimensions to derive its supported 16:9 label. The
-  // mapping explicitly leaves resolution as "None" because a resolution preset
-  // would override the requested aspect ratio.
+  // These dimensions derive Seedream's native 16:9 label. The model controls
+  // the physical 1K canvas; exact platform dimensions are exported afterward.
   const youtubeMasterSpec = {
     ...youtubeSpec,
     renderWidth: 2560,
@@ -557,7 +605,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     // Keep both the brief/copy at the front and the hard negative constraints
     // at the end. A plain tail truncation drops the rules that prevent models
     // from printing metadata or adding device mockups.
-    const tailLength = 1500;
+    const tailLength = maxLength <= 4000 ? 1000 : 1500;
     const separator =
       "\n\n[Long non-display context condensed; retain the approved copy and all final constraints.]\n\n";
     const headLength =
@@ -591,6 +639,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     referenceImages,
     storageKey,
     label,
+    retryOptions,
   }: {
     provider: AIProvider;
     mapping: ModelMapping;
@@ -599,6 +648,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     referenceImages?: string[];
     storageKey: string;
     label: string;
+    retryOptions?: GenerationRetryOptions;
   }) =>
     runAssetOrNull(
       async (signal) => {
@@ -618,7 +668,12 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
           {
             ...mapping.defaultParams,
             backendModel: mapping.backendModel,
-            prompt: fitPrompt(prompt, 8000),
+            prompt: fitPrompt(
+              prompt,
+              mapping.backendModel === REPLICATE_MODELS.SEEDREAM_5_PRO
+                ? 4000
+                : 8000,
+            ),
             width: spec.renderWidth,
             height: spec.renderHeight,
             providerOptions: {
@@ -642,6 +697,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
           `${ASSET_ROOT}/${brandKitId}/${storageKey}`,
           signal,
           env.IMAGES,
+          retryOptions,
         );
       },
       SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
@@ -649,126 +705,202 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     );
 
   let masterBannerUrl = usableExistingMaster;
-  let youtubeBannerUrl: string | undefined;
-  const isYoutubeRevision =
-    selectedSpec?.platform === "youtube" &&
-    Boolean(correctedRefinementPrompt?.trim());
-  if (!targetItemId || !masterBannerUrl || isYoutubeRevision) {
-    if (isYoutubeRevision && masterBannerUrl) {
-      const revisedMaster = await generateBanner({
-        provider: reframeProvider,
-        mapping: SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
-        spec: youtubeSpec,
-        prompt: buildSocialReframePrompt({
-          spec: youtubeSpec,
-          brandName,
-          context: normalizedContext,
-          copy: approvedCopy,
-          headingFont,
-          bodyFont,
-          refinementPrompt: correctedRefinementPrompt,
-        }),
-        referenceImages: [masterBannerUrl],
-        storageKey: "social-youtube-master-base",
-        label: "social-media:youtube:refinement",
-      });
-      masterBannerUrl = revisedMaster?.url;
-    } else {
-      if (brief.includeLogo || productImageUrls?.length) {
-        logger.info(
-          "Ideogram V3 Turbo master does not use content-image references",
-          {
-            brandKitId,
-            requestedLogoReference: brief.includeLogo,
-            requestedProductReferences: productImageUrls?.length || 0,
-          },
-        );
-      }
-      const artDirection = await createSocialMasterArtDirection({
-        ai,
+  const shouldGenerateMaster =
+    !masterBannerUrl || (!targetItemId && Boolean(refinementPrompt?.trim()));
+  if (shouldGenerateMaster) {
+    const logoReferenceUrl = brief.includeLogo ? sourceLogoUrl : undefined;
+    const reservedReferenceSlots =
+      (usableExistingMaster ? 1 : 0) + (logoReferenceUrl ? 1 : 0);
+    const productReferenceUrls = (productImageUrls || []).slice(
+      0,
+      10 - reservedReferenceSlots,
+    );
+    const masterReferenceImages = [
+      ...(usableExistingMaster ? [usableExistingMaster] : []),
+      ...(logoReferenceUrl ? [logoReferenceUrl] : []),
+      ...productReferenceUrls,
+    ];
+    const logoFigure = logoReferenceUrl
+      ? usableExistingMaster
+        ? 2
+        : 1
+      : undefined;
+    const productFigures = productReferenceUrls.map(
+      (_url, index) =>
+        index + (usableExistingMaster ? 2 : 1) + (logoReferenceUrl ? 1 : 0),
+    );
+    const productionPlan = await createSocialMasterProductionPlan({
+      ai,
+      brandName,
+      context: normalizedContext,
+      brief,
+      copy: approvedCopy,
+      headingFont,
+      bodyFont,
+      hasLogoReference: Boolean(logoReferenceUrl),
+      productReferenceCount: productReferenceUrls.length,
+      logGeneratedDirection: env.LOG_SOCIAL_ART_DIRECTION === "true",
+    });
+    approvedCopy = productionPlan.copy;
+    const generatedMaster = await generateBanner({
+      provider: masterProvider,
+      mapping: SOCIAL_BANNER_MASTER_MODEL_MAPPING,
+      spec: youtubeMasterSpec,
+      prompt: buildYoutubeBannerPrompt({
         brandName,
         context: normalizedContext,
-        brief,
         copy: approvedCopy,
+        artDirection: productionPlan.artDirection,
         headingFont,
         bodyFont,
-        hasLogoReference: false,
-        productReferenceCount: 0,
-        logGeneratedDirection: env.LOG_SOCIAL_ART_DIRECTION === "true",
-      });
-      const generatedMaster = await generateBanner({
-        provider: masterProvider,
-        mapping: SOCIAL_BANNER_MASTER_MODEL_MAPPING,
-        spec: youtubeMasterSpec,
-        prompt: buildYoutubeBannerPrompt({
-          brandName,
-          context: normalizedContext,
-          copy: approvedCopy,
-          artDirection,
-          headingFont,
-          bodyFont,
-          logoFigure: undefined,
-          productFigures: [],
-        }),
-        storageKey: "social-youtube-master-base",
-        label: "social-media:youtube-master",
-      });
-      masterBannerUrl = generatedMaster?.url;
+        logoFigure,
+        productFigures,
+      }),
+      referenceImages: masterReferenceImages,
+      storageKey: "social-youtube-master-base",
+      label: "social-media:master",
+      // Retry once only when Replicate confirms prediction creation was
+      // rejected (for example, a 429). Ambiguous failures never retry.
+      retryOptions: { maxAttempts: 2, policy: "safe-only" },
+    });
+    masterBannerUrl = generatedMaster?.url;
+    if (masterBannerUrl && onMasterGenerated) {
+      await onMasterGenerated(masterBannerUrl, approvedCopy);
     }
   }
+
+  logger.info("Prepared social master content manifest", {
+    brandKitId,
+    brandNameCharacters: brandName.trim().length,
+    headlineCharacters: approvedCopy.headline.length,
+    callToActionCharacters: approvedCopy.callToAction.length,
+    requestedLogo: brief.includeLogo,
+    attachedLogoReference: brief.includeLogo && Boolean(sourceLogoUrl),
+    masterTextRequired: true,
+    socialIdentityIncludedInMaster: normalizedContext.hasSocials,
+    normalizedSocialNetworks: Object.keys(normalizedContext.socials),
+  });
 
   if (!masterBannerUrl) {
     throw new PipelineError(
       "Social media kit incomplete: YouTube master generation failed",
+      false,
+    );
+  }
+
+  let exportSourceUrl = masterBannerUrl;
+  if (selectedSpec && correctedRefinementPrompt?.trim()) {
+    const revisedSource = await generateBanner({
+      provider: reframeProvider,
+      mapping: SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
+      spec: selectedSpec,
+      prompt: buildSocialReframePrompt({
+        spec: selectedSpec,
+        brandName,
+        context: normalizedContext,
+        copy: approvedCopy,
+        headingFont,
+        bodyFont,
+        refinementPrompt: correctedRefinementPrompt,
+      }),
+      referenceImages: [masterBannerUrl],
+      storageKey: `${selectedSpec.storageKey}-refined-source`,
+      label: `social-media:${selectedSpec.platform}:refinement`,
+    });
+    if (!revisedSource?.url) {
+      return { masterBannerUrl, approvedCopy, failed: 1, total: 1 };
+    }
+    exportSourceUrl = revisedSource.url;
+  }
+
+  const sourceImageData = await runAssetOrNull(
+    async (signal) => {
+      const response = await fetch(exportSourceUrl, { signal });
+      if (!response.ok) {
+        throw new Error(`Failed to download social master: ${response.status}`);
+      }
+      return new Uint8Array(await response.arrayBuffer());
+    },
+    SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+    "social-media:master-download",
+  );
+  if (!sourceImageData) {
+    throw new PipelineError(
+      "Social media kit incomplete: master download failed",
+      true,
+    );
+  }
+  const sourceInfo = await env.IMAGES.info(imageStream(sourceImageData));
+  if (!("width" in sourceInfo) || !sourceInfo.width || !sourceInfo.height) {
+    throw new PipelineError(
+      "Social media kit incomplete: master dimensions are unavailable",
       true,
     );
   }
 
-  if (!targetItemId || selectedSpec?.platform === "youtube") {
-    youtubeBannerUrl = masterBannerUrl;
-  }
-
-  if (selectedSpec?.platform === "youtube") {
-    return {
-      youtubeBannerUrl,
-      masterBannerUrl,
-      approvedCopy,
-      failed: youtubeBannerUrl ? 0 : 1,
-      total: 1,
-    };
-  }
-
-  const specsToReframe = selectedSpec
-    ? [selectedSpec]
-    : SOCIAL_ASSET_SPECS.filter((spec) => spec.platform !== "youtube");
-  const reframeResults: {
+  const specsToExport = selectedSpec ? [selectedSpec] : SOCIAL_ASSET_SPECS;
+  const exportResults: {
     spec: (typeof SOCIAL_ASSET_SPECS)[number];
     url: string | undefined;
   }[] = [];
-  for (const spec of specsToReframe) {
-    reframeResults.push({
+  for (const spec of specsToExport) {
+    const { width, height } = parseAssetDimensions(spec.dimensions);
+    exportResults.push({
       spec,
-      url: (
-        await generateBanner({
-          provider: reframeProvider,
-          mapping: SOCIAL_BANNER_REFRAME_MODEL_MAPPING,
-          spec,
-          prompt: buildSocialReframePrompt({
-            spec,
-            brandName,
-            context: normalizedContext,
-            copy: approvedCopy,
-            headingFont,
-            bodyFont,
-            refinementPrompt: selectedSpec
-              ? correctedRefinementPrompt
-              : undefined,
-          }),
-          referenceImages: [masterBannerUrl],
-          storageKey: spec.storageKey,
-          label: `social-media:${spec.platform}:reframe`,
-        })
-      )?.url,
+      url: await runAssetOrNull(
+        async () => {
+          const trim = centeredAspectTrim(
+            sourceInfo.width,
+            sourceInfo.height,
+            width,
+            height,
+          );
+          let transformer = env.IMAGES.input(imageStream(sourceImageData));
+          if (trim) {
+            transformer = transformer.transform({ trim });
+          }
+          const transformed = await transformer
+            // The source is already center-cropped to the delivery ratio, so
+            // this resize cannot introduce padding or letterboxing.
+            .transform({ width, height, fit: "squeeze" })
+            .output({ format: "image/png" });
+          const response = transformed.response();
+          if (!response.ok) {
+            throw new Error(
+              `Social banner export failed with status ${response.status}`,
+            );
+          }
+          const imageData = new Uint8Array(await response.arrayBuffer());
+          const info = await env.IMAGES.info(imageStream(imageData));
+          if (
+            !("width" in info) ||
+            info.width !== width ||
+            info.height !== height
+          ) {
+            throw new Error(
+              `Social banner export dimensions were not ${width}x${height}`,
+            );
+          }
+          const uploaded = await storage.upload(
+            `${ASSET_ROOT}/${brandKitId}/${spec.storageKey}.png`,
+            imageData,
+            { overwrite: true, contentType: "image/png" },
+          );
+          logger.info("Created exact social banner export", {
+            brandKitId,
+            platform: spec.platform,
+            width,
+            height,
+            sourceWidth: sourceInfo.width,
+            sourceHeight: sourceInfo.height,
+            trim,
+            source: selectedSpec ? "selected-master" : "canonical-master",
+          });
+          return uploaded.url;
+        },
+        SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
+        `social-media:${spec.platform}:export`,
+      ),
     });
   }
 
@@ -776,19 +908,25 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     ? {}
     : {
         socialProfileUrl: iconOnlyLogoUrl || sourceLogoUrl,
-        youtubeBannerUrl,
       };
-  for (const result of reframeResults) {
+  for (const result of exportResults) {
     if (result.url) generated[result.spec.outputKey] = result.url;
   }
 
-  const failedReframes = reframeResults.filter((result) => !result.url).length;
+  if (
+    generated.youtubeBannerUrl &&
+    (!targetItemId || selectedSpec?.platform === "youtube")
+  ) {
+    masterBannerUrl = generated.youtubeBannerUrl;
+  }
+
+  const failedExports = exportResults.filter((result) => !result.url).length;
   const failedProfile = targetItemId || generated.socialProfileUrl ? 0 : 1;
   return {
     ...generated,
     masterBannerUrl,
     approvedCopy,
-    failed: failedReframes + failedProfile,
+    failed: failedExports + failedProfile,
     total: targetItemId ? 1 : SOCIAL_MEDIA_ASSET_COUNT,
   };
 }

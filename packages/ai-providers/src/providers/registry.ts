@@ -36,30 +36,29 @@ export interface ModelMapping {
   };
 }
 
-/** Ideogram V3 Turbo creates the canonical text-complete YouTube master. */
+/** Seedream 5 Pro creates the canonical text-complete 16:9 master. */
 export const SOCIAL_BANNER_MASTER_MODEL_MAPPING: ModelMapping = {
   provider: "replicate",
   inputType: "json",
-  backendModel: REPLICATE_MODELS.IDEOGRAM_V3,
+  backendModel: REPLICATE_MODELS.SEEDREAM_5_PRO,
   capabilities: {
-    nativePromptEnhancement: false,
-    imageToImage: false,
+    nativePromptEnhancement: true,
+    imageToImage: true,
+    editingStrategy: "remix-image-array",
+    promptTemplate: {
+      figureNaming: "figure-number",
+    },
   },
   defaultParams: {
     providerOptions: {
+      size: "1K",
       aspect_ratio: "16:9",
-      resolution: "None",
-      // Gemma supplies the complete production art direction. Disable a second
-      // model-side rewrite so exact copy and safe-zone constraints stay intact.
-      magic_prompt_option: "Off",
-      // Let the art direction choose photographic, illustrative, or material
-      // language instead of forcing Ideogram's flat poster-oriented Design mode.
-      style_type: "None",
+      output_format: "png",
     },
   },
 };
 
-/** Replicate-hosted GPT Image 2 reframes the master for every platform. */
+/** GPT Image 2 remains available for explicit profile/banner refinements. */
 export const SOCIAL_BANNER_REFRAME_MODEL_MAPPING: ModelMapping = {
   provider: "replicate",
   inputType: "json",

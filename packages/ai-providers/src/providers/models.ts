@@ -8,6 +8,7 @@ export const REPLICATE_MODELS = {
   SEEDREAM_4: "bytedance/seedream-4",
   SEEDREAM_4_5: "bytedance/seedream-4.5",
   SEEDREAM_5_LITE: "bytedance/seedream-5-lite",
+  SEEDREAM_5_PRO: "bytedance/seedream-5-pro",
   GPT_IMAGE_2: "openai/gpt-image-2",
 } as const;
 
@@ -110,6 +111,25 @@ export const MODEL_CAPABILITIES: Readonly<Record<string, ModelCapability>> = {
     defaultOutputFormat: "",
   },
   [REPLICATE_MODELS.SEEDREAM_5_LITE]: {
+    aspectRatio: true,
+    editingStrategy: {
+      type: "remix-image-array",
+      imageField: "image_input",
+    },
+    defaultOutputFormat: "png",
+    supportedAspectRatios: [
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16",
+      "3:2",
+      "2:3",
+      "21:9",
+    ],
+    maxPromptLength: 4000,
+  },
+  [REPLICATE_MODELS.SEEDREAM_5_PRO]: {
     aspectRatio: true,
     editingStrategy: {
       type: "remix-image-array",

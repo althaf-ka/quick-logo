@@ -16,6 +16,7 @@ import {
   extractWorkersAiResponseJson,
   extractWorkersAiResponseText,
 } from "../core/ai-response-parser";
+import { withRetry } from "../core/pipeline-helpers";
 import { createLogger } from "@quicklogo/server-telemetry";
 import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
 import {
@@ -103,6 +104,9 @@ export class BrandKitPipeline {
       });
       return;
     }
+    const socialMasterCheckpoint = deliverables?.socialMedia
+      ? await this.repository.getSocialMasterCheckpoint(brandKitId)
+      : undefined;
 
     // Accumulates per-section refunds for assets that fell back (issue #3).
     let refundCredits = 0;
@@ -400,6 +404,33 @@ export class BrandKitPipeline {
               context: brandAssetContext,
               socialMediaBrief,
               productImageUrls,
+              existingMasterBannerUrl: socialMasterCheckpoint?.url,
+              existingApprovedCopy: socialMasterCheckpoint?.approvedCopy,
+              onMasterGenerated: async (url, approvedCopy) => {
+                try {
+                  await withRetry(() =>
+                    this.repository.saveSocialMasterCheckpoint(brandKitId, {
+                      url,
+                      approvedCopy,
+                      pipelineVersion: SOCIAL_MEDIA_PIPELINE_VERSION,
+                    }),
+                  );
+                } catch (error) {
+                  this.logger.error(
+                    "Failed to save social master checkpoint",
+                    error,
+                    { brandKitId },
+                  );
+                  throw new PipelineError(
+                    "The social master was generated but could not be saved safely",
+                    false,
+                  );
+                }
+                this.logger.info("Saved social master checkpoint", {
+                  brandKitId,
+                  pipelineVersion: SOCIAL_MEDIA_PIPELINE_VERSION,
+                });
+              },
             })
           : null;
 

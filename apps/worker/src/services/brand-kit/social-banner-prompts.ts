@@ -161,26 +161,24 @@ export function buildYoutubeBannerPrompt({
     .filter(Boolean)
     .join("\n");
 
-  return `Create one visually ambitious, premium, full-bleed 16:9 channel-art banner.
+  return `Create one distinctive, premium, full-bleed 16:9 channel-art banner with commissioned-campaign taste and restraint.
 
-The visible typography is part of the finished artwork. ${masterVisibleTypography(brandName, copy)} ${masterSocialIdentityCopy(context)} Keep the complete typography group clear and readable in the short center of the banner. Use at most two balanced headline lines at a controlled display scale. Keep the hero scene equally prominent; the headline must not occupy most of the canvas.
-
+DISPLAY CONTENT — ${masterVisibleTypography(brandName, copy)} ${masterSocialIdentityCopy(context)} Use at most two balanced headline lines. Keep the brand signature, call to action, and social identity as one compact supporting lockup.
 ${typographyCopy(headingFont, bodyFont)}
 
-The composition is scene-led rather than template-led. Use a decisive focal idea, foreground-to-background depth, tactile detail, expressive lighting, purposeful negative space, and a brand-specific visual metaphor. Never resolve this as large text on a flat color field, a split-color poster, a generic gradient layout, or a stack of centered text bands.
+CREATIVE STANDARD — build one ownable, category-specific visual metaphor with a decisive hero action or object, an asymmetric editorial layout, tactile depth, motivated light, and meaningful calm space. Use no more than three purposeful supporting elements. Avoid a centered person buried in radial debris, confetti, floating objects, particle effects, or a decorative creative explosion. Typography must counterbalance the scene in clear negative space—not sit as oversized white text over the focal subject.
 
-ART DIRECTION — execute this as the dominant visual story:
-
+ART DIRECTION
 ${artDirection}
 
-BRAND TREATMENT:
+INPUT POLICY
 ${masterLogoPolicy(logoFigure)}
-${copy.additionalInstructions ? `Apply this corrected user direction as private visual/layout guidance without adding unrelated copy: ${copy.additionalInstructions}` : "No additional revision is requested."}
+${copy.additionalInstructions ? `Apply this corrected private visual direction without turning it into visible copy: ${copy.additionalInstructions.slice(0, 400)}` : "No additional revision is requested."}
 ${references}
 
-COMPOSITION — keep every written string, social identity, face, and essential product detail inside the short centered mobile-safe area occupying about 60% of the width and 29% of the height. Use expressive scale, rhythm, contrast, and spatial interaction with the focal scene rather than a generic centered stack. The hero scene and nonessential visual energy may extend across the full canvas; the outer side fields remain meaningful background extension without critical content.
+SAFE COMPOSITION — keep every written string, social identity, face, and essential product detail inside the short centered mobile-safe area: approximately 60% of canvas width and 29% of canvas height. Keep the focal subject and typography separately readable. Extend only nonessential environment, material, atmosphere, and light through the outer sides so centered crops remain complete.
 
-OUTPUT CONTRACT — render only one full-bleed finished artwork. The only visible letters or words permitted are the exact quoted brand name, approved headline, approved call to action, and approved usernames above. Do not add decorative microcopy, body copy, captions, lorem ipsum, fake writing, URLs, platform names, or an @ symbol. Exclude device screens, interfaces, mockups, presentation boards, frames, watermarks, crop guides, padding, and blank bands.`;
+OUTPUT — return only finished full-bleed artwork. Permit only the exact quoted brand name, headline, call to action, and usernames specified above. Add no other letters, fake writing, URLs, platform names, @ symbol, invented logo, interface, mockup, frame, watermark, guide, padding, blank band, or letterboxing.`;
 }
 
 export function buildSocialReframePrompt({

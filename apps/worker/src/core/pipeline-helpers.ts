@@ -11,6 +11,12 @@ import type {
 const logger = createLogger("worker");
 const RETRY_AFTER_SAFETY_BUFFER_MS = 1500;
 
+export interface GenerationRetryOptions {
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  policy?: "standard" | "safe-only";
+}
+
 export async function withRetry<T>(
   operation: () => Promise<T>,
   maxRetries = 3,
@@ -55,11 +61,15 @@ export async function withTimeout<T>(
 export async function withRetryableGeneration(
   provider: AIProvider,
   params: GenerationParams,
-  maxRetries = 3,
-  baseDelayMs = 1000,
+  options: GenerationRetryOptions = {},
 ): Promise<GenerationResult> {
+  const {
+    maxAttempts = 3,
+    baseDelayMs = 1000,
+    policy: retryPolicy = "standard",
+  } = options;
   let attempt = 0;
-  while (attempt < maxRetries) {
+  while (attempt < maxAttempts) {
     const result = await provider.generate(params);
     if (result.success) {
       return result;
@@ -68,9 +78,16 @@ export async function withRetryableGeneration(
     if (!result.isRetryable) {
       return result;
     }
+    if (retryPolicy === "safe-only" && !result.isSafeToRetry) {
+      logger.warn(
+        "[ai-providers] Skipping automatic retry because prediction creation is ambiguous",
+        { error: result.error, model: result.metadata?.model },
+      );
+      return result;
+    }
 
     attempt++;
-    if (attempt >= maxRetries) {
+    if (attempt >= maxAttempts) {
       return result;
     }
 
@@ -80,7 +97,7 @@ export async function withRetryableGeneration(
 
     logger.warn(
       `[ai-providers] Generation failed, retrying after ${delay}ms...`,
-      { error: result.error, attempt },
+      { error: result.error, attempt, retryPolicy },
     );
     try {
       await setTimeout(delay, undefined, { signal: params.signal });
