@@ -80,9 +80,13 @@ import { Input } from "@quicklogo/ui/components/input";
 import { Textarea } from "@quicklogo/ui/components/textarea";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { DeliverablesConfig } from "@/types/brand-kit";
-import type { SocialMediaBrief } from "@quicklogo/shared";
-import { BRAND_KIT_SECTION_COSTS } from "@quicklogo/shared";
+import type { BusinessCardBrief, SocialMediaBrief } from "@quicklogo/shared";
+import {
+  BRAND_KIT_SECTION_COSTS,
+  isValidBusinessCardQrUrl,
+} from "@quicklogo/shared";
 import { BrandProfileEditor } from "../components/brand-profile-editor";
+import { BusinessCardSettings } from "../components/business-card-settings";
 
 const DELIVERABLES_CONFIG = [
   {
@@ -153,6 +157,7 @@ interface DeliverablesStepProps {
     instagram: string;
     twitter: string;
     linkedin: string;
+    facebook: string;
     youtube: string;
     tiktok: string;
   };
@@ -161,6 +166,7 @@ interface DeliverablesStepProps {
       instagram: string;
       twitter: string;
       linkedin: string;
+      facebook: string;
       youtube: string;
       tiktok: string;
     }>
@@ -195,6 +201,8 @@ interface DeliverablesStepProps {
   >;
   socialMediaBrief: SocialMediaBrief;
   setSocialMediaBrief: React.Dispatch<React.SetStateAction<SocialMediaBrief>>;
+  businessCardBrief: BusinessCardBrief;
+  setBusinessCardBrief: React.Dispatch<React.SetStateAction<BusinessCardBrief>>;
   brandPersonality: string;
   setBrandPersonality: (v: string) => void;
   additionalContext: string;
@@ -217,6 +225,8 @@ export function DeliverablesStep({
   setGuidelines,
   socialMediaBrief,
   setSocialMediaBrief,
+  businessCardBrief,
+  setBusinessCardBrief,
   brandPersonality,
   setBrandPersonality,
   additionalContext,
@@ -280,12 +290,25 @@ export function DeliverablesStep({
 
   // Validation
   const socialHasData = Object.values(socials).some((v) => v.trim() !== "");
+  const selectedContactHasData = businessCardBrief.includedContactFields.every(
+    (field) => Boolean(contact[field]?.trim()),
+  );
+  const selectedSocialsHaveData =
+    businessCardBrief.includedSocialPlatforms.every((platform) =>
+      Boolean(socials[platform]?.trim()),
+    );
+  const qrHasData =
+    !businessCardBrief.includeQr ||
+    businessCardBrief.qrTarget === "vcard" ||
+    (businessCardBrief.qrTarget === "website" && !!contact.website.trim()) ||
+    (businessCardBrief.qrTarget === "custom" &&
+      isValidBusinessCardQrUrl(businessCardBrief.customQrValue));
   const contactHasData =
-    !!contact.name.trim() &&
-    !!contact.title.trim() &&
-    !!contact.phone.trim() &&
-    !!contact.email.trim() &&
-    !!contact.address.trim();
+    selectedContactHasData &&
+    selectedSocialsHaveData &&
+    (businessCardBrief.includedContactFields.length > 0 ||
+      businessCardBrief.includedSocialPlatforms.length > 0) &&
+    qrHasData;
   const contactError =
     errorKeys.has("businessCard") &&
     deliverables.businessCard.enabled &&
@@ -564,22 +587,15 @@ export function DeliverablesStep({
                           </div>
                         ) : null}
                         {key === "businessCard" ? (
-                          <div className="space-y-3 pt-2">
-                            <Input
-                              placeholder="Any suggestions / ideas for the card?"
-                              value={contact.suggestion}
-                              onChange={(e) =>
-                                setContact({
-                                  ...contact,
-                                  suggestion: e.target.value,
-                                })
-                              }
-                              className={inputClassName}
+                          <div className="pt-2">
+                            <BusinessCardSettings
+                              brief={businessCardBrief}
+                              setBrief={setBusinessCardBrief}
+                              contact={contact}
+                              socials={socials}
+                              showValidation={contactError}
+                              onEditProfile={() => setIsBrandProfileOpen(true)}
                             />
-                            <p className="text-muted-foreground/50 text-[10px]">
-                              Note: Contact details for the card can be
-                              configured in your Brand Profile below.
-                            </p>
                           </div>
                         ) : null}
                         {key === "socialMedia" ? (
@@ -940,13 +956,21 @@ export function DeliverablesStep({
                   newErrors.add("brandPresentation");
                 setErrorKeys(newErrors);
 
-                if (
-                  newErrors.has("socialMedia") ||
-                  newErrors.has("businessCard")
-                ) {
-                  setIsBrandProfileOpen(true);
+                if (newErrors.has("businessCard")) {
+                  setActiveAccordions((current) =>
+                    current.includes("businessCard")
+                      ? current
+                      : [...current, "businessCard"],
+                  );
+                }
+
+                if (newErrors.has("socialMedia")) {
                   toast.error(
                     "Please fill in the required brand profile information.",
+                  );
+                } else if (newErrors.has("businessCard")) {
+                  toast.error(
+                    "Review the highlighted business-card settings before generating.",
                   );
                 }
 

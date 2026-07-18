@@ -3,10 +3,13 @@ import { ZoomableImage } from "@/components/global/zoomable-image";
 import { useBrandKitSection } from "./section-context";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { AssetCard } from "./asset-card";
+import type { BusinessCardBrief } from "@quicklogo/shared";
 
 export interface BusinessCardData {
   frontUrl: string;
   backUrl?: string;
+  version?: number;
+  brief?: BusinessCardBrief;
 }
 
 interface BusinessCardSectionProps {
@@ -20,6 +23,14 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
     targetSectionId === "business-card" && targetItemId === "front";
   const isBackTargeted =
     targetSectionId === "business-card" && targetItemId === "back";
+  const landscapeRatio = card.brief?.format === "eu" ? 85 / 55 : 3.5 / 2;
+  const previewRatio =
+    card.brief?.orientation === "portrait"
+      ? 1 / landscapeRatio
+      : landscapeRatio;
+  const formatLabel = card.brief
+    ? `${card.brief.format === "eu" ? "EU 85 × 55 mm" : "US 3.5 × 2 in"} · ${card.brief.orientation}`
+    : undefined;
 
   return (
     <div>
@@ -32,6 +43,7 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <AssetCard
             title="Front"
+            subtitle={formatLabel}
             isTargeted={isFrontTargeted}
             isPlaceholder={card.frontUrl.includes("placehold.co")}
             onToggleRefine={() =>
@@ -41,8 +53,9 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
             }
           >
             <div
+              style={{ aspectRatio: previewRatio }}
               className={cn(
-                "bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden transition-all",
+                "bg-muted/10 relative flex w-full items-center justify-center overflow-hidden transition-all",
                 isFrontTargeted && "ring-primary z-10 ring-4",
               )}
             >
@@ -62,6 +75,7 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
           {card.backUrl ? (
             <AssetCard
               title="Back"
+              subtitle={formatLabel}
               isTargeted={isBackTargeted}
               isPlaceholder={card.backUrl?.includes("placehold.co")}
               onToggleRefine={() =>
@@ -71,8 +85,9 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
               }
             >
               <div
+                style={{ aspectRatio: previewRatio }}
                 className={cn(
-                  "bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden transition-all",
+                  "bg-muted/10 relative flex w-full items-center justify-center overflow-hidden transition-all",
                   isBackTargeted && "ring-primary z-10 ring-4",
                 )}
               >

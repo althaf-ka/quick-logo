@@ -1,5 +1,6 @@
 import { buildBrandKitTypographyRequest } from "@quicklogo/ai-providers/prompt";
 import { createLogger } from "@quicklogo/server-telemetry";
+import { withRetry } from "../../core/pipeline-helpers";
 
 const logger = createLogger("worker");
 
@@ -65,15 +66,20 @@ export async function runTypographySelectionRequest({
 }: TypographySelectionInput): Promise<unknown | null> {
   try {
     const { messages } = buildBrandKitTypographyRequest(brandContext);
-    return await ai.run(TYPOGRAPHY_MODEL as Parameters<Ai["run"]>[0], {
-      messages,
-      temperature: 0.2,
-      max_completion_tokens: 500,
-      chat_template_kwargs: {
-        enable_thinking: false,
-      },
-      response_format: TYPOGRAPHY_RESPONSE_FORMAT,
-    });
+    return await withRetry(
+      () =>
+        ai.run(TYPOGRAPHY_MODEL as Parameters<Ai["run"]>[0], {
+          messages,
+          temperature: 0.2,
+          max_completion_tokens: 500,
+          chat_template_kwargs: {
+            enable_thinking: false,
+          },
+          response_format: TYPOGRAPHY_RESPONSE_FORMAT,
+        }),
+      2,
+      500,
+    );
   } catch (error) {
     logger.warn("Typography generation failed; using fallback", {
       model: TYPOGRAPHY_MODEL,

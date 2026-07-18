@@ -12,6 +12,7 @@ export * from "./constants/models";
 export * from "./types/index";
 export * from "./utils/brand-kit-context";
 export * from "./utils/social-targets";
+export * from "./utils/social-identities";
 export * from "./constants/tips";
 export * from "./validators/brand-profile";
 export * from "./validators/pagination";

@@ -2,6 +2,7 @@ import {
   normalizeBrandContext,
   buildBusinessCardGenerationParams,
 } from "./src/prompt";
+import { DEFAULT_BUSINESS_CARD_BRIEF } from "@quicklogo/shared";
 
 // Test 1: URL mapping
 const ctx1 = normalizeBrandContext("Brand1", {
@@ -81,33 +82,49 @@ console.assert(
   `Contact-only back failed: ${prompt4Back}`,
 );
 
-// Test 5: Both socials/contact includes one primary front detail and remaining back details
+// Test 5: Matching social usernames are merged on the card back
 const ctx5 = normalizeBrandContext("Brand5", {
   industry: "Creator",
-  socials: { instagram: "ig" },
+  socials: { instagram: "same-handle", tiktok: "@same-handle" },
   contact: { email: "a@b.com" },
 });
-const prompt5Front = buildBusinessCardGenerationParams({
-  variation: "front",
-  brandName: "Brand5",
-  sourceLogoUrl: "",
-  backendModel: "",
-  context: ctx5,
-}).prompt;
-console.assert(
-  prompt5Front.includes("Feature one primary detail only: Instagram: @ig"),
-  `Front primary detail failed: ${prompt5Front}`,
-);
 const prompt5Back = buildBusinessCardGenerationParams({
   variation: "back",
   brandName: "Brand5",
   sourceLogoUrl: "",
   backendModel: "",
   context: ctx5,
+  businessCardBrief: {
+    ...DEFAULT_BUSINESS_CARD_BRIEF,
+    includedContactFields: ["email"],
+    includedSocialPlatforms: ["instagram", "tiktok"],
+  },
 }).prompt;
 console.assert(
-  prompt5Back.includes("Email: a@b.com") && !prompt5Back.includes("Instagram"),
-  `Back detail failed: ${prompt5Back}`,
+  prompt5Back.includes("Instagram + TikTok icons") &&
+    prompt5Back.includes('username "same-handle" exactly once'),
+  `Social grouping failed: ${prompt5Back}`,
+);
+
+// Test 6: QR-enabled cards reserve an empty zone for deterministic overlay
+const prompt6Back = buildBusinessCardGenerationParams({
+  variation: "back",
+  brandName: "Brand6",
+  sourceLogoUrl: "logo.png",
+  backendModel: "",
+  context: normalizeBrandContext("Brand6", {
+    contact: { website: "example.com" },
+  }),
+  businessCardBrief: {
+    ...DEFAULT_BUSINESS_CARD_BRIEF,
+    includedContactFields: ["website"],
+    includeQr: true,
+  },
+}).prompt;
+console.assert(
+  prompt6Back.includes("Do not draw a QR code") &&
+    prompt6Back.includes("overlaid afterward"),
+  `QR safe-zone failed: ${prompt6Back}`,
 );
 
 console.log("All tests passed!");

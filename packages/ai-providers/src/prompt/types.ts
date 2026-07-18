@@ -48,8 +48,12 @@ export interface ContactDetail {
 
 export interface BusinessCardContentStrategy {
   tagline?: string;
-  frontDetail?: ContactDetail;
+  frontDetails: ContactDetail[];
   backDetails: ContactDetail[];
+  socialIdentityGroups: Array<{
+    identity: string;
+    platformLabels: string[];
+  }>;
 }
 
 export type LogoVariationKind = "dark-mode" | "icon-only";

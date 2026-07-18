@@ -68,16 +68,16 @@ export function ContactSection({
     <div className="space-y-4">
       <SectionHeader
         title="Contact Details"
-        isRequired={true}
+        isRequired={false}
         hasData={contactHasData}
-        requiredText="Required for Business Card"
+        description="Add the details you may want to include, then choose exactly what appears in Business Card settings."
       />
       <div className="grid grid-cols-2 gap-3">
         {renderInput(
           "name",
           "Full Name",
           "e.g. Jane Doe",
-          true,
+          false,
           "text",
           "col-span-2",
         )}
@@ -85,12 +85,12 @@ export function ContactSection({
           "title",
           "Job Title",
           "e.g. Founder & CEO",
-          true,
+          false,
           "text",
           "col-span-2",
         )}
-        {renderInput("phone", "Phone", "+1 (555) 000-0000", true, "tel")}
-        {renderInput("email", "Email", "hello@brand.com", true, "email")}
+        {renderInput("phone", "Phone", "+1 (555) 000-0000", false, "tel")}
+        {renderInput("email", "Email", "hello@brand.com", false, "email")}
         {renderInput(
           "website",
           "Website",
@@ -103,7 +103,7 @@ export function ContactSection({
           "address",
           "Physical Address",
           "123 Creative Ave, NY",
-          true,
+          false,
           "text",
           "col-span-2",
         )}

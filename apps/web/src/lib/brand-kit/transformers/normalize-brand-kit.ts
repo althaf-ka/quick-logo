@@ -7,7 +7,7 @@ import { mapDeliverables } from "./map-deliverables";
 
 import type { InferResponseType } from "@quicklogo/api-client";
 import { api } from "@/lib/api";
-import type { SocialMediaBrief } from "@quicklogo/shared";
+import type { BusinessCardBrief, SocialMediaBrief } from "@quicklogo/shared";
 
 type BrandKitApiResponse = InferResponseType<
   (typeof api.brandKits)[":id"]["$get"]
@@ -68,6 +68,8 @@ export function normalizeBrandKit(
     guidelines: (brandKit.guidelines as Record<string, any>) || undefined,
     socialMediaBrief:
       (brandKit.socialMediaBrief as SocialMediaBrief | null) || undefined,
+    businessCardBrief:
+      (brandKit.businessCardBrief as BusinessCardBrief | null) || undefined,
     revisions: revisions.map((r) => ({
       id: r.id,
       isActive: r.isActive,

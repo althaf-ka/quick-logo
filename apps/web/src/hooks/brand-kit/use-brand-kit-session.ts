@@ -225,6 +225,7 @@ export function useBrandKitSession(storageKeySuffix: string) {
         contact: normalized.contact,
         guidelines: normalized.guidelines,
         socialMediaBrief: normalized.socialMediaBrief,
+        businessCardBrief: normalized.businessCardBrief,
       });
 
       // Extract product images from presentation if available

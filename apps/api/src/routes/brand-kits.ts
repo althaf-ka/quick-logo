@@ -40,34 +40,45 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       const data = c.req.valid("json");
 
       const cost = computeBrandKitCost(data.deliverables);
+      const brandKitId = createId();
 
       await deductCredits(db, user.id, cost);
 
       const promptSummary = buildBrandContextSummary(data, data.prompt);
 
-      const brandKitId = createId();
-      await db.insert(brandKits).values({
-        id: brandKitId,
-        userId: user.id,
-        brandName: data.brandName || "",
-        prompt: promptSummary,
-        sourceImageId: data.sourceImageId,
-        customLogoUrl: data.customLogoUrl,
-        productImageUrls: data.productImageUrls,
-        extractedColors: data.extractedColors,
-        typographyStyle: data.typographyStyle,
-        industry: data.industry,
-        tagline: data.tagline,
-        targetAudience: data.targetAudience,
-        brandPersonality: data.brandPersonality,
-        additionalContext: data.additionalContext,
-        selectedVibes: data.selectedVibes,
-        socials: data.socials,
-        contact: data.contact,
-        guidelines: data.guidelines,
-        socialMediaBrief: data.socialMediaBrief,
-        creditsUsed: cost,
-      });
+      try {
+        await db.insert(brandKits).values({
+          id: brandKitId,
+          userId: user.id,
+          brandName: data.brandName || "",
+          prompt: promptSummary,
+          sourceImageId: data.sourceImageId,
+          customLogoUrl: data.customLogoUrl,
+          productImageUrls: data.productImageUrls,
+          extractedColors: data.extractedColors,
+          typographyStyle: data.typographyStyle,
+          industry: data.industry,
+          tagline: data.tagline,
+          targetAudience: data.targetAudience,
+          brandPersonality: data.brandPersonality,
+          additionalContext: data.additionalContext,
+          selectedVibes: data.selectedVibes,
+          socials: data.socials,
+          contact: data.contact,
+          guidelines: data.guidelines,
+          socialMediaBrief: data.socialMediaBrief,
+          businessCardBrief: data.businessCardBrief,
+          creditsUsed: cost,
+        });
+      } catch (error) {
+        await refundCreditsOnce(db, {
+          refundId: `brand-kit-create:${brandKitId}`,
+          userId: user.id,
+          credits: cost,
+          reason: "brand_kit_create_failed",
+        });
+        throw error;
+      }
 
       try {
         await c.env.GENERATION_QUEUE.send(

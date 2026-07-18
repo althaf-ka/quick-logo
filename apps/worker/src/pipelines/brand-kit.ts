@@ -21,7 +21,7 @@ import { createLogger } from "@quicklogo/server-telemetry";
 import { resolveTypographyStyle } from "../services/brand-kit/typography-resolver";
 import {
   tryNormalizeTypographyOutput,
-  FALLBACK_TYPOGRAPHY,
+  getFallbackTypography,
 } from "../services/brand-kit/typography-normalizer";
 import {
   runTypographySelectionRequest,
@@ -36,12 +36,14 @@ import {
   buildSocialMediaAssetList,
   SOCIAL_MEDIA_ASSET_COUNT,
   SOCIAL_MEDIA_PIPELINE_VERSION,
+  BUSINESS_CARD_PIPELINE_VERSION,
 } from "../services/brand-kit/asset-generator";
 import { generateBrandPresentationImage } from "../services/brand-kit/brand-presentation-generator";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
 import {
   FAVICON_SIZES,
   BRAND_KIT_SECTION_COSTS,
+  DEFAULT_BUSINESS_CARD_BRIEF,
   computeSectionRefund,
 } from "@quicklogo/shared";
 import { refundCreditsOnce } from "../services/image/image-repository";
@@ -79,6 +81,7 @@ export class BrandKitPipeline {
       socials,
       contact,
       socialMediaBrief,
+      businessCardBrief,
     } = message;
 
     const brandAssetContext = normalizeBrandContext(brandName || "", {
@@ -181,7 +184,7 @@ export class BrandKitPipeline {
         brandPersonality,
       });
 
-      let typographyOutput = FALLBACK_TYPOGRAPHY;
+      let typographyOutput = getFallbackTypography(resolvedStyle);
       if (typographyResponse) {
         const typographyText = extractWorkersAiResponseText(typographyResponse);
         const typographyJson = extractWorkersAiResponseJson(typographyResponse);
@@ -500,6 +503,9 @@ export class BrandKitPipeline {
               brandName,
               sourceLogoUrl: actualLogoUrl,
               context: brandAssetContext,
+              businessCardBrief,
+              headingFont: typographyOutput.heading.family,
+              bodyFont: typographyOutput.body.family,
             })
           : null;
 
@@ -510,6 +516,8 @@ export class BrandKitPipeline {
         );
 
         finalResultsJSON.businessCard = {
+          version: BUSINESS_CARD_PIPELINE_VERSION,
+          brief: businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF,
           frontUrl:
             businessCardUrls?.frontUrl ??
             "https://placehold.co/1536x1024/000/FFF?text=Front",

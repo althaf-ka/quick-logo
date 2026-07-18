@@ -71,7 +71,7 @@ export function useBrandProfileForm({
   );
 
   const contactHasData = useMemo(
-    () => contactSchema.safeParse(localContact).success,
+    () => Object.values(localContact).some((value) => value.trim() !== ""),
     [localContact],
   );
 

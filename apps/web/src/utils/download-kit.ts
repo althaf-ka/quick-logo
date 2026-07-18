@@ -10,6 +10,14 @@ async function fetchAsUint8Array(url: string): Promise<Uint8Array> {
   return new Uint8Array(ab);
 }
 
+function imageExtension(url: string): "png" | "svg" {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith(".svg") ? "svg" : "png";
+  } catch {
+    return "png";
+  }
+}
+
 export async function generateBrandKitZip(
   data: BrandKitResultsData,
 ): Promise<Uint8Array> {
@@ -54,7 +62,9 @@ export async function generateBrandKitZip(
       promises.push(
         fetchAsUint8Array(data.businessCard.frontUrl)
           .then((bytes) => {
-            zipData[`business-card/front.png`] = bytes;
+            zipData[
+              `business-card/front.${imageExtension(data.businessCard!.frontUrl)}`
+            ] = bytes;
           })
           .catch((e) => console.error("Failed to add business card front", e)),
       );
@@ -63,7 +73,9 @@ export async function generateBrandKitZip(
       promises.push(
         fetchAsUint8Array(data.businessCard.backUrl)
           .then((bytes) => {
-            zipData[`business-card/back.png`] = bytes;
+            zipData[
+              `business-card/back.${imageExtension(data.businessCard!.backUrl!)}`
+            ] = bytes;
           })
           .catch((e) => console.error("Failed to add business card back", e)),
       );

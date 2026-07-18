@@ -14,6 +14,7 @@ export interface SocialsData {
   instagram: string;
   twitter: string;
   linkedin: string;
+  facebook: string;
   youtube: string;
   tiktok: string;
 }

@@ -10,9 +10,11 @@ import { CreativeDirectionStep } from "./steps/creative-direction-step";
 import { DeliverablesStep } from "./steps/deliverables-step";
 
 import type {
+  BusinessCardBrief,
   SocialMediaBrief,
   StructuredBrandContext,
 } from "@quicklogo/shared";
+import { DEFAULT_BUSINESS_CARD_BRIEF } from "@quicklogo/shared";
 
 const DEFAULT_SOCIAL_MEDIA_BRIEF: SocialMediaBrief = {
   purpose: "brand-awareness",
@@ -104,6 +106,7 @@ export function BrandQuestionnaire({
     instagram: structuredContext.socials?.instagram || "",
     twitter: structuredContext.socials?.twitter || "",
     linkedin: structuredContext.socials?.linkedin || "",
+    facebook: structuredContext.socials?.facebook || "",
     youtube: structuredContext.socials?.youtube || "",
     tiktok: structuredContext.socials?.tiktok || "",
   });
@@ -125,6 +128,9 @@ export function BrandQuestionnaire({
   });
   const [socialMediaBrief, setSocialMediaBrief] = useState<SocialMediaBrief>(
     structuredContext.socialMediaBrief || DEFAULT_SOCIAL_MEDIA_BRIEF,
+  );
+  const [businessCardBrief, setBusinessCardBrief] = useState<BusinessCardBrief>(
+    structuredContext.businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF,
   );
 
   useEffect(() => {
@@ -153,6 +159,9 @@ export function BrandQuestionnaire({
     if (structuredContext.socialMediaBrief) {
       setSocialMediaBrief(structuredContext.socialMediaBrief);
     }
+    if (structuredContext.businessCardBrief) {
+      setBusinessCardBrief(structuredContext.businessCardBrief);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structuredContext._hydratedAt]); // Only trigger when hydration timestamp changes
 
@@ -168,6 +177,7 @@ export function BrandQuestionnaire({
       contact,
       guidelines,
       socialMediaBrief,
+      businessCardBrief,
     });
   }, [
     industry,
@@ -180,6 +190,7 @@ export function BrandQuestionnaire({
     contact,
     guidelines,
     socialMediaBrief,
+    businessCardBrief,
     updateStructuredContext,
   ]);
 
@@ -207,6 +218,7 @@ export function BrandQuestionnaire({
       contact,
       guidelines,
       socialMediaBrief,
+      businessCardBrief,
     });
   }, [
     commitToSession,
@@ -221,6 +233,7 @@ export function BrandQuestionnaire({
     contact,
     guidelines,
     socialMediaBrief,
+    businessCardBrief,
   ]);
 
   const canProceedToCreative =
@@ -231,8 +244,22 @@ export function BrandQuestionnaire({
   const canProceedToDeliverables =
     selectedVibes.length > 0 && typography !== "";
 
-  const contactHasData = Object.values(contact).some((v) => v.trim() !== "");
-  const contactError = deliverables.businessCard.enabled && !contactHasData;
+  const businessCardHasData =
+    businessCardBrief.includedContactFields.every((field) =>
+      Boolean(contact[field]?.trim()),
+    ) &&
+    (businessCardBrief.includedContactFields.length > 0 ||
+      businessCardBrief.includedSocialPlatforms.some((platform) =>
+        Boolean(socials[platform]?.trim()),
+      )) &&
+    (!businessCardBrief.includeQr ||
+      businessCardBrief.qrTarget === "vcard" ||
+      (businessCardBrief.qrTarget === "website" &&
+        Boolean(contact.website.trim())) ||
+      (businessCardBrief.qrTarget === "custom" &&
+        Boolean(businessCardBrief.customQrValue?.trim())));
+  const contactError =
+    deliverables.businessCard.enabled && !businessCardHasData;
 
   const canGenerate =
     canProceedToCreative && canProceedToDeliverables && !contactError;
@@ -338,6 +365,8 @@ export function BrandQuestionnaire({
               setGuidelines={setGuidelines}
               socialMediaBrief={socialMediaBrief}
               setSocialMediaBrief={setSocialMediaBrief}
+              businessCardBrief={businessCardBrief}
+              setBusinessCardBrief={setBusinessCardBrief}
               brandPersonality={brandPersonality}
               setBrandPersonality={setBrandPersonality}
               additionalContext={additionalContext}

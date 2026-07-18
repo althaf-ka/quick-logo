@@ -1,5 +1,8 @@
 import type { ValidatedBrandContext } from "@quicklogo/ai-providers/prompt";
-import { extractUsername } from "@quicklogo/shared";
+import {
+  groupSocialIdentities,
+  SOCIAL_PLATFORM_LABELS,
+} from "@quicklogo/shared";
 import type { VerifiedSocialCopy } from "./social-banner-copy";
 
 export interface SocialBannerPromptSpec {
@@ -56,48 +59,8 @@ function typographyCopy(headingFont?: string, bodyFont?: string): string {
 Supporting typeface: ${bodyFont || "choose a clean, compatible supporting face"}.`;
 }
 
-const SOCIAL_PLATFORM_LABELS: Record<
-  keyof ValidatedBrandContext["socials"],
-  string
-> = {
-  instagram: "Instagram",
-  youtube: "YouTube",
-  twitter: "X",
-  linkedin: "LinkedIn",
-  facebook: "Facebook",
-  tiktok: "TikTok",
-};
-
-function socialIdentityGroups(context: ValidatedBrandContext): Array<{
-  identity: string;
-  platforms: Array<keyof ValidatedBrandContext["socials"]>;
-}> {
-  const grouped = new Map<
-    string,
-    {
-      identity: string;
-      platforms: Array<keyof ValidatedBrandContext["socials"]>;
-    }
-  >();
-  for (const [platform, rawIdentity] of Object.entries(
-    context.socials,
-  ) as Array<[keyof ValidatedBrandContext["socials"], string | undefined]>) {
-    if (!rawIdentity) continue;
-    const identity = extractUsername(rawIdentity)
-      .trim()
-      .replace(/^@+/, "")
-      .slice(0, 40);
-    if (!identity) continue;
-    const groupKey = identity.toLocaleLowerCase("en-US");
-    const group = grouped.get(groupKey) || { identity, platforms: [] };
-    group.platforms.push(platform);
-    grouped.set(groupKey, group);
-  }
-  return [...grouped.values()];
-}
-
 function masterSocialIdentityCopy(context: ValidatedBrandContext): string {
-  const groups = socialIdentityGroups(context);
+  const groups = groupSocialIdentities(context.socials);
   if (!groups.length) {
     return "";
   }
@@ -112,7 +75,7 @@ function masterSocialIdentityCopy(context: ValidatedBrandContext): string {
 }
 
 function reframeSocialIdentityCopy(context: ValidatedBrandContext): string {
-  const groups = socialIdentityGroups(context);
+  const groups = groupSocialIdentities(context.socials);
   if (!groups.length) {
     return "Figure 1 contains no approved social identity; do not invent one.";
   }

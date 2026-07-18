@@ -2,111 +2,54 @@ import {
   ValidatedBrandContext,
   ContactDetail,
   BusinessCardContentStrategy,
-  NormalizedSocials,
-  NormalizedContact,
 } from "./types";
-import { formatSocialLabel, cleanOptionalText } from "./normalize-context";
-
-export function selectPrimaryFrontDetail(
-  context: ValidatedBrandContext,
-): ContactDetail | undefined {
-  if (!context.hasAnyDetails) return undefined;
-
-  const industry = context.industry?.toLowerCase() || "";
-  const isCreator =
-    /creator|lifestyle|fashion|beauty|food|travel|art|music|entertainment|influencer|retail|hospitality/i.test(
-      industry,
-    );
-  const isB2B =
-    /b2b|saas|enterprise|consulting|legal|finance|healthcare|education|professional/i.test(
-      industry,
-    );
-
-  const getSocial = (
-    platform: keyof NormalizedSocials,
-  ): ContactDetail | undefined => {
-    if (context.socials[platform]) {
-      return {
-        type: "social",
-        label: formatSocialLabel(platform),
-        value: context.socials[platform]!,
-      };
-    }
-    return undefined;
-  };
-  const getContact = (
-    key: keyof NormalizedContact,
-  ): ContactDetail | undefined => {
-    if (context.contact[key]) {
-      return {
-        type: key as ContactDetail["type"],
-        label: key.charAt(0).toUpperCase() + key.slice(1),
-        value: context.contact[key]!,
-      };
-    }
-    return undefined;
-  };
-
-  let primary: ContactDetail | undefined;
-
-  if (isCreator) {
-    primary =
-      getSocial("instagram") ||
-      getSocial("tiktok") ||
-      getSocial("youtube") ||
-      getContact("website");
-  } else if (isB2B) {
-    primary =
-      getContact("website") || getSocial("linkedin") || getContact("email");
-  } else {
-    primary =
-      getSocial("instagram") ||
-      getContact("website") ||
-      getSocial("linkedin") ||
-      getSocial("tiktok") ||
-      getSocial("youtube") ||
-      getSocial("twitter");
-  }
-
-  return primary;
-}
+import { cleanOptionalText } from "./normalize-context";
+import {
+  BUSINESS_CARD_CONTACT_FIELDS,
+  BUSINESS_CARD_SOCIAL_PLATFORMS,
+  groupSocialIdentities,
+  SOCIAL_PLATFORM_LABELS,
+  type BusinessCardBrief,
+} from "@quicklogo/shared";
 
 export function buildBusinessCardContentStrategy(
   context: ValidatedBrandContext,
+  brief?: BusinessCardBrief,
 ): BusinessCardContentStrategy {
-  const frontDetail = selectPrimaryFrontDetail(context);
+  const includedContactFields = new Set(
+    brief?.includedContactFields || BUSINESS_CARD_CONTACT_FIELDS,
+  );
+  const includedSocialPlatforms =
+    brief?.includedSocialPlatforms || BUSINESS_CARD_SOCIAL_PLATFORMS;
+  const frontDetails: ContactDetail[] = [];
   const backDetails: ContactDetail[] = [];
 
   for (const [k, v] of Object.entries(context.contact)) {
-    if (v)
-      backDetails.push({
+    if (v && includedContactFields.has(k as keyof typeof context.contact)) {
+      const detail = {
         type: k as ContactDetail["type"],
         label: k.charAt(0).toUpperCase() + k.slice(1),
         value: v as string,
-      });
-  }
-  for (const [k, v] of Object.entries(context.socials)) {
-    if (v)
-      backDetails.push({
-        type: "social",
-        label: formatSocialLabel(k as keyof NormalizedSocials),
-        value: v as string,
-      });
+      };
+      if (k === "name" || k === "title") frontDetails.push(detail);
+      else backDetails.push(detail);
+    }
   }
 
-  // Remove duplicated front detail from back if it's there
-  const filteredBackDetails = backDetails.filter(
-    (d) =>
-      !(
-        frontDetail &&
-        d.type === frontDetail.type &&
-        d.value === frontDetail.value
-      ),
-  );
+  const socialIdentityGroups = groupSocialIdentities(
+    context.socials,
+    includedSocialPlatforms,
+  ).map((group) => ({
+    identity: group.identity,
+    platformLabels: group.platforms.map(
+      (platform) => SOCIAL_PLATFORM_LABELS[platform],
+    ),
+  }));
 
   return {
     tagline: cleanOptionalText(context.tagline),
-    frontDetail,
-    backDetails: filteredBackDetails,
+    frontDetails,
+    backDetails,
+    socialIdentityGroups,
   };
 }

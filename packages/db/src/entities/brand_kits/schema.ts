@@ -31,6 +31,7 @@ export const brandKits = sqliteTable("brand_kit", {
   contact: text("contact", { mode: "json" }),
   guidelines: text("guidelines", { mode: "json" }),
   socialMediaBrief: text("social_media_brief", { mode: "json" }),
+  businessCardBrief: text("business_card_brief", { mode: "json" }),
 
   status: text("status", {
     enum: ["pending", "processing", "completed", "failed"],

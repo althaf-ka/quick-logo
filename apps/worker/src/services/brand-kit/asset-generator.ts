@@ -15,8 +15,12 @@ import type {
   AIProvider,
   GenerationParams,
 } from "@quicklogo/ai-providers/types";
-import { DEFAULT_BRAND_KIT_MODEL_ID } from "@quicklogo/shared";
-import type { SocialMediaBrief } from "@quicklogo/shared";
+import {
+  DEFAULT_BRAND_KIT_MODEL_ID,
+  DEFAULT_BUSINESS_CARD_BRIEF,
+  type BusinessCardBrief,
+  type SocialMediaBrief,
+} from "@quicklogo/shared";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import {
@@ -47,6 +51,7 @@ import {
 import { createLogger } from "@quicklogo/server-telemetry";
 import { setTimeout as delay } from "node:timers/promises";
 import { ensurePng } from "../image/png-transcoder";
+import { finalizeBusinessCardAsset } from "./business-card-qr";
 
 const logger = createLogger("worker");
 
@@ -146,6 +151,7 @@ const YOUTUBE_ART_SIZE = "2560x1440"; // 16:9
 
 export const SOCIAL_MEDIA_ASSET_COUNT = 5;
 export const SOCIAL_MEDIA_PIPELINE_VERSION = 37;
+export const BUSINESS_CARD_PIPELINE_VERSION = 1;
 
 const SOCIAL_ASSET_SPECS: readonly (SocialBannerPromptSpec & {
   targetId: string;
@@ -1023,6 +1029,10 @@ export async function generateBusinessCardAssets({
   refinementPrompt,
   context,
   targetItemId,
+  businessCardBrief,
+  headingFont,
+  bodyFont,
+  existingFrontUrl,
 }: {
   ai: Ai;
   env: Env;
@@ -1033,23 +1043,23 @@ export async function generateBusinessCardAssets({
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
   targetItemId?: string;
+  businessCardBrief?: BusinessCardBrief;
+  headingFont?: string;
+  bodyFont?: string;
+  existingFrontUrl?: string;
 }): Promise<{ frontUrl?: string; backUrl?: string } & AssetSectionTally> {
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
-  // Leonardo-style print card look; shared by both faces.
-  const cardDefaultParams = {
-    ...mapping.defaultParams,
-    providerOptions: {
-      ...mapping.defaultParams?.providerOptions,
-      styleUUID: "703d6fe5-7f1c-4a9e-8da0-5331f214d5cf",
-    },
-  };
+  const cardDefaultParams = mapping.defaultParams;
 
   let frontUrl: string | undefined;
   let backUrl: string | undefined;
   let failed = 0;
   let total = 0;
+  const brief = businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF;
+  const normalizedContext =
+    context || normalizeBrandContext(brandName, { colors: [] });
 
   if (!targetItemId || targetItemId === "front") {
     total++;
@@ -1062,20 +1072,38 @@ export async function generateBusinessCardAssets({
         backendModel: mapping.backendModel,
         defaultParams: cardDefaultParams,
         refinementPrompt,
-        context,
+        context: normalizedContext,
+        businessCardBrief: brief,
+        headingFont,
+        bodyFont,
       }),
       storage,
       uploadPath: `${ASSET_ROOT}/${brandKitId}/business-card-front`,
       timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
       label: "asset-generator",
     });
-    if (url) frontUrl = url;
-    else failed++;
+    if (url) {
+      try {
+        frontUrl = await finalizeBusinessCardAsset({
+          storage,
+          brandKitId,
+          sourceUrl: url,
+          brief,
+          context: normalizedContext,
+          side: "front",
+        });
+      } catch (error) {
+        logger.error("Failed to finalize business-card front", error, {
+          brandKitId,
+        });
+        failed++;
+      }
+    } else failed++;
   }
 
   if (!targetItemId || targetItemId === "back") {
     total++;
-    const url = await generateAssetWithTimeout({
+    const generatedBackUrl = await generateAssetWithTimeout({
       provider,
       params: buildBusinessCardGenerationParams({
         variation: "back",
@@ -1084,15 +1112,38 @@ export async function generateBusinessCardAssets({
         backendModel: mapping.backendModel,
         defaultParams: cardDefaultParams,
         refinementPrompt,
-        context,
+        context: normalizedContext,
+        businessCardBrief: brief,
+        headingFont,
+        bodyFont,
+        companionReferenceUrl:
+          frontUrl ||
+          (existingFrontUrl && !existingFrontUrl.includes("placehold.co")
+            ? existingFrontUrl
+            : undefined),
       }),
       storage,
       uploadPath: `${ASSET_ROOT}/${brandKitId}/business-card-back`,
       timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
       label: "asset-generator",
     });
-    if (url) backUrl = url;
-    else failed++;
+    if (generatedBackUrl) {
+      try {
+        backUrl = await finalizeBusinessCardAsset({
+          storage,
+          brandKitId,
+          sourceUrl: generatedBackUrl,
+          brief,
+          context: normalizedContext,
+          side: "back",
+        });
+      } catch (error) {
+        logger.error("Failed to finalize business-card back", error, {
+          brandKitId,
+        });
+        failed++;
+      }
+    } else failed++;
   }
   return { frontUrl, backUrl, failed, total };
 }

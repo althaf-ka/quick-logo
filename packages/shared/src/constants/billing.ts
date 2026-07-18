@@ -37,7 +37,9 @@ export const BRAND_KIT_SECTION_COSTS: Record<BrandKitPaidSection, number> = {
   // Two panoramic concepts, creative-direction/QA inference, and five final
   // deterministic platform compositions.
   socialMedia: 5,
-  businessCard: 2,
+  // Two GPT Image 2 generations at four credits each. QR composition is
+  // deterministic and does not add an inference charge.
+  businessCard: 8,
   favicon: 1,
   brandPresentation: 3,
   brandGraphics: 2,

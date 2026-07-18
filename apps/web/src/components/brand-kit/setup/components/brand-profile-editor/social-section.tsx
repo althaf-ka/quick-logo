@@ -2,6 +2,7 @@ import {
   InstagramLogoIcon,
   XLogoIcon,
   LinkedinLogoIcon,
+  FacebookLogoIcon,
   YoutubeLogoIcon,
   TiktokLogoIcon,
 } from "@phosphor-icons/react";
@@ -39,6 +40,13 @@ const SOCIAL_PLATFORMS = [
     ),
   },
   {
+    id: "facebook",
+    label: "Facebook",
+    icon: (
+      <FacebookLogoIcon weight="duotone" className="size-3.5 text-blue-500" />
+    ),
+  },
+  {
     id: "youtube",
     label: "YouTube",
     icon: (
@@ -62,10 +70,10 @@ export function SocialSection({
   onUpdate,
   onBlur,
 }: SocialSectionProps) {
-  const isRequired = isSocialMediaRequired || isBusinessCardRequired;
-  const requiredText = isBusinessCardRequired
-    ? "Required for Business Card & Socials"
-    : "Required for Social Media Kit";
+  const isRequired = Boolean(isSocialMediaRequired);
+  const requiredText = isSocialMediaRequired
+    ? "Required for Social Media Kit"
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -74,7 +82,7 @@ export function SocialSection({
         isRequired={isRequired}
         hasData={socialsHasData}
         requiredText={requiredText}
-        description="Paste the full profile URL or enter the username directly. We'll automatically extract the exact handle for you."
+        description={`Paste a profile URL or username. We'll extract the exact handle${isBusinessCardRequired ? ", and you can choose which profiles appear in Business Card settings" : ""}.`}
       />
       <div className="flex flex-col gap-3">
         {SOCIAL_PLATFORMS.map(({ id, label, icon }) => (

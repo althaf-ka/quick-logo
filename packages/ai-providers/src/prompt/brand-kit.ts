@@ -1,5 +1,9 @@
 import type { GenerationParams } from "../types";
 import {
+  DEFAULT_BUSINESS_CARD_BRIEF,
+  type BusinessCardBrief,
+} from "@quicklogo/shared";
+import {
   LogoVariationKind,
   BrandGraphicVariationKind,
   BusinessCardVariationKind,
@@ -45,41 +49,80 @@ const RELIABILITY_WARNING =
   "\nRender any included text carefully and legibly. Do not invent, alter, or add extra contact details.";
 
 export const BUSINESS_CARD_PROMPTS = {
-  front: (context: ValidatedBrandContext) => {
-    const strategy = buildBusinessCardContentStrategy(context);
-    let hierarchy = "Center the provided logo beautifully.\n";
+  front: (
+    context: ValidatedBrandContext,
+    options?: BusinessCardPromptOptions,
+  ) => {
+    const brief = options?.brief || DEFAULT_BUSINESS_CARD_BRIEF;
+    const strategy = buildBusinessCardContentStrategy(context, brief);
+    let hierarchy =
+      "Figure 1 is the approved logo. Reproduce it exactly once; do not redraw, restyle, misspell, or replace it.\n";
     if (strategy.tagline)
       hierarchy += `Include tagline: "${strategy.tagline}" below the logo.\n`;
-    if (strategy.frontDetail) {
-      hierarchy += `Feature one primary detail only: ${strategy.frontDetail.label}: ${strategy.frontDetail.value}\n`;
-      hierarchy +=
-        "Do not include any other contact or social details on the front.";
+    if (strategy.frontDetails.length > 0) {
+      hierarchy += `Include this exact personal identity lockup:\n  ${strategy.frontDetails
+        .map((detail) => `${detail.label}: "${detail.value}"`)
+        .join("\n  ")}\n`;
     } else {
       hierarchy +=
-        "Keep the front minimalist — no contact or social text elements. Clean brand-colored background. Print-ready.";
+        "Keep the front brand-led and minimalist with no personal contact details.";
     }
 
-    return `You are an expert graphic designer. Create a premium standalone business card front for "${context.brandName}". CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card mockup on a background. Clean typographic hierarchy. Generous spacing. High readability.\n\nFront content hierarchy:\n${hierarchy}${RELIABILITY_WARNING}`;
+    return `You are a senior identity designer. Create one premium standalone ${brief.orientation} ${brief.format.toUpperCase()} business-card front for "${context.brandName}" in a ${brief.style === "auto" ? "brand-appropriate" : brief.style} style. The entire image is the full-bleed card surface, never a photographed card, perspective mockup, presentation scene, hand, desk, border, crop guide, or floating object.\n\nCONTENT HIERARCHY\n${hierarchy}\nTYPOGRAPHY\nUse ${options?.headingFont || "a distinctive brand-appropriate display face"} for the primary identity and ${options?.bodyFont || "a clean compatible supporting face"} for supporting text. Render every quoted string once, spelled exactly as supplied. Do not invent labels, claims, numbers, URLs, or decorative writing.\n\nDESIGN DIRECTION\n${brief.notes?.trim() || "Create a restrained, ownable composition with clear hierarchy, tactile depth, generous negative space, and deliberate brand-colored accents."}${buildBrandDesignContext(context)}${cardCropInstruction(brief)}${RELIABILITY_WARNING}`;
   },
-  back: (context: ValidatedBrandContext) => {
-    const strategy = buildBusinessCardContentStrategy(context);
+  back: (
+    context: ValidatedBrandContext,
+    options?: BusinessCardPromptOptions,
+  ) => {
+    const brief = options?.brief || DEFAULT_BUSINESS_CARD_BRIEF;
+    const strategy = buildBusinessCardContentStrategy(context, brief);
     let hierarchy = "";
-    if (strategy.backDetails.length === 0) {
+    if (
+      strategy.backDetails.length === 0 &&
+      strategy.socialIdentityGroups.length === 0
+    ) {
       hierarchy =
         "Elegant abstract pattern or gradient from brand palette. No text elements. Matching minimalist back design.";
     } else {
       const detailsList = strategy.backDetails
-        .map((d) => `${d.label}: ${d.value}`)
+        .map((d) => `${d.label}: "${d.value}"`)
         .join("\n  ");
-      hierarchy = `Create a matching minimalist back design.\nInclude these exact contact details in a clean grid or stacked layout:\n  ${detailsList}\nKeep generous spacing and strong readability.`;
+      const socialList = strategy.socialIdentityGroups
+        .map(
+          (group) =>
+            `${group.platformLabels.join(" + ")} icons followed by the username "${group.identity}" exactly once`,
+        )
+        .join("\n  ");
+      hierarchy = `Create a coordinated back design.\n${detailsList ? `Include these exact contact details in a clean grid or stacked layout:\n  ${detailsList}\n` : ""}${socialList ? `SOCIAL IDENTITY GROUPS\n  ${socialList}\nMatching usernames are intentionally merged: show the grouped platform icons together and render the shared username only once. Do not write platform names or add an @ symbol.\n` : ""}Keep generous spacing and strong readability.`;
     }
+    const qrInstruction = brief.includeQr
+      ? "Reserve one clean, visually quiet square QR zone in the lower-right corner, approximately 30% of the card height with generous clear space. Do not draw a QR code, barcode, placeholder squares, scan icon, or text inside this zone; the exact scannable QR will be overlaid afterward. Keep every generated text element outside this zone."
+      : "Do not draw a QR code or barcode.";
 
-    return `You are an expert graphic designer. Create a premium standalone business card back for "${context.brandName}". CRITICAL: This is a direct print file. The entire image IS the card surface. Full-bleed, edge-to-edge design. DO NOT draw a card mockup on a background. Clean typographic hierarchy. Generous spacing. High readability.\n\nBack content hierarchy:\n${hierarchy}${RELIABILITY_WARNING}`;
+    const references = options?.hasCompanionReference
+      ? "Figure 1 is the approved business-card front and is the visual source of truth. Figure 2 is the approved logo. Preserve the front's palette, material language, lighting, graphic motif, typography character, margins, and finish without copying its layout literally."
+      : "Figure 1 is the approved logo. Use it as the visual source of truth and create a coordinated back in the same brand system.";
+
+    return `You are a senior identity designer. ${references} Create one premium standalone ${brief.orientation} ${brief.format.toUpperCase()} business-card back. The entire image is the full-bleed card surface, never a photographed card, perspective mockup, presentation scene, hand, desk, border, crop guide, or floating object.\n\nBACK CONTENT\n${hierarchy}\nTYPOGRAPHY\nUse ${options?.headingFont || "the front's display typography"} and ${options?.bodyFont || "the front's supporting typography"}. Render every quoted string once, spelled exactly as supplied. Do not invent labels, claims, numbers, URLs, or decorative writing.\n\nQR SAFE ZONE\n${qrInstruction}\n\nDESIGN DIRECTION\n${brief.notes?.trim() || "Continue the approved front with a restrained, ownable composition, clear hierarchy, tactile depth, and deliberate negative space."}${buildBrandDesignContext(context)}${cardCropInstruction(brief)}${RELIABILITY_WARNING}`;
   },
-} satisfies Record<
-  BusinessCardVariationKind,
-  (context: ValidatedBrandContext) => string
->;
+} satisfies Record<BusinessCardVariationKind, BusinessCardPromptBuilder>;
+
+interface BusinessCardPromptOptions {
+  brief?: BusinessCardBrief;
+  headingFont?: string;
+  bodyFont?: string;
+  hasCompanionReference?: boolean;
+}
+
+type BusinessCardPromptBuilder = (
+  context: ValidatedBrandContext,
+  options?: BusinessCardPromptOptions,
+) => string;
+
+function cardCropInstruction(brief: BusinessCardBrief): string {
+  const ratio = brief.format === "us" ? "3.5:2" : "85:55";
+  return `\n\nFORMAT SAFETY\nThe requested finished ratio is ${ratio} in ${brief.orientation} orientation. Keep all logos, typography, icons, faces, and essential details inside the central 78% of the working canvas. Extend only background color, texture, light, and nonessential accents to the edges so the exact card-ratio crop remains complete.`;
+}
 
 const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
   colorPalette:
@@ -358,11 +401,11 @@ export function buildAssetParams({
     : prompt;
 
   const params: GenerationParams = {
+    ...defaultParams,
     backendModel,
     prompt: finalPrompt,
     width,
     height,
-    ...defaultParams,
   };
 
   if (referenceImage) {
@@ -442,6 +485,10 @@ export interface BuildBusinessCardParamsInput {
   backendModel: string;
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
   context?: ValidatedBrandContext;
+  businessCardBrief?: BusinessCardBrief;
+  headingFont?: string;
+  bodyFont?: string;
+  companionReferenceUrl?: string;
 }
 
 export function buildBusinessCardGenerationParams({
@@ -452,28 +499,41 @@ export function buildBusinessCardGenerationParams({
   defaultParams,
   refinementPrompt,
   context,
+  businessCardBrief,
+  headingFont,
+  bodyFont,
+  companionReferenceUrl,
 }: BuildBusinessCardParamsInput & {
   refinementPrompt?: string;
 }): GenerationParams {
   const ctx = context || normalizeBrandContext(brandName, {});
 
-  const LOGO_KEYWORDS = ["logo", "emblem", "symbol", "brandmark", "icon"];
-  const wantsLogo = refinementPrompt
-    ? LOGO_KEYWORDS.some((kw) => refinementPrompt.toLowerCase().includes(kw))
-    : false;
-
-  const useReference = variation !== "back" || wantsLogo;
-
-  return buildAssetParams({
-    prompt: BUSINESS_CARD_PROMPTS[variation](ctx),
-    referenceImage: useReference ? sourceLogoUrl : undefined,
-    referenceStrength:
-      variation === "front" ? (ctx.hasAnyDetails ? 60 : 90) : 40,
-    ...LANDSCAPE_DIMENSIONS,
+  const brief = businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF;
+  const isPortrait = brief.orientation === "portrait";
+  const params = buildAssetParams({
+    prompt: BUSINESS_CARD_PROMPTS[variation](ctx, {
+      brief,
+      headingFont,
+      bodyFont,
+      hasCompanionReference: Boolean(companionReferenceUrl),
+    }),
+    referenceStrength: variation === "front" ? 70 : 80,
+    ...(isPortrait
+      ? {
+          width: LANDSCAPE_DIMENSIONS.height,
+          height: LANDSCAPE_DIMENSIONS.width,
+        }
+      : LANDSCAPE_DIMENSIONS),
     backendModel,
     defaultParams,
     refinementPrompt,
   });
+  params.referenceImages = [
+    ...(companionReferenceUrl ? [companionReferenceUrl] : []),
+    sourceLogoUrl,
+  ];
+  params.canvasMode = "img2img";
+  return params;
 }
 
 export function buildBrandPresentationGenerationParams({

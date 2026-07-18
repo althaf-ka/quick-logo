@@ -200,6 +200,13 @@ const MODEL_REGISTRY: Record<ModelId, ModelMapping> = {
     defaultParams: {
       width: 1024,
       height: 1024,
+      providerOptions: {
+        quality: "low",
+        output_format: "png",
+        background: "opaque",
+        number_of_images: 1,
+        moderation: "auto",
+      },
     },
   },
   "quick-imagen": {

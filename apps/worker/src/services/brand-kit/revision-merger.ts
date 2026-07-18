@@ -20,6 +20,7 @@ import {
 import {
   brandKitColorPaletteResponseSchema,
   brandKitGlobalRefinementResponseSchema,
+  DEFAULT_BUSINESS_CARD_BRIEF,
 } from "@quicklogo/shared";
 import {
   generateSocialMediaAssets,
@@ -27,6 +28,7 @@ import {
   generateBusinessCardAssets,
   buildSocialMediaAssetList,
   SOCIAL_MEDIA_PIPELINE_VERSION,
+  BUSINESS_CARD_PIPELINE_VERSION,
 } from "./asset-generator";
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -229,8 +231,17 @@ export async function mergeRevisionResults({
         refinementPrompt,
         context: brandAssetContext,
         targetItemId,
+        businessCardBrief:
+          currentBrandKit?.businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF,
+        headingFont: newMergedJSON.typography?.heading?.family,
+        bodyFont: newMergedJSON.typography?.body?.family,
+        existingFrontUrl: newMergedJSON.businessCard?.frontUrl,
       });
       newMergedJSON.businessCard = {
+        ...newMergedJSON.businessCard,
+        version: BUSINESS_CARD_PIPELINE_VERSION,
+        brief:
+          currentBrandKit?.businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF,
         frontUrl:
           businessCardUrls.frontUrl ?? newMergedJSON.businessCard?.frontUrl,
         backUrl:
