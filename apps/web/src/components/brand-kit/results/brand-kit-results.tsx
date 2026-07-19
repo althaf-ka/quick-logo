@@ -58,7 +58,6 @@ export interface BrandKitResultsData {
 
 interface BrandKitResultsProps {
   data: BrandKitResultsData;
-  typographyStyle?: string;
   onRefine: (sectionId: string | null, targetItemId?: string) => void;
   onFontChange: (role: "heading" | "body", family: string) => void;
   refiningSectionId?: string | null;
@@ -123,7 +122,6 @@ const FocusWrapper = ({
 
 export function BrandKitResults({
   data,
-  typographyStyle,
   onRefine,
   onFontChange,
   refiningSectionId,
@@ -218,10 +216,7 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <BrandPresentationSection
-                  data={data}
-                  typographyStyle={typographyStyle}
-                />
+                <BrandPresentationSection data={data} />
               </FocusWrapper>
             ) : null}
 

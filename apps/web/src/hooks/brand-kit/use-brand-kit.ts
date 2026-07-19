@@ -269,7 +269,7 @@ export function useBrandKit({
         return urls;
       } catch {
         toast.error("Failed to upload mockup images.");
-        return [];
+        return undefined;
       } finally {
         setIsUploadingMockups(false);
       }
@@ -342,6 +342,7 @@ export function useBrandKit({
     async (
       customPrompt?: string,
       customContext?: Partial<StructuredBrandContext>,
+      customProductImageUrls?: string[],
     ) => {
       if (isGeneratingKit || isRefiningKit) return;
       const activePrompt = customPrompt !== undefined ? customPrompt : prompt;
@@ -364,18 +365,11 @@ export function useBrandKit({
         toast.error("Brand name is required");
         return;
       }
-      if (
-        !brandKitId &&
-        deliverables.brandPresentation.enabled &&
-        productImageUrls.length === 0
-      ) {
-        toast.error("Brand Presentation requires at least one product image");
-        return;
-      }
-
       if (customPrompt !== undefined) {
         setPrompt(customPrompt);
       }
+
+      const presentationImageUrls = customProductImageUrls ?? productImageUrls;
 
       setActiveOperationCredits(
         targetSection || brandKitId
@@ -403,7 +397,9 @@ export function useBrandKit({
           typographyStyle: typographyPreference.mood,
           extractedColors: extractedColors,
           productImageUrls:
-            productImageUrls.length > 0 ? productImageUrls : undefined,
+            presentationImageUrls.length > 0
+              ? presentationImageUrls
+              : undefined,
           deliverables: {
             logoVariations: deliverables.logoVariations.enabled,
             socialMedia: deliverables.socialMedia.enabled,

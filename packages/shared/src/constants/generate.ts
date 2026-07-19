@@ -1,6 +1,8 @@
 import type { GenerateConfig } from "../validators/generate";
 import { MODEL_IDS } from "./models";
 
+export const MAX_BRAND_PRESENTATION_REFERENCE_IMAGES = 6;
+
 export {
   MODEL_IDS,
   MODELS,

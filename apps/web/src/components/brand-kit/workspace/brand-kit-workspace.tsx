@@ -112,7 +112,6 @@ export function BrandKitWorkspace({
               >
                 <BrandKitResults
                   data={bk.results}
-                  typographyStyle={bk.typography}
                   headerAction={
                     isCompact ? (
                       <div className="flex items-center gap-2">

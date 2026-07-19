@@ -33,7 +33,11 @@ interface BrandQuestionnaireProps {
   typography: string;
   setTypography: (v: string) => void;
   onMockupUpload: (files: File[]) => Promise<string[] | void> | void;
-  onGenerate: (prompt?: string, context?: StructuredBrandContext) => void;
+  onGenerate: (
+    prompt?: string,
+    context?: StructuredBrandContext,
+    productImageUrls?: string[],
+  ) => void;
   isGenerating?: boolean;
   totalCredits: number;
   structuredContext: StructuredBrandContext;
@@ -202,12 +206,33 @@ export function BrandQuestionnaire({
     return () => window.clearTimeout(timeout);
   }, [commitToSession]);
 
-  const handleGenerate = useCallback(() => {
-    commitToSession();
+  const handleGenerate = useCallback(
+    (productImageUrls?: string[]) => {
+      commitToSession();
 
-    // Instead of stringifying the prompt, we pass the local context.
-    // The flat string `prompt` will be derived server-side.
-    onGenerate(undefined, {
+      // Instead of stringifying the prompt, we pass the local context.
+      // The flat string `prompt` will be derived server-side.
+      onGenerate(
+        undefined,
+        {
+          industry,
+          tagline,
+          targetAudience,
+          selectedVibes,
+          additionalContext,
+          brandPersonality,
+          socials,
+          contact,
+          guidelines,
+          socialMediaBrief,
+          businessCardBrief,
+        },
+        productImageUrls,
+      );
+    },
+    [
+      commitToSession,
+      onGenerate,
       industry,
       tagline,
       targetAudience,
@@ -219,22 +244,8 @@ export function BrandQuestionnaire({
       guidelines,
       socialMediaBrief,
       businessCardBrief,
-    });
-  }, [
-    commitToSession,
-    onGenerate,
-    industry,
-    tagline,
-    targetAudience,
-    selectedVibes,
-    additionalContext,
-    brandPersonality,
-    socials,
-    contact,
-    guidelines,
-    socialMediaBrief,
-    businessCardBrief,
-  ]);
+    ],
+  );
 
   const canProceedToCreative =
     brandName.trim().length > 0 &&

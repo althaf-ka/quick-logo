@@ -396,18 +396,20 @@ export async function mergeRevisionResults({
                     sourceLogoUrl: actualLogoUrl,
                     refinementPrompt,
                     headingFont: newMergedJSON.typography?.heading?.family,
+                    headingWeight: newMergedJSON.typography?.heading?.weight,
                     bodyFont: newMergedJSON.typography?.body?.family,
-                    productImageUrl:
-                      currentBrandKit?.productImageUrls &&
-                      currentBrandKit.productImageUrls.length > 0
-                        ? currentBrandKit.productImageUrls[0]
-                        : undefined,
+                    bodyWeight: newMergedJSON.typography?.body?.weight,
+                    productImageUrls: currentBrandKit?.productImageUrls,
+                    colors: currentBrandKit?.extractedColors,
+                    tagline:
+                      brandPresentation.tagline || currentBrandKit?.tagline,
                     brandDescription:
                       currentBrandKit?.prompt || "Professional brand kit",
                     industry: currentBrandKit?.industry,
                     targetAudience: currentBrandKit?.targetAudience,
                     selectedVibes: currentBrandKit?.selectedVibes,
                     brandPersonality: currentBrandKit?.brandPersonality,
+                    additionalContext: currentBrandKit?.additionalContext,
                   })) ?? newPresentationUrl;
               } catch (err) {
                 logger.error(
@@ -544,18 +546,19 @@ export async function mergeRevisionResults({
                     sourceLogoUrl: actualLogoUrl,
                     refinementPrompt,
                     headingFont: newMergedJSON.typography?.heading?.family,
+                    headingWeight: newMergedJSON.typography?.heading?.weight,
                     bodyFont: newMergedJSON.typography?.body?.family,
-                    productImageUrl:
-                      currentBrandKit?.productImageUrls &&
-                      currentBrandKit.productImageUrls.length > 0
-                        ? currentBrandKit.productImageUrls[0]
-                        : undefined,
+                    bodyWeight: newMergedJSON.typography?.body?.weight,
+                    productImageUrls: currentBrandKit?.productImageUrls,
+                    colors: currentBrandKit?.extractedColors,
+                    tagline: parsedJson.tagline || currentBrandKit?.tagline,
                     brandDescription:
                       currentBrandKit?.prompt || "Professional brand kit",
                     industry: currentBrandKit?.industry,
                     targetAudience: currentBrandKit?.targetAudience,
                     selectedVibes: currentBrandKit?.selectedVibes,
                     brandPersonality: currentBrandKit?.brandPersonality,
+                    additionalContext: currentBrandKit?.additionalContext,
                   })
                 : undefined) ??
               newMergedJSON.brandPresentation?.presentationUrl;

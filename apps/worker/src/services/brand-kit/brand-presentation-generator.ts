@@ -20,13 +20,18 @@ export async function generateBrandPresentationImage({
   sourceLogoUrl,
   refinementPrompt,
   headingFont,
+  headingWeight,
   bodyFont,
-  productImageUrl,
+  bodyWeight,
+  productImageUrls,
+  colors,
+  tagline,
   brandDescription,
   industry,
   targetAudience,
   selectedVibes,
   brandPersonality,
+  additionalContext,
 }: {
   ai: Ai;
   env: Env;
@@ -36,13 +41,18 @@ export async function generateBrandPresentationImage({
   sourceLogoUrl: string;
   refinementPrompt?: string;
   headingFont?: string;
+  headingWeight?: string;
   bodyFont?: string;
-  productImageUrl?: string;
+  bodyWeight?: string;
+  productImageUrls?: string[];
+  colors?: string[];
+  tagline?: string;
   brandDescription?: string;
   industry?: string;
   targetAudience?: string;
   selectedVibes?: string[];
   brandPersonality?: string;
+  additionalContext?: string;
 }): Promise<string | undefined> {
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
@@ -60,12 +70,17 @@ export async function generateBrandPresentationImage({
           defaultParams: mapping.defaultParams,
           refinementPrompt,
           headingFont,
+          headingWeight,
           bodyFont,
-          productImageUrl,
+          bodyWeight,
+          productImageUrls,
+          colors,
+          tagline,
           industry,
           targetAudience,
           selectedVibes,
           brandPersonality,
+          additionalContext,
           fallbackPrompt: brandDescription,
         }),
         storage,

@@ -1,9 +1,6 @@
 import type { Database } from "@quicklogo/db";
 
-import {
-  buildBrandPresentationTextRequest,
-  derivePalette,
-} from "@quicklogo/ai-providers/prompt";
+import { derivePalette } from "@quicklogo/ai-providers/prompt";
 import type { StorageProvider } from "@quicklogo/storage";
 import type {
   GenerateBrandKitMessage,
@@ -39,6 +36,10 @@ import {
   BUSINESS_CARD_PIPELINE_VERSION,
 } from "../services/brand-kit/asset-generator";
 import { generateBrandPresentationImage } from "../services/brand-kit/brand-presentation-generator";
+import {
+  BRAND_PRESENTATION_COPY_MODEL,
+  generateBrandPresentationDescription,
+} from "../services/brand-kit/brand-presentation-copy";
 import { BrandKitRepository } from "../services/brand-kit/brand-kit-repository";
 import {
   FAVICON_SIZES,
@@ -222,32 +223,27 @@ export class BrandKitPipeline {
         "Building the brand system",
       );
       if (deliverables?.brandPresentation) {
-        const presentationRequest = buildBrandPresentationTextRequest({
-          brandName,
-          description: prompt,
-          industry: message.industry,
-          targetAudience: message.targetAudience,
-          selectedVibes: message.selectedVibes,
-          brandPersonality: message.brandPersonality,
-        });
-        const presentationResponse = await this.ai.run(
-          "@cf/meta/llama-3.1-8b-instruct-fp8",
-          presentationRequest,
+        const generatedDescription = await generateBrandPresentationDescription(
+          {
+            ai: this.ai,
+            brandName,
+            description: prompt,
+            industry: message.industry,
+            targetAudience: message.targetAudience,
+            selectedVibes: message.selectedVibes,
+            brandPersonality: message.brandPersonality,
+          },
         );
-        const presentationText =
-          extractWorkersAiResponseText(presentationResponse);
-        let tagline = `${brandName}: Redefining Quality`;
-        let description = `Discover the unique design philosophy behind ${brandName}.`;
-        try {
-          const parsed = JSON.parse(presentationText);
-          tagline = parsed.tagline || tagline;
-          description = parsed.description || description;
-        } catch {
-          this.logger.warn(
-            "[brand-kit-pipeline] Brand presentation copy generation failed; using fallback",
-            { brandKitId },
-          );
-        }
+        const presentationTagline = tagline?.trim() || "";
+        const presentationDescription =
+          generatedDescription || additionalContext?.trim() || prompt;
+
+        this.logger.info("Created brand presentation copy", {
+          brandKitId,
+          model: BRAND_PRESENTATION_COPY_MODEL,
+          hasUserTagline: Boolean(presentationTagline),
+          usedGeneratedDescription: Boolean(generatedDescription),
+        });
 
         const presentationUrl = actualLogoUrl
           ? await generateBrandPresentationImage({
@@ -258,16 +254,18 @@ export class BrandKitPipeline {
               brandName,
               sourceLogoUrl: actualLogoUrl,
               headingFont: typographyOutput.heading.family,
+              headingWeight: typographyOutput.heading.weight,
               bodyFont: typographyOutput.body.family,
-              productImageUrl:
-                productImageUrls && productImageUrls.length > 0
-                  ? productImageUrls[0]
-                  : undefined,
+              bodyWeight: typographyOutput.body.weight,
+              productImageUrls,
+              colors: extractedColors,
+              tagline: presentationTagline,
               brandDescription: prompt,
               industry: message.industry,
               targetAudience: message.targetAudience,
               selectedVibes: message.selectedVibes,
               brandPersonality: message.brandPersonality,
+              additionalContext,
             })
           : undefined;
 
@@ -278,8 +276,8 @@ export class BrandKitPipeline {
           "https://placehold.co/1536x1024/000/FFF?text=Brand+Presentation";
 
         brandPresentationOutput = {
-          tagline,
-          description,
+          tagline: presentationTagline,
+          description: presentationDescription,
           presentationUrl: presentationImageUrl,
         };
       }

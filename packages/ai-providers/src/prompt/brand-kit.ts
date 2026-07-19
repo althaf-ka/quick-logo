@@ -1,6 +1,7 @@
 import type { GenerationParams } from "../types";
 import {
   DEFAULT_BUSINESS_CARD_BRIEF,
+  MAX_BRAND_PRESENTATION_REFERENCE_IMAGES,
   type BusinessCardBrief,
 } from "@quicklogo/shared";
 import {
@@ -222,12 +223,11 @@ export function buildBrandPresentationTextRequest({
   selectedVibes,
   brandPersonality,
 }: BuildBrandPresentationTextRequestInput): BrandKitJsonRequest {
-  const systemPrompt = `You are an expert brand identity designer and copywriter.
+  const systemPrompt = `You are an expert brand identity copywriter.
 Output ONLY valid JSON matching the schema below. Do not include any extra text.
 Schema:
 {
-  "tagline": "A catchy, short, professional brand tagline (under 6 words)",
-  "description": "A professional, compelling brand story or mission statement (1-2 sentences, max 30 words)"
+  "description": "A professional, compelling brand presentation summary (1-2 sentences, max 40 words)"
 }`;
 
   let context = `Brand Name: ${brandName}\n`;
@@ -543,12 +543,17 @@ export function buildBrandPresentationGenerationParams({
   defaultParams,
   refinementPrompt,
   headingFont,
+  headingWeight,
   bodyFont,
-  productImageUrl,
+  bodyWeight,
+  productImageUrls,
+  colors,
+  tagline,
   industry,
   targetAudience,
   selectedVibes,
   brandPersonality,
+  additionalContext,
   fallbackPrompt,
 }: {
   brandName: string;
@@ -557,41 +562,63 @@ export function buildBrandPresentationGenerationParams({
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
   refinementPrompt?: string;
   headingFont?: string;
+  headingWeight?: string;
   bodyFont?: string;
-  productImageUrl?: string;
+  bodyWeight?: string;
+  productImageUrls?: string[];
+  colors?: string[];
+  tagline?: string;
   industry?: string;
   targetAudience?: string;
   selectedVibes?: string[];
   brandPersonality?: string;
+  additionalContext?: string;
   fallbackPrompt?: string;
 }): GenerationParams {
-  let basePrompt = `Create a stunning modern UI presentation layout for brand "${brandName}".`;
+  const referenceProductImages = (productImageUrls || []).slice(
+    0,
+    MAX_BRAND_PRESENTATION_REFERENCE_IMAGES,
+  );
+  const hasProductImages = referenceProductImages.length > 0;
+  const palette = colors?.filter(Boolean).slice(0, 6);
+
+  let basePrompt = `Create one premium 3:2 brand application presentation board for "${brandName}". The finished image is a cohesive editorial bento grid with 5–7 deliberately varied panels, narrow consistent gutters, generous negative space, and a unified art direction. It must look like a senior design studio case-study cover, not a UI dashboard, slide deck, moodboard, template picker, or collection of disconnected stock mockups.`;
 
   if (industry) basePrompt += ` Industry: ${industry}.`;
   if (targetAudience) basePrompt += ` Target Audience: ${targetAudience}.`;
+  if (tagline) basePrompt += ` Brand message: "${tagline}".`;
+  if (palette?.length) {
+    basePrompt += ` Use this approved brand palette consistently: ${palette.join(", ")}.`;
+  }
 
   if (selectedVibes?.length || brandPersonality) {
     basePrompt += ` Brand aesthetic: ${selectedVibes?.join(", ") || "modern"}. Personality: ${brandPersonality || "professional"}.`;
   } else if (fallbackPrompt) {
     basePrompt += ` Context: ${fallbackPrompt}.`;
   }
+  if (additionalContext)
+    basePrompt += ` Additional direction: ${additionalContext}.`;
 
-  basePrompt += ` Include clean typography`;
-  basePrompt += ` Visual elements to seamlessly integrate: A premium logo mockup\n`;
-  if (productImageUrl) basePrompt += `, a sleek product showcase`;
-  basePrompt += `, subtle typography integration (${headingFont || "Inter"} & ${bodyFont || "Montserrat"}), and beautiful modern color palette swatches.`;
-  basePrompt += ` Background should feature abstract organic shapes and sleek brand textures.`;
-  basePrompt += ` CRITICAL: NO literal instruction text (do NOT write "Logo Mockup" or "Art:"). Create a cohesive, highly polished, aesthetic graphic design composition.`;
+  basePrompt += ` Figure 1 is the approved logo. Preserve its exact geometry, spelling, proportions, and colors; never redraw, reinterpret, or invent a replacement mark. The approved AI-selected type system is ${headingFont || "the approved heading font"} at weight ${headingWeight || "700"} for headings and ${bodyFont || "the approved body font"} at weight ${bodyWeight || "400"} for body copy. Use these exact typefaces wherever text is rendered; do not replace them with unrelated fonts. Keep copy restrained and hierarchy clear.`;
+  if (hasProductImages) {
+    basePrompt += ` Figures 2 onward are approved product or brand photographs. Keep their subjects recognizable and use them as hero imagery in one or two panels. Build the remaining panels from relevant campaign applications: packaging or product collateral, an outdoor poster or billboard, a digital advertisement, environmental signage, and one close-up graphic-system detail.`;
+  } else {
+    basePrompt += ` No product photography is supplied. Treat this as a service, digital, or organization brand and do not invent a packaged product. Show credible service-brand touchpoints selected for the industry: a responsive website or app screen, outdoor or office signage, a campaign poster or billboard, a proposal or presentation cover, professional stationery, and one close-up graphic-system detail.`;
+  }
+  basePrompt += ` Reuse the approved identity system across every panel: the exact logo, palette, typographic character, shapes derived from the logo, and a consistent imagery treatment. Include one restrained identity panel with the logo, a small palette treatment, and a typography sample; the other panels must demonstrate real-world applications. Avoid repeated scenes, fake app chrome, tiny illegible paragraphs, random slogans, written hex codes, watermarks, Behance branding, device overload, and generic decorative clutter. Do not label panels with words such as "Logo Mockup", "Brand Identity", "Typography", "Color Palette", or "Art". Return only the finished full-bleed presentation board.`;
 
-  return buildAssetParams({
+  const params = buildAssetParams({
     prompt: basePrompt,
-    referenceImage: sourceLogoUrl || productImageUrl,
-    referenceStrength: sourceLogoUrl ? 65 : productImageUrl ? 45 : undefined,
+    referenceStrength: 70,
     ...LANDSCAPE_DIMENSIONS,
     backendModel,
     defaultParams,
     refinementPrompt,
   });
+
+  params.referenceImages = [sourceLogoUrl, ...referenceProductImages];
+  params.canvasMode = "img2img";
+  return params;
 }
 
 export interface BuildBrandKitGlobalRefinementRequestInput {

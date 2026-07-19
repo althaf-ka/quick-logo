@@ -83,6 +83,7 @@ import type { DeliverablesConfig } from "@/types/brand-kit";
 import type { BusinessCardBrief, SocialMediaBrief } from "@quicklogo/shared";
 import {
   BRAND_KIT_SECTION_COSTS,
+  MAX_BRAND_PRESENTATION_REFERENCE_IMAGES,
   isValidBusinessCardQrUrl,
 } from "@quicklogo/shared";
 import { BrandProfileEditor } from "../components/brand-profile-editor";
@@ -120,7 +121,7 @@ const DELIVERABLES_CONFIG = [
   {
     id: "brandPresentation",
     label: "Brand Presentation",
-    desc: "Full brand guidelines",
+    desc: "Real-world identity showcase",
     cost: BRAND_KIT_SECTION_COSTS.brandPresentation,
     icon: <PresentationChartIcon weight="duotone" className="size-4" />,
   },
@@ -211,7 +212,7 @@ interface DeliverablesStepProps {
   totalCredits: number;
   isGenerating?: boolean;
   onBack: () => void;
-  onGenerate: () => void;
+  onGenerate: (productImageUrls?: string[]) => void;
 }
 
 export function DeliverablesStep({
@@ -253,8 +254,24 @@ export function DeliverablesStep({
   }, [localMockupPreviews]);
 
   const handleMockupUploadLocal = (files: File[]) => {
-    const newPreviews = files.map((f) => URL.createObjectURL(f));
-    setLocalMockupFiles((prev) => [...prev, ...files]);
+    const remainingSlots = Math.max(
+      0,
+      MAX_BRAND_PRESENTATION_REFERENCE_IMAGES - localMockupFiles.length,
+    );
+    const acceptedFiles = files
+      .filter((file) => file.type.startsWith("image/"))
+      .filter((file) => file.size <= 10 * 1024 * 1024)
+      .slice(0, remainingSlots);
+
+    if (acceptedFiles.length < files.length) {
+      toast.warning("Some references were skipped", {
+        description: `Add up to ${MAX_BRAND_PRESENTATION_REFERENCE_IMAGES} image files, each under 10 MB.`,
+      });
+    }
+    if (acceptedFiles.length === 0) return;
+
+    const newPreviews = acceptedFiles.map((file) => URL.createObjectURL(file));
+    setLocalMockupFiles((prev) => [...prev, ...acceptedFiles]);
     setLocalMockupPreviews((prev) => [...prev, ...newPreviews]);
   };
 
@@ -314,15 +331,7 @@ export function DeliverablesStep({
     deliverables.businessCard.enabled &&
     !contactHasData;
 
-  const presentationHasData = localMockupFiles.length > 0;
-  const presentationError =
-    errorKeys.has("brandPresentation") &&
-    deliverables.brandPresentation.enabled &&
-    !presentationHasData;
-
-  const hasErrors =
-    (deliverables.businessCard.enabled && !contactHasData) ||
-    (deliverables.brandPresentation.enabled && !presentationHasData);
+  const hasErrors = deliverables.businessCard.enabled && !contactHasData;
 
   return (
     <motion.div
@@ -417,9 +426,7 @@ export function DeliverablesStep({
             const hasSettings = DELIVERABLES_WITH_SETTINGS.includes(key);
             const isExpanded = activeAccordions.includes(key);
 
-            const isError =
-              (key === "businessCard" && contactError) ||
-              (key === "brandPresentation" && presentationError);
+            const isError = key === "businessCard" && contactError;
 
             const status = isSelected
               ? isError
@@ -454,9 +461,7 @@ export function DeliverablesStep({
                       {item.label}
                       {isError ? (
                         <span className="font-mono text-[9px] tracking-wider text-red-500 uppercase">
-                          {key === "brandPresentation"
-                            ? "Needs Images"
-                            : "Needs Info"}
+                          Needs Info
                         </span>
                       ) : null}
                     </h3>
@@ -517,7 +522,11 @@ export function DeliverablesStep({
                             : "text-muted-foreground/50 hover:text-primary border-white/[0.04]",
                         )}
                       >
-                        <span>Configure</span>
+                        <span>
+                          {key === "brandPresentation"
+                            ? "Reference photos (optional)"
+                            : "Configure"}
+                        </span>
                         <motion.div
                           animate={{ rotate: isExpanded ? 180 : 0 }}
                           transition={{ duration: 0.2 }}
@@ -720,7 +729,13 @@ export function DeliverablesStep({
                           </div>
                         ) : null}
                         {key === "brandPresentation" ? (
-                          <div className="space-y-3 pt-2">
+                          <div className="flex flex-col gap-4 pt-3">
+                            <p className="text-muted-foreground/55 text-[10px] leading-relaxed">
+                              We’ll combine your approved identity with relevant
+                              campaign, digital, and real-world applications.
+                              The brand information entered below is reused
+                              automatically.
+                            </p>
                             <input
                               ref={fileInputRef}
                               type="file"
@@ -735,43 +750,71 @@ export function DeliverablesStep({
                                   handleMockupUploadLocal(
                                     Array.from(e.target.files),
                                   );
+                                  e.target.value = "";
                                 }
                               }}
                             />
                             {localMockupPreviews.length > 0 ? (
-                              <div className="grid grid-cols-4 gap-2">
+                              <div className="grid grid-cols-3 gap-2">
                                 {localMockupPreviews.map((preview, pidx) => (
                                   <div
                                     key={pidx}
-                                    className="group relative aspect-square overflow-hidden bg-zinc-900 ring-1 ring-white/[0.08]"
+                                    className="group relative aspect-[4/3] overflow-hidden bg-zinc-900 ring-1 ring-white/[0.08]"
                                   >
                                     <img
                                       src={preview}
-                                      alt={`Product ${pidx + 1}`}
-                                      className="h-full w-full object-contain p-1.5"
+                                      alt={`Brand reference ${pidx + 1}`}
+                                      className="h-full w-full object-cover"
                                     />
-                                    <button
+                                    <Button
+                                      variant="destructive"
+                                      size="icon-xs"
+                                      aria-label={`Remove reference ${pidx + 1}`}
                                       onClick={() =>
                                         handleMockupRemoveLocal(pidx)
                                       }
-                                      className="absolute top-0.5 right-0.5 bg-black/80 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500"
+                                      className="absolute top-1.5 right-1.5 opacity-80 transition-opacity group-hover:opacity-100"
                                     >
-                                      <XIcon className="size-2.5" />
-                                    </button>
+                                      <XIcon />
+                                    </Button>
                                   </div>
                                 ))}
                               </div>
                             ) : null}
-                            <button
+                            <Button
+                              variant="outline"
                               onClick={() => fileInputRef.current?.click()}
-                              className="group text-muted-foreground/40 hover:border-primary/30 hover:text-primary flex w-full items-center justify-center gap-2 border border-dashed border-white/[0.08] py-2 font-mono text-[10px] tracking-wider uppercase transition-all"
+                              disabled={
+                                localMockupFiles.length >=
+                                MAX_BRAND_PRESENTATION_REFERENCE_IMAGES
+                              }
+                              className="h-auto w-full justify-start border-dashed px-3 py-3"
                             >
                               <UploadIcon
                                 weight="bold"
-                                className="size-3.5 transition-transform group-hover:-translate-y-0.5"
+                                data-icon="inline-start"
                               />
-                              Upload Images
-                            </button>
+                              <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
+                                <span className="text-[11px] font-semibold">
+                                  {localMockupFiles.length >=
+                                  MAX_BRAND_PRESENTATION_REFERENCE_IMAGES
+                                    ? "Reference photos ready"
+                                    : "Add your own photos"}
+                                </span>
+                                <span className="text-muted-foreground text-[9px] font-normal">
+                                  Product, team, workplace, or project imagery
+                                </span>
+                              </span>
+                              <span className="text-muted-foreground font-mono text-[9px] tabular-nums">
+                                {localMockupFiles.length}/
+                                {MAX_BRAND_PRESENTATION_REFERENCE_IMAGES}
+                              </span>
+                            </Button>
+                            <p className="text-muted-foreground/40 text-[9px] leading-relaxed">
+                              No photos? That’s fine—we’ll create a complete
+                              service-friendly presentation without inventing a
+                              product.
+                            </p>
                           </div>
                         ) : null}
                       </div>
@@ -949,11 +992,6 @@ export function DeliverablesStep({
                 const newErrors = new Set<string>();
                 if (deliverables.businessCard.enabled && !contactHasData)
                   newErrors.add("businessCard");
-                if (
-                  deliverables.brandPresentation.enabled &&
-                  !presentationHasData
-                )
-                  newErrors.add("brandPresentation");
                 setErrorKeys(newErrors);
 
                 if (newErrors.has("businessCard")) {
@@ -978,8 +1016,11 @@ export function DeliverablesStep({
               }
               if (localMockupFiles.length > 0) {
                 setIsUploadingMockups(true);
-                await onMockupUpload(localMockupFiles);
+                const uploadedUrls = await onMockupUpload(localMockupFiles);
                 setIsUploadingMockups(false);
+                if (!uploadedUrls || uploadedUrls.length === 0) return;
+                onGenerate(uploadedUrls);
+                return;
               }
               onGenerate();
             }}

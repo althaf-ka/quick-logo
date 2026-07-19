@@ -3,25 +3,14 @@ import type { BrandKitResultsData } from "../results/brand-kit-results";
 
 interface BrandPresentationSectionProps {
   data: BrandKitResultsData;
-  typographyStyle?: string;
 }
 
 export function BrandPresentationSection({
   data,
-  typographyStyle,
 }: BrandPresentationSectionProps) {
   const presentationUrl = data.brandPresentation?.presentationUrl;
   const isPlaceholder =
     !presentationUrl || presentationUrl.includes("placehold.co");
-
-  // Check style direction
-  const curvyStyles = ["friendly-round", "playful-display", "elegant-script"];
-  const isCurvy = curvyStyles.includes(typographyStyle || "");
-
-  // Borderless frame matching style direction
-  const imageFrameClass = isCurvy
-    ? "rounded-[24px] overflow-hidden"
-    : "rounded-none overflow-hidden";
 
   return (
     <div>
@@ -30,16 +19,13 @@ export function BrandPresentationSection({
         sectionId="brand-presentation"
       />
       <SectionContent sectionId="brand-presentation">
-        {/* 16:9 Widescreen Image Wrapper - Blends seamlessly into UI */}
-        <div
-          className={`bg-muted/10 relative flex aspect-[16/9] w-full items-center justify-center ${imageFrameClass}`}
-        >
+        <div className="bg-muted/10 relative flex aspect-[3/2] w-full items-center justify-center overflow-hidden">
           <img
             src={
               presentationUrl ||
-              "https://placehold.co/1376x768/0d0e12/1e293b?text=Generating+Brand+Presentation..."
+              "https://placehold.co/1536x1024/0d0e12/1e293b?text=Generating+Brand+Presentation..."
             }
-            alt="AI Brand Presentation Mockup"
+            alt={`${data.brandName || "Brand"} identity application presentation`}
             className={`h-full w-full object-cover ${
               isPlaceholder ? "opacity-35 blur-sm" : ""
             }`}
@@ -50,8 +36,8 @@ export function BrandPresentationSection({
                 AI Generation Queued
               </span>
               <p className="text-muted-foreground max-w-[340px] font-mono text-xs leading-relaxed">
-                AI is designing a brand presentation that reflects your colors,
-                patterns, and style identity...
+                AI is composing your identity across campaign, digital, and
+                real-world touchpoints...
               </p>
             </div>
           ) : null}

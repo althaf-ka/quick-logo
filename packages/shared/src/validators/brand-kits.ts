@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_BRAND_PRESENTATION_REFERENCE_IMAGES } from "../constants/generate";
 import {
   BUSINESS_CARD_CONTACT_FIELDS,
   BUSINESS_CARD_FORMATS,
@@ -64,6 +65,7 @@ export const generateBrandKitSchema = z
     typographyStyle: z.string(), // Input preference (e.g., "modern-sans")
     productImageUrls: z
       .array(z.url({ error: "Invalid product image URL" }))
+      .max(MAX_BRAND_PRESENTATION_REFERENCE_IMAGES)
       .optional(),
     deliverables: z.object({
       logoVariations: z.boolean().optional(),
