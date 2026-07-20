@@ -30,7 +30,7 @@ export interface PresentationConfig {
 }
 
 export interface BrandGuidelinesConfig {
-  depth?: "minimal" | "comprehensive";
+  depth?: "essential" | "complete";
   toneOfVoice?: string;
   accessibilityRules?: boolean;
 }

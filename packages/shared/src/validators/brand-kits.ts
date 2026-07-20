@@ -13,6 +13,38 @@ import {
   SOCIAL_BANNER_VISUAL_DIRECTIONS,
 } from "../utils/brand-kit-context";
 
+export const brandGuidelinesDepthSchema = z.enum(["essential", "complete"]);
+
+export const brandGuidelinesContentSchema = z.object({
+  version: z.literal(1),
+  depth: brandGuidelinesDepthSchema,
+  missionStatement: z.string().optional(),
+  tagline: z.string().optional(),
+  personality: z.string().optional(),
+  targetAudience: z.string().optional(),
+  selectedVibes: z.array(z.string()).optional(),
+  industry: z.string().optional(),
+  additionalContext: z.string().optional(),
+  logoRules: z.object({
+    clearSpaceRatio: z.number().positive(),
+    minimumDigitalWidth: z.number().int().positive(),
+    minimumMarkSize: z.number().int().positive(),
+    misuseRules: z.array(z.string()),
+  }),
+  voice: z
+    .object({
+      traits: z.array(z.string()),
+      dos: z.array(z.string()),
+      donts: z.array(z.string()),
+    })
+    .optional(),
+});
+
+export type BrandGuidelinesDepth = z.infer<typeof brandGuidelinesDepthSchema>;
+export type BrandGuidelinesContent = z.infer<
+  typeof brandGuidelinesContentSchema
+>;
+
 export const businessCardBriefSchema = z.object({
   style: z.enum(BUSINESS_CARD_STYLES),
   format: z.enum(BUSINESS_CARD_FORMATS),
@@ -36,7 +68,7 @@ export const structuredBrandContextSchema = z.object({
   contact: z.record(z.string(), z.string()).optional(),
   guidelines: z
     .object({
-      depth: z.enum(["essential", "complete"]).optional(),
+      depth: brandGuidelinesDepthSchema.optional(),
     })
     .optional(),
   socialMediaBrief: z
@@ -270,6 +302,22 @@ export const brandKitTypographyResponseSchema = z.object({
   }),
 });
 
+export const brandGuidelinesRefinementResponseSchema = z.object({
+  missionStatement: z.string().optional(),
+  tagline: z.string().optional(),
+  personality: z.string().optional(),
+  targetAudience: z.string().optional(),
+  industry: z.string().optional(),
+  additionalContext: z.string().optional(),
+  voice: z
+    .object({
+      traits: z.array(z.string()),
+      dos: z.array(z.string()),
+      donts: z.array(z.string()),
+    })
+    .optional(),
+});
+
 export const restoreFullBrandKitSchema = z.object({
   sourceRevisionId: z.string(),
 });
@@ -291,14 +339,5 @@ export const brandKitGlobalRefinementResponseSchema = z.object({
     })
     .optional(),
   typography: brandKitTypographyResponseSchema.optional(),
-  brandGuidelines: z
-    .object({
-      missionStatement: z.string().optional(),
-      tagline: z.string().optional(),
-      personality: z.string().optional(),
-      targetAudience: z.string().optional(),
-      industry: z.string().optional(),
-      additionalContext: z.string().optional(),
-    })
-    .optional(),
+  brandGuidelines: brandGuidelinesRefinementResponseSchema.optional(),
 });

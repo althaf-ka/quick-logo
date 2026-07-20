@@ -29,6 +29,7 @@ import { BrandGuidelinesSection } from "../sections/brand-guidelines-section";
 import { BrandGraphicsSection } from "../sections/brand-graphics-section";
 import { BrandPresentationSection } from "../sections/brand-presentation-section";
 import { ErrorBoundary } from "@/components/global/error-boundary";
+import type { BrandGuidelinesContent } from "@quicklogo/shared";
 
 export interface BrandKitResultsData {
   logoVariations?: LogoVariation[];
@@ -54,6 +55,19 @@ export interface BrandKitResultsData {
     description: string;
     presentationUrl?: string;
   };
+  brandGuidelines?: BrandGuidelinesContent;
+  deliverables?: Partial<
+    Record<
+      | "logoVariations"
+      | "socialMedia"
+      | "businessCard"
+      | "favicon"
+      | "brandGraphics"
+      | "brandPresentation"
+      | "brandGuidelines",
+      boolean
+    >
+  >;
 }
 
 interface BrandKitResultsProps {
@@ -278,7 +292,7 @@ export function BrandKitResults({
               </FocusWrapper>
             ) : null}
 
-            {data.logoUrl ? (
+            {data.brandGuidelines ? (
               <FocusWrapper
                 id="brand-guidelines"
                 className="w-full md:col-span-2 lg:col-span-3"
@@ -286,15 +300,7 @@ export function BrandKitResults({
                 isMobile={isMobile}
                 anyRefining={anyRefining}
               >
-                <BrandGuidelinesSection
-                  data={{
-                    logoUrl: data.logoUrl,
-                    brandName: data.brandName || "Brand",
-                    colors: data.colorPalette,
-                    typography: data.typography,
-                    productImages: data.productImages,
-                  }}
-                />
+                <BrandGuidelinesSection data={data} />
               </FocusWrapper>
             ) : null}
           </div>

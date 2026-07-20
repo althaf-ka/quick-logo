@@ -130,11 +130,14 @@ const BRAND_KIT_SECTION_SCHEMAS: Record<BrandKitSectionKey, string> = {
     '{ "colorPalette": [{ "hex": "#000000", "role": "Primary", "rgb": "0,0,0" }] }',
   brandPresentation:
     '{ "tagline": "A tagline matching the brand vibe", "description": "A short, professional brand story or description showing the brand values" }',
+  brandGuidelines:
+    '{ "missionStatement": "...", "tagline": "...", "personality": "...", "targetAudience": "...", "industry": "...", "additionalContext": "...", "voice": { "traits": ["..."], "dos": ["..."], "donts": ["..."] } }',
 };
 
 const REFINEMENT_SECTION_KEYS: Partial<Record<string, BrandKitSectionKey>> = {
   "color-palette": "colorPalette",
   "brand-presentation": "brandPresentation",
+  "brand-guidelines": "brandGuidelines",
 };
 
 export function buildJsonBrandKitRequest(
@@ -358,7 +361,9 @@ export function buildBrandKitRefinementRequest({
   const sectionInstruction =
     sectionId === "brand-presentation"
       ? "You are refining the brand presentation tagline and description story. Make sure it incorporates the user's instructions while remaining professional and catchy."
-      : "You are refining the color palette of a brand. Keep it cohesive and professional.";
+      : sectionId === "brand-guidelines"
+        ? "You are refining brand guideline copy and verbal identity. Return the complete applicable copy fields, preserve facts not targeted by the request, and never invent contact details or measurable logo specifications."
+        : "You are refining the color palette of a brand. Keep it cohesive and professional.";
 
   let context = `Brand Name: ${brandName}\n`;
   if (industry) context += `Industry: ${industry}\n`;

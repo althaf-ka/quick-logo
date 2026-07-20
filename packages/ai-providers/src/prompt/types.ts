@@ -61,7 +61,10 @@ export type BusinessCardVariationKind = "front" | "back";
 export type BrandGraphicVariationKind =
   | "graphic-backdrop-post"
   | "graphic-backdrop-story";
-export type BrandKitSectionKey = "colorPalette" | "brandPresentation";
+export type BrandKitSectionKey =
+  | "colorPalette"
+  | "brandPresentation"
+  | "brandGuidelines";
 
 export interface BrandKitMessage {
   role: "system" | "user";

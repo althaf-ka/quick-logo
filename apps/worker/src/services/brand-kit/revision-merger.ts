@@ -19,6 +19,7 @@ import {
 } from "../../core/ai-response-parser";
 import {
   brandKitColorPaletteResponseSchema,
+  brandGuidelinesRefinementResponseSchema,
   brandKitGlobalRefinementResponseSchema,
   DEFAULT_BUSINESS_CARD_BRIEF,
 } from "@quicklogo/shared";
@@ -574,6 +575,26 @@ export async function mergeRevisionResults({
             );
             throw new Error("AI returned invalid brand presentation schema");
           }
+        } else if (refinementRequest.sectionKey === "brandGuidelines") {
+          const validated =
+            brandGuidelinesRefinementResponseSchema.safeParse(parsedJson);
+          if (!validated.success || Object.keys(validated.data).length === 0) {
+            logger.warn(
+              "[revision-merger] Brand guidelines refinement validation failed",
+              { error: validated.success ? undefined : validated.error },
+            );
+            throw new Error("AI returned invalid brand guidelines schema");
+          }
+          newMergedJSON.brandGuidelines = {
+            ...newMergedJSON.brandGuidelines,
+            ...validated.data,
+            ...(validated.data.voice && {
+              voice: {
+                ...newMergedJSON.brandGuidelines?.voice,
+                ...validated.data.voice,
+              },
+            }),
+          };
         }
       } catch (e) {
         logger.error(

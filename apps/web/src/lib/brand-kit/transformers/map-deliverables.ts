@@ -117,8 +117,13 @@ export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
       config: presentationConfig,
     },
     brandGuidelines: {
-      enabled: !!(results.brandGuidelines || results.logoUrl),
-      config: results.brandGuidelines || { depth: "minimal" },
+      enabled: !!results.brandGuidelines,
+      config: {
+        depth:
+          results.brandGuidelines?.depth === "complete"
+            ? "complete"
+            : "essential",
+      },
     },
   };
 }

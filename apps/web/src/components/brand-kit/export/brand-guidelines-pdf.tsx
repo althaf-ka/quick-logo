@@ -10,40 +10,12 @@ import {
   Line,
 } from "@react-pdf/renderer";
 import type { BrandKitResultsData } from "../results/brand-kit-results";
+import { buildBrandGuidelinesViewModel } from "@/lib/brand-kit/build-brand-guidelines-view-model";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function hexToRgb(hex: string) {
-  const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return res
-    ? {
-        r: parseInt(res[1], 16),
-        g: parseInt(res[2], 16),
-        b: parseInt(res[3], 16),
-      }
-    : { r: 0, g: 0, b: 0 };
-}
-
-function hexToCmyk(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  let c = 1 - r / 255,
-    m = 1 - g / 255,
-    y = 1 - b / 255;
-  let k = Math.min(c, m, y);
-  if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
-  c = Math.round(((c - k) / (1 - k)) * 100);
-  m = Math.round(((m - k) / (1 - k)) * 100);
-  y = Math.round(((y - k) / (1 - k)) * 100);
-  k = Math.round(k * 100);
-  return { c, m, y, k };
-}
-
-function contrastText(hex: string): string {
-  const { r, g, b } = hexToRgb(hex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55
-    ? "#0a0a0a"
-    : "#ffffff";
+function getPdfFontWeight(weight: string, fallback: number) {
+  const numericWeight = Number.parseInt(weight, 10);
+  if (Number.isFinite(numericWeight)) return numericWeight;
+  return weight.toLowerCase() === "bold" ? 700 : fallback;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +140,22 @@ const s = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 12,
   },
+  ruleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  ruleCard: {
+    width: "48%",
+    border: "1pt solid #eeeeee",
+    padding: 14,
+    minHeight: 66,
+  },
+  ruleTitle: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#999999",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 5,
+  },
+  ruleText: { fontSize: 9, lineHeight: 1.55, color: "#444444" },
 
   /* ── Footer (back cover) ── */
   footerBar: {
@@ -212,10 +200,13 @@ const ChapterHead: React.FC<{
   label: string;
   title: string;
   accentColor: string;
-}> = ({ label, title, accentColor }) => (
+  headingFontFamily: string;
+}> = ({ label, title, accentColor, headingFontFamily }) => (
   <View style={{ marginBottom: 20 }}>
     <Text style={s.chapterLabel}>{label}</Text>
-    <Text style={s.chapterTitle}>{title}</Text>
+    <Text style={[s.chapterTitle, { fontFamily: headingFontFamily }]}>
+      {title}
+    </Text>
     <View style={[s.accent, { backgroundColor: accentColor }]} />
   </View>
 );
@@ -231,22 +222,56 @@ const Pg = () => (
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
-export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
+interface BrandGuidelinesPDFProps {
+  data: BrandKitResultsData;
+  embeddedFonts?: { heading: boolean; body: boolean };
+}
+
+export const BrandGuidelinesPDF: React.FC<BrandGuidelinesPDFProps> = ({
   data,
+  embeddedFonts,
 }) => {
-  const brandName = data.brandName || "Brand Kit";
-  const primaryLogo = data.logoVariations?.length
-    ? data.logoVariations[0].url
-    : data.logoUrl;
+  const guidelines = buildBrandGuidelinesViewModel(data);
+  const brandName = guidelines?.brandName || data.brandName || "Brand Kit";
+  const primaryLogo = guidelines?.primaryLogoUrl;
   const accent =
-    data.colorPalette.length > 0 ? data.colorPalette[0].hex : "#0a0a0a";
+    guidelines && guidelines.colors.length > 0
+      ? guidelines.colors[0].hex
+      : "#0a0a0a";
+  const headingFontFamily = embeddedFonts?.heading
+    ? data.typography.heading.family
+    : "Helvetica";
+  const bodyFontFamily = embeddedFonts?.body
+    ? data.typography.body.family
+    : "Helvetica";
+
+  if (!guidelines) {
+    return (
+      <Document>
+        <Page
+          size="A4"
+          style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+        >
+          <ChapterHead
+            label="Brand Guidelines"
+            title="Document unavailable"
+            accentColor={accent}
+            headingFontFamily={headingFontFamily}
+          />
+          <Text style={s.bodyText}>
+            Brand Guidelines were not selected for this Brand Kit.
+          </Text>
+        </Page>
+      </Document>
+    );
+  }
 
   return (
     <Document>
       {/* ================================================================ */}
       {/* COVER                                                            */}
       {/* ================================================================ */}
-      <Page size="A4" style={s.page}>
+      <Page size="A4" style={[s.page, { fontFamily: bodyFontFamily }]}>
         <View style={[s.coverAccentBar, { backgroundColor: accent }]} />
         <View style={s.coverInner}>
           {primaryLogo && (
@@ -262,6 +287,7 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
               color: "#fff",
               letterSpacing: 1,
               marginBottom: 8,
+              fontFamily: headingFontFamily,
             }}
           >
             {brandName}
@@ -277,47 +303,89 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
           >
             Brand Guidelines
           </Text>
+          <Text
+            style={{
+              marginTop: 12,
+              fontSize: 7,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: "#888888",
+            }}
+          >
+            {guidelines.depth} edition
+          </Text>
         </View>
       </Page>
 
       {/* ================================================================ */}
       {/* 01 — BRAND DNA                                                   */}
       {/* ================================================================ */}
-      {data.brandPresentation &&
-        (data.brandPresentation.tagline ||
-          data.brandPresentation.description) && (
-          <Page size="A4" style={[s.page, s.content]}>
-            <ChapterHead
-              label="01 — Brand DNA"
-              title="Identity & Voice"
-              accentColor={accent}
-            />
+      {(guidelines.foundation.tagline ||
+        guidelines.foundation.missionStatement) && (
+        <Page
+          size="A4"
+          style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+        >
+          <ChapterHead
+            label="01 — Brand DNA"
+            title="Identity & Voice"
+            accentColor={accent}
+            headingFontFamily={headingFontFamily}
+          />
 
-            {data.brandPresentation.tagline && (
-              <View style={s.quoteWrap}>
-                <Text style={s.quoteText}>
-                  &ldquo;{data.brandPresentation.tagline}&rdquo;
+          {guidelines.foundation.tagline && (
+            <View style={s.quoteWrap}>
+              <Text style={s.quoteText}>
+                &ldquo;{guidelines.foundation.tagline}&rdquo;
+              </Text>
+            </View>
+          )}
+
+          {guidelines.foundation.missionStatement && (
+            <Text style={s.bodyText}>
+              {guidelines.foundation.missionStatement}
+            </Text>
+          )}
+          <View style={s.ruleGrid}>
+            {guidelines.foundation.industry && (
+              <View style={s.ruleCard}>
+                <Text style={s.ruleTitle}>Industry</Text>
+                <Text style={s.ruleText}>{guidelines.foundation.industry}</Text>
+              </View>
+            )}
+            {guidelines.foundation.targetAudience && (
+              <View style={s.ruleCard}>
+                <Text style={s.ruleTitle}>Audience</Text>
+                <Text style={s.ruleText}>
+                  {guidelines.foundation.targetAudience}
                 </Text>
               </View>
             )}
-
-            {data.brandPresentation.description && (
-              <Text style={s.bodyText}>
-                {data.brandPresentation.description}
-              </Text>
+            {guidelines.foundation.personality && (
+              <View style={s.ruleCard}>
+                <Text style={s.ruleTitle}>Personality</Text>
+                <Text style={s.ruleText}>
+                  {guidelines.foundation.personality}
+                </Text>
+              </View>
             )}
-            <Pg />
-          </Page>
-        )}
+          </View>
+          <Pg />
+        </Page>
+      )}
 
       {/* ================================================================ */}
       {/* 02 — LOGO SYSTEM                                                 */}
       {/* ================================================================ */}
-      <Page size="A4" style={[s.page, s.content]}>
+      <Page
+        size="A4"
+        style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+      >
         <ChapterHead
           label="02 — Logo System"
           title="Primary & Alternate Marks"
           accentColor={accent}
+          headingFontFamily={headingFontFamily}
         />
         <Text style={s.bodyText}>
           The logo must remain unaltered at all times, maintaining its original
@@ -342,14 +410,14 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
         )}
 
         {/* Variations */}
-        {data.logoVariations && data.logoVariations.length > 1 && (
+        {guidelines.logoVariations.length > 1 && (
           <View wrap={false}>
             <Text style={[s.chapterLabel, { marginBottom: 12 }]}>
               Alternate Marks
             </Text>
             <View style={s.logoVariGrid}>
-              {data.logoVariations.slice(1).map((v, i) => (
-                <View key={i} style={s.logoVariItem}>
+              {guidelines.logoVariations.slice(1).map((v) => (
+                <View key={v.id} style={s.logoVariItem}>
                   <Image
                     src={v.url}
                     style={{ width: "100%", height: 85, objectFit: "contain" }}
@@ -363,54 +431,103 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
         <Pg />
       </Page>
 
+      <Page
+        size="A4"
+        style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+      >
+        <ChapterHead
+          label="03 — Logo Standards"
+          title="Usage Rules"
+          accentColor={accent}
+          headingFontFamily={headingFontFamily}
+        />
+        <Text style={s.bodyText}>
+          Consistent spacing, scale, and treatment protect recognition across
+          every application.
+        </Text>
+        <View style={[s.ruleGrid, { marginBottom: 22 }]}>
+          <View style={s.ruleCard}>
+            <Text style={s.ruleTitle}>Clear space</Text>
+            <Text style={s.ruleText}>
+              Keep at least {guidelines.logoRules.clearSpaceRatio * 100}% of the
+              displayed logo height clear on every side.
+            </Text>
+          </View>
+          <View style={s.ruleCard}>
+            <Text style={s.ruleTitle}>Minimum digital width</Text>
+            <Text style={s.ruleText}>
+              {guidelines.logoRules.minimumDigitalWidth}px for the full logo;
+              {` ${guidelines.logoRules.minimumMarkSize}px`} for the standalone
+              mark. Treat these as recommended minimums.
+            </Text>
+          </View>
+        </View>
+        <Text style={[s.chapterLabel, { marginBottom: 12 }]}>
+          Never do this
+        </Text>
+        <View style={s.ruleGrid}>
+          {guidelines.logoRules.misuseRules.map((rule) => (
+            <View key={rule} style={s.ruleCard}>
+              <Text style={s.ruleText}>× {rule}</Text>
+            </View>
+          ))}
+        </View>
+        <Pg />
+      </Page>
+
       {/* ================================================================ */}
       {/* 03 — COLOR PALETTE                                               */}
       {/* ================================================================ */}
-      <Page size="A4" style={[s.page, s.content]}>
+      <Page
+        size="A4"
+        style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+      >
         <ChapterHead
-          label="03 — Color Palette"
+          label="04 — Color Palette"
           title="Brand Colors"
           accentColor={accent}
+          headingFontFamily={headingFontFamily}
         />
         <Text style={s.bodyText}>
-          Never approximate — always reference these precise values for both
-          digital and print reproduction.
+          Use HEX and RGB for digital work. CMYK values below are approximate;
+          confirm production values with the printer and intended color profile.
         </Text>
 
-        {data.colorPalette.map((color, idx) => {
-          const rgb = hexToRgb(color.hex);
-          const cmyk = hexToCmyk(color.hex);
-          return (
-            <View key={idx} wrap={false} style={{ marginBottom: 4 }}>
-              <View style={[s.swatchBand, { backgroundColor: color.hex }]}>
-                <Text
-                  style={[s.swatchName, { color: contrastText(color.hex) }]}
-                >
-                  {color.role || `Color ${idx + 1}`}
+        {guidelines.colors.map((color) => (
+          <View
+            key={`${color.role}-${color.hex}`}
+            wrap={false}
+            style={{ marginBottom: 4 }}
+          >
+            <View style={[s.swatchBand, { backgroundColor: color.hex }]}>
+              <Text style={[s.swatchName, { color: color.preferredTextColor }]}>
+                {color.role}
+              </Text>
+            </View>
+            <View style={s.specRow}>
+              <View>
+                <Text style={s.specLabel}>HEX</Text>
+                <Text style={s.specVal}>{color.hex.toUpperCase()}</Text>
+              </View>
+              <View>
+                <Text style={s.specLabel}>RGB</Text>
+                <Text style={s.specVal}>{color.rgb}</Text>
+              </View>
+              <View>
+                <Text style={s.specLabel}>CMYK APPROX.</Text>
+                <Text style={s.specVal}>{color.approximateCmyk}</Text>
+              </View>
+              <View>
+                <Text style={s.specLabel}>TEXT CONTRAST</Text>
+                <Text style={s.specVal}>
+                  {color.contrastRatio.toFixed(2)}:1 with{" "}
+                  {color.preferredTextColor}
                 </Text>
               </View>
-              <View style={s.specRow}>
-                <View>
-                  <Text style={s.specLabel}>HEX</Text>
-                  <Text style={s.specVal}>{color.hex.toUpperCase()}</Text>
-                </View>
-                <View>
-                  <Text style={s.specLabel}>RGB</Text>
-                  <Text style={s.specVal}>
-                    {rgb.r} / {rgb.g} / {rgb.b}
-                  </Text>
-                </View>
-                <View>
-                  <Text style={s.specLabel}>CMYK</Text>
-                  <Text style={s.specVal}>
-                    {cmyk.c} / {cmyk.m} / {cmyk.y} / {cmyk.k}
-                  </Text>
-                </View>
-              </View>
-              <Hairline />
             </View>
-          );
-        })}
+            <Hairline />
+          </View>
+        ))}
         <Pg />
       </Page>
 
@@ -418,21 +535,38 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
       {/* 04 — TYPOGRAPHY                                                  */}
       {/* ================================================================ */}
       {(data.typography?.heading || data.typography?.body) && (
-        <Page size="A4" style={[s.page, s.content]}>
+        <Page
+          size="A4"
+          style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+        >
           <ChapterHead
-            label="04 — Typography"
+            label="05 — Typography"
             title="Typefaces"
             accentColor={accent}
+            headingFontFamily={headingFontFamily}
           />
           <Text style={s.bodyText}>
             These typefaces are mandatory for all brand communications across
             print and digital.
           </Text>
 
-          {data.typography.heading && (
+          {guidelines.typography.heading && (
             <View style={{ marginBottom: 40 }} wrap={false}>
               <Text style={s.typeRole}>Primary Typeface</Text>
-              <Text style={s.typeFamily}>{data.typography.heading.family}</Text>
+              <Text
+                style={[
+                  s.typeFamily,
+                  {
+                    fontFamily: headingFontFamily,
+                    fontWeight: getPdfFontWeight(
+                      guidelines.typography.heading.weight,
+                      700,
+                    ),
+                  },
+                ]}
+              >
+                {guidelines.typography.heading.family}
+              </Text>
               <View
                 style={{
                   width: 40,
@@ -441,7 +575,7 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
                   marginBottom: 14,
                 }}
               />
-              <Text style={s.typeAlphabet}>
+              <Text style={[s.typeAlphabet, { fontFamily: headingFontFamily }]}>
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z{"\n"}a b c d
                 e f g h i j k l m n o p q r s t u v w x y z{"\n"}0 1 2 3 4 5 6 7
                 8 9
@@ -449,10 +583,23 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
             </View>
           )}
 
-          {data.typography.body && (
+          {guidelines.typography.body && (
             <View style={{ marginBottom: 40 }} wrap={false}>
               <Text style={s.typeRole}>Secondary Typeface</Text>
-              <Text style={s.typeFamily}>{data.typography.body.family}</Text>
+              <Text
+                style={[
+                  s.typeFamily,
+                  {
+                    fontFamily: bodyFontFamily,
+                    fontWeight: getPdfFontWeight(
+                      guidelines.typography.body.weight,
+                      400,
+                    ),
+                  },
+                ]}
+              >
+                {guidelines.typography.body.family}
+              </Text>
               <View
                 style={{
                   width: 40,
@@ -461,7 +608,7 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
                   marginBottom: 14,
                 }}
               />
-              <Text style={s.typeAlphabet}>
+              <Text style={[s.typeAlphabet, { fontFamily: bodyFontFamily }]}>
                 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z{"\n"}a b c d
                 e f g h i j k l m n o p q r s t u v w x y z{"\n"}0 1 2 3 4 5 6 7
                 8 9
@@ -472,10 +619,87 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
         </Page>
       )}
 
+      {guidelines.isComplete && guidelines.voice && (
+        <Page
+          size="A4"
+          style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+        >
+          <ChapterHead
+            label="06 — Verbal Identity"
+            title="Voice & Tone"
+            accentColor={accent}
+            headingFontFamily={headingFontFamily}
+          />
+          <Text style={s.bodyText}>
+            The brand should sound recognizably consistent while adapting its
+            level of detail to the audience and channel.
+          </Text>
+          <Text style={[s.chapterLabel, { marginBottom: 12 }]}>
+            Voice traits
+          </Text>
+          <View style={[s.ruleGrid, { marginBottom: 22 }]}>
+            {guidelines.voice.traits.map((trait) => (
+              <View key={trait} style={s.ruleCard}>
+                <Text style={s.ruleText}>{trait}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={s.ruleGrid}>
+            <View style={s.ruleCard}>
+              <Text style={s.ruleTitle}>Do</Text>
+              {guidelines.voice.dos.map((item) => (
+                <Text key={item} style={s.ruleText}>
+                  • {item}
+                </Text>
+              ))}
+            </View>
+            <View style={s.ruleCard}>
+              <Text style={s.ruleTitle}>Avoid</Text>
+              {guidelines.voice.donts.map((item) => (
+                <Text key={item} style={s.ruleText}>
+                  • {item}
+                </Text>
+              ))}
+            </View>
+          </View>
+          <Pg />
+        </Page>
+      )}
+
+      {guidelines.isComplete && guidelines.applications.length > 0 && (
+        <Page
+          size="A4"
+          style={[s.page, s.content, { fontFamily: bodyFontFamily }]}
+        >
+          <ChapterHead
+            label="07 — Applications"
+            title="Brand in Use"
+            accentColor={accent}
+            headingFontFamily={headingFontFamily}
+          />
+          <Text style={s.bodyText}>
+            These generated touchpoints demonstrate how the identity system can
+            remain coherent across channels.
+          </Text>
+          <View style={s.logoVariGrid}>
+            {guidelines.applications.map((application) => (
+              <View key={application.label} style={s.logoVariItem} wrap={false}>
+                <Image
+                  src={application.url}
+                  style={{ width: "100%", height: 120, objectFit: "cover" }}
+                />
+                <Text style={s.logoVariLabel}>{application.label}</Text>
+              </View>
+            ))}
+          </View>
+          <Pg />
+        </Page>
+      )}
+
       {/* ================================================================ */}
       {/* BACK COVER                                                       */}
       {/* ================================================================ */}
-      <Page size="A4" style={s.page}>
+      <Page size="A4" style={[s.page, { fontFamily: bodyFontFamily }]}>
         <View
           style={{
             flex: 1,
@@ -500,6 +724,7 @@ export const BrandGuidelinesPDF: React.FC<{ data: BrandKitResultsData }> = ({
               fontSize: 9,
               fontWeight: 600,
               letterSpacing: 5,
+              fontFamily: headingFontFamily,
               textTransform: "uppercase",
               color: "#555",
             }}

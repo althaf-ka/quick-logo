@@ -81,38 +81,40 @@ export function ResultsSidebar({
             </div>
           </button>
 
-          <button
-            onClick={() => results && exportPdf(results)}
-            disabled={isExporting || !results}
-            className={cn(
-              "group relative flex w-full items-center gap-3 overflow-hidden border px-4 py-3 transition-all duration-300",
-              isExporting || !results
-                ? "cursor-not-allowed border-white/[0.06] bg-white/[0.01] opacity-50"
-                : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
-            )}
-          >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-400">
-              {isExporting && exportType === "pdf" ? (
-                <CircleDashedIcon
-                  weight="bold"
-                  className="size-4 animate-spin"
-                />
-              ) : (
-                <FilePdfIcon weight="bold" className="size-4" />
+          {results?.brandGuidelines ? (
+            <button
+              onClick={() => exportPdf(results)}
+              disabled={isExporting}
+              className={cn(
+                "group relative flex w-full items-center gap-3 overflow-hidden border px-4 py-3 transition-all duration-300",
+                isExporting
+                  ? "cursor-not-allowed border-white/[0.06] bg-white/[0.01] opacity-50"
+                  : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
               )}
-            </div>
-            <div className="flex flex-col items-start text-left">
-              <span className="text-foreground font-mono text-[11px] font-bold tracking-widest uppercase">
-                {isExporting && exportType === "pdf"
-                  ? "Generating PDF..."
-                  : "Brand Guidelines"}
-              </span>
-              <span className="text-muted-foreground/50 font-mono text-[9px] tracking-wider uppercase">
-                PDF documentation
-              </span>
-            </div>
-          </button>
+            >
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-400">
+                {isExporting && exportType === "pdf" ? (
+                  <CircleDashedIcon
+                    weight="bold"
+                    className="size-4 animate-spin"
+                  />
+                ) : (
+                  <FilePdfIcon weight="bold" className="size-4" />
+                )}
+              </div>
+              <div className="flex flex-col items-start text-left">
+                <span className="text-foreground font-mono text-[11px] font-bold tracking-widest uppercase">
+                  {isExporting && exportType === "pdf"
+                    ? "Generating PDF..."
+                    : "Brand Guidelines"}
+                </span>
+                <span className="text-muted-foreground/50 font-mono text-[9px] tracking-wider uppercase">
+                  PDF documentation
+                </span>
+              </div>
+            </button>
+          ) : null}
         </div>
       </motion.div>
 

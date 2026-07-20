@@ -216,7 +216,12 @@ export function useBrandKit({
     if (!normalizedData) return null;
     const activeRev = normalizedData.revisions?.find((r) => r.isActive);
     if (!activeRev) return null;
-    return activeRev.results as unknown as BrandKitResultsData;
+    const revisionResults = activeRev.results as unknown as BrandKitResultsData;
+    return {
+      ...revisionResults,
+      brandName: revisionResults.brandName || normalizedData.brandName,
+      logoUrl: revisionResults.logoUrl || normalizedData.logoUrl,
+    };
   }, [normalizedData]);
 
   // 3. Orchestrated File Uploads & Generation

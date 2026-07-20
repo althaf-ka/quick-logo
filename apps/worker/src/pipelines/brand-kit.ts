@@ -46,6 +46,7 @@ import {
   BRAND_KIT_SECTION_COSTS,
   DEFAULT_BUSINESS_CARD_BRIEF,
   computeSectionRefund,
+  type BrandGuidelinesContent,
 } from "@quicklogo/shared";
 import { refundCreditsOnce } from "../services/image/image-repository";
 import { PipelineError } from "../core/errors";
@@ -284,6 +285,8 @@ export class BrandKitPipeline {
 
       const finalResultsJSON: Record<string, any> = {
         brandName,
+        logoUrl: fallbackLogoUrl,
+        productImages: productImageUrls || [],
         colorPalette: colorOutput.colorPalette || [],
         typography: typographyOutput,
         deliverables: deliverables,
@@ -293,28 +296,49 @@ export class BrandKitPipeline {
       };
 
       if (deliverables?.brandGuidelines) {
-        finalResultsJSON.brandGuidelines = {
-          brandName,
+        const depth = message.guidelines?.depth || "essential";
+        const voiceTraits = (message.selectedVibes || []).slice(0, 3);
+        const brandGuidelines: BrandGuidelinesContent = {
+          version: 1,
+          depth,
           missionStatement: brandPresentationOutput?.description || prompt,
           tagline: brandPresentationOutput?.tagline || message.tagline || "",
           personality: message.brandPersonality || "",
           targetAudience: message.targetAudience || "",
           selectedVibes: message.selectedVibes || [],
           industry: message.industry || "",
-          colors:
-            colorOutput.colorPalette?.map((c) => ({
-              role: c.role,
-              hex: c.hex,
-            })) || [],
-          typography: {
-            heading: typographyOutput.heading.family,
-            body: typographyOutput.body.family,
-          },
           additionalContext: message.additionalContext || "",
-          socials: message.socials || {},
-          contact: message.contact || {},
-          rules: message.guidelines || {},
+          logoRules: {
+            clearSpaceRatio: 0.25,
+            minimumDigitalWidth: 120,
+            minimumMarkSize: 32,
+            misuseRules: [
+              "Do not stretch, squash, or rotate the logo.",
+              "Do not recolor the logo outside the approved palette.",
+              "Do not add shadows, outlines, or decorative effects.",
+              "Do not place the logo on a low-contrast background.",
+            ],
+          },
+          ...(depth === "complete" && {
+            voice: {
+              traits:
+                voiceTraits.length > 0
+                  ? voiceTraits
+                  : ["Clear", "Confident", "Consistent"],
+              dos: [
+                "Use direct, audience-focused language.",
+                "Keep terminology and tone consistent across channels.",
+                "Prefer concise sentences with a clear purpose.",
+              ],
+              donts: [
+                "Do not use jargon when plain language is clearer.",
+                "Do not make claims the brand cannot substantiate.",
+                "Do not shift personality between channels.",
+              ],
+            },
+          }),
         };
+        finalResultsJSON.brandGuidelines = brandGuidelines;
       }
 
       let darkAndIconUrls: {

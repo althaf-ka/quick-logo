@@ -1,134 +1,300 @@
+import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react";
+import { Badge } from "@quicklogo/ui/components/badge";
+import type { BrandKitResultsData } from "../results/brand-kit-results";
+import { buildBrandGuidelinesViewModel } from "@/lib/brand-kit/build-brand-guidelines-view-model";
 import { SectionHeader, SectionContent } from "./section-header";
-import type { PaletteColor } from "./color-palette-section";
-import type { TypographyPairing } from "./typography-section";
-
-export interface BrandGuidelinesData {
-  logoUrl: string;
-  brandName: string;
-  colors: PaletteColor[];
-  typography: TypographyPairing;
-  productImages?: string[];
-}
 
 interface BrandGuidelinesSectionProps {
-  data: BrandGuidelinesData;
+  data: BrandKitResultsData;
 }
 
 export function BrandGuidelinesSection({ data }: BrandGuidelinesSectionProps) {
-  const hasProducts = data.productImages && data.productImages.length > 0;
+  const guidelines = buildBrandGuidelinesViewModel(data);
+  if (!guidelines) return null;
 
   return (
     <div>
       <SectionHeader title="Brand Guidelines" sectionId="brand-guidelines" />
       <SectionContent sectionId="brand-guidelines">
-        <div className="border">
-          <div className="bg-card p-4 sm:p-6">
-            <div className="grid grid-cols-6 gap-2 sm:gap-3">
-              <div className="col-span-3 flex items-center justify-center border bg-white p-6">
-                <img
-                  src={data.logoUrl}
-                  alt={data.brandName}
-                  className="max-h-24 max-w-full object-contain"
-                />
-              </div>
-
-              <div className="col-span-3 flex flex-col justify-center border p-4">
-                <p className="text-muted-foreground/40 font-mono text-[8px] tracking-widest uppercase">
-                  Brand Identity
-                </p>
-                <p
-                  className="mt-1 text-base leading-tight font-bold sm:text-lg"
-                  style={{ fontFamily: data.typography.heading.family }}
+        <div className="bg-card flex flex-col gap-4 border p-4 sm:p-6">
+          <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-end">
+            <div className="flex items-center gap-4">
+              {guidelines.primaryLogoUrl ? (
+                <div className="flex size-20 shrink-0 items-center justify-center border bg-white p-3">
+                  <img
+                    src={guidelines.primaryLogoUrl}
+                    alt={`${guidelines.brandName} logo`}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-1">
+                <Badge variant="secondary" className="w-fit uppercase">
+                  {guidelines.depth} edition
+                </Badge>
+                <h4
+                  className="text-xl font-bold sm:text-2xl"
+                  style={{ fontFamily: guidelines.typography.heading.family }}
                 >
-                  {data.brandName}
-                </p>
-                <p
-                  className="text-muted-foreground mt-1 text-[10px] leading-relaxed"
-                  style={{ fontFamily: data.typography.body.family }}
-                >
-                  Brand guidelines with usage rules, spacing, and application
-                  examples.
-                </p>
+                  {guidelines.brandName}
+                </h4>
+                {guidelines.foundation.tagline ? (
+                  <p className="text-muted-foreground text-sm italic">
+                    “{guidelines.foundation.tagline}”
+                  </p>
+                ) : null}
               </div>
+            </div>
+            <p className="text-muted-foreground max-w-md text-xs leading-relaxed">
+              A practical identity reference covering approved logo use, color,
+              typography, accessibility, and brand expression.
+            </p>
+          </div>
 
-              <div className="col-span-6 flex items-stretch overflow-hidden border">
-                {data.colors.slice(0, 6).map((color, i) => (
-                  <div key={i} className="flex flex-1 flex-col">
-                    <div
-                      className="flex-1"
-                      style={{ backgroundColor: color.hex, minHeight: 28 }}
+          {guidelines.foundation.missionStatement ? (
+            <div className="grid gap-2 border p-4 sm:grid-cols-[8rem_1fr]">
+              <p className="text-muted-foreground font-mono text-[9px] font-bold tracking-widest uppercase">
+                Brand purpose
+              </p>
+              <p className="text-sm leading-relaxed">
+                {guidelines.foundation.missionStatement}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="flex flex-col gap-3 border p-4">
+              <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+                Clear space
+              </p>
+              <div className="bg-muted/30 flex min-h-32 items-center justify-center p-6">
+                <div className="border-primary/60 relative border border-dashed p-5">
+                  {guidelines.primaryLogoUrl ? (
+                    <img
+                      src={guidelines.primaryLogoUrl}
+                      alt="Logo clear-space example"
+                      className="max-h-12 max-w-36 object-contain"
                     />
-                    <div className="bg-card px-1 py-0.5">
-                      <p className="truncate font-mono text-[7px] uppercase">
-                        {color.hex}
-                      </p>
-                    </div>
+                  ) : null}
+                  <span className="text-primary absolute -top-4 left-0 font-mono text-[8px]">
+                    X
+                  </span>
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Keep at least {guidelines.logoRules.clearSpaceRatio * 100}% of
+                the displayed logo height clear on every side.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 border p-4">
+              <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+                Minimum size
+              </p>
+              <div className="flex min-h-32 items-end justify-center gap-5 bg-white p-5 text-black">
+                <div className="flex flex-col items-center gap-2">
+                  {guidelines.primaryLogoUrl ? (
+                    <img
+                      src={guidelines.primaryLogoUrl}
+                      alt="Minimum logo size"
+                      className="max-h-10 w-28 object-contain"
+                    />
+                  ) : null}
+                  <span className="font-mono text-[8px]">
+                    {guidelines.logoRules.minimumDigitalWidth}px
+                  </span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="size-8 border border-black/20" />
+                  <span className="font-mono text-[8px]">
+                    {guidelines.logoRules.minimumMarkSize}px
+                  </span>
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Recommended digital minimums preserve clarity. Verify small
+                reproduction before production use.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 border p-4">
+              <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+                Incorrect usage
+              </p>
+              <div className="flex flex-col gap-2">
+                {guidelines.logoRules.misuseRules.map((rule) => (
+                  <div key={rule} className="flex items-start gap-2">
+                    <XCircleIcon className="mt-0.5 shrink-0 text-red-400" />
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      {rule}
+                    </p>
                   </div>
                 ))}
               </div>
-
-              <div className="col-span-3 flex items-center gap-3 border p-3 sm:gap-4 sm:p-4">
-                <div className="flex-1">
-                  <p className="text-muted-foreground/40 font-mono text-[7px] tracking-widest uppercase">
-                    Heading
-                  </p>
-                  <p
-                    className="text-xs font-bold sm:text-sm"
-                    style={{ fontFamily: data.typography.heading.family }}
-                  >
-                    {data.typography.heading.name}
-                  </p>
-                </div>
-                <div className="bg-border h-6 w-px sm:h-8" />
-                <div className="flex-1">
-                  <p className="text-muted-foreground/40 font-mono text-[7px] tracking-widest uppercase">
-                    Body
-                  </p>
-                  <p
-                    className="text-xs sm:text-sm"
-                    style={{ fontFamily: data.typography.body.family }}
-                  >
-                    {data.typography.body.name}
-                  </p>
-                </div>
-              </div>
-
-              <div className="col-span-3 overflow-hidden border">
-                {hasProducts ? (
-                  <div className="grid grid-cols-3 gap-0">
-                    {data.productImages?.slice(0, 3).map((url, i) => (
-                      <div key={i} className="bg-muted/20 overflow-hidden">
-                        <img
-                          src={url}
-                          alt={`Application ${i + 1}`}
-                          className="aspect-square w-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center p-4">
-                    <p className="text-muted-foreground/30 font-mono text-[8px] tracking-widest uppercase">
-                      Logo Applications
-                    </p>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
-          <div className="border-t px-4 py-2.5">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground font-mono text-[9px] tracking-wider uppercase">
-                Brand Guidelines PDF Preview
+          <div className="flex flex-col gap-3 border p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+                Color specifications
               </p>
-              <span className="text-muted-foreground/40 font-mono text-[8px]">
-                Included in download
-              </span>
+              <p className="text-muted-foreground font-mono text-[8px] uppercase">
+                WCAG text contrast checked
+              </p>
             </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {guidelines.colors.map((color) => (
+                <div key={`${color.role}-${color.hex}`} className="border">
+                  <div
+                    className="flex min-h-20 items-end justify-between gap-2 p-3"
+                    style={{
+                      backgroundColor: color.hex,
+                      color: color.preferredTextColor,
+                    }}
+                  >
+                    <span className="text-xs font-bold">{color.role}</span>
+                    <span className="font-mono text-[9px]">{color.hex}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 p-3 font-mono text-[8px]">
+                    <span>RGB {color.rgb}</span>
+                    <span>CMYK approx. {color.approximateCmyk}</span>
+                    <span className="flex items-center gap-1">
+                      <CheckCircleIcon className="text-emerald-400" />
+                      {color.contrastRatio.toFixed(2)}:1 with{" "}
+                      {color.preferredTextColor}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              {
+                label: "Heading",
+                font: guidelines.typography.heading,
+                sample:
+                  guidelines.typography.heading.sampleText ||
+                  guidelines.brandName,
+              },
+              {
+                label: "Body",
+                font: guidelines.typography.body,
+                sample:
+                  guidelines.typography.body.sampleText ||
+                  "A brand identity that speaks to your audience with clarity and confidence. Every detail matters.",
+              },
+            ].map(({ label, font, sample }) => (
+              <div key={label} className="flex flex-col gap-3 border p-4">
+                <p className="text-muted-foreground font-mono text-[9px] tracking-widest uppercase">
+                  {label} typeface
+                </p>
+                <p
+                  className={
+                    label === "Heading"
+                      ? "text-2xl leading-tight"
+                      : "text-sm leading-relaxed"
+                  }
+                  style={{ fontFamily: font.family, fontWeight: font.weight }}
+                >
+                  {sample}
+                </p>
+                <p className="text-muted-foreground font-mono text-[9px]">
+                  {font.family} · {font.weight}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {guidelines.isComplete && guidelines.voice ? (
+            <div className="grid gap-3 lg:grid-cols-3">
+              <div className="flex flex-col gap-3 border p-4">
+                <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+                  Voice traits
+                </p>
+                <p className="text-muted-foreground text-[10px] leading-relaxed">
+                  Writing personality, separate from typography and font weight.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {guidelines.voice.traits.map((trait) => (
+                    <Badge key={trait} variant="outline">
+                      {trait}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <GuidanceList title="Do" items={guidelines.voice.dos} positive />
+              <GuidanceList title="Avoid" items={guidelines.voice.donts} />
+            </div>
+          ) : null}
+
+          {guidelines.isComplete && guidelines.applications.length > 0 ? (
+            <div className="flex flex-col gap-3 border p-4">
+              <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+                Brand in application
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {guidelines.applications.map((application) => (
+                  <figure key={application.label} className="border">
+                    <img
+                      src={application.url}
+                      alt={application.label}
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    <figcaption className="p-2 font-mono text-[8px] tracking-wider uppercase">
+                      {application.label}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex items-center justify-between border-t pt-3">
+            <p className="text-muted-foreground font-mono text-[9px] tracking-wider uppercase">
+              PDF documentation
+            </p>
+            <span className="text-muted-foreground font-mono text-[8px] uppercase">
+              Included in the Brand Kit ZIP
+            </span>
           </div>
         </div>
       </SectionContent>
+    </div>
+  );
+}
+
+function GuidanceList({
+  title,
+  items,
+  positive = false,
+}: {
+  title: string;
+  items: string[];
+  positive?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border p-4">
+      <p className="font-mono text-[9px] font-bold tracking-widest uppercase">
+        {title}
+      </p>
+      <div className="flex flex-col gap-2">
+        {items.map((item) => {
+          const Icon = positive ? CheckCircleIcon : XCircleIcon;
+          return (
+            <div key={item} className="flex items-start gap-2">
+              <Icon
+                className={positive ? "text-emerald-400" : "text-red-400"}
+              />
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {item}
+              </p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

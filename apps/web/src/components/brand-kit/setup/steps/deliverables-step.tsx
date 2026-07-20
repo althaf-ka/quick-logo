@@ -135,7 +135,7 @@ const DELIVERABLES_CONFIG = [
   {
     id: "brandGuidelines",
     label: "Brand Guidelines",
-    desc: "Rules and PDF exports",
+    desc: "Rules and downloadable PDF",
     cost: BRAND_KIT_SECTION_COSTS.brandGuidelines,
     icon: <BookOpenTextIcon weight="duotone" className="size-4" />,
   },
@@ -473,7 +473,7 @@ export function DeliverablesStep({
                   <div className="flex shrink-0 items-center gap-2">
                     <span className={badgeVariants({ status })}>
                       {item.cost === 0 ? (
-                        "Free"
+                        "Included"
                       ) : (
                         <>
                           <SparkleIcon weight="fill" className="size-2" />
@@ -556,12 +556,12 @@ export function DeliverablesStep({
                                 {
                                   value: "essential",
                                   label: "Essential",
-                                  desc: "Colors, typography, and logo usage.",
+                                  desc: "Core logo, color, typography, and accessibility rules.",
                                 },
                                 {
                                   value: "complete",
                                   label: "Complete",
-                                  desc: "Adds voice, spacing, and accessibility.",
+                                  desc: "Everything in Essential, plus voice and real-world applications.",
                                 },
                               ].map((opt) => (
                                 <label

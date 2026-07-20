@@ -119,6 +119,21 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
   const readmeContent = `# ${brandName} - Brand Guidelines\n\nThis archive contains the official brand assets for ${brandName}.\n\n${colorsMd}${typographyMd}`;
   zipData["README.md"] = strToU8(readmeContent);
 
+  if (data.brandGuidelines) {
+    const { renderBrandGuidelinesPdf } = await import(
+      "../../lib/brand-kit/render-brand-guidelines-pdf"
+    );
+    const pdfBlob = await renderBrandGuidelinesPdf(data);
+    zipData[
+      `guidelines/${
+        brandName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") || "brand"
+      }-brand-guidelines.pdf`
+    ] = new Uint8Array(await pdfBlob.arrayBuffer());
+  }
+
   // 5. Fetch other assets (social media, print, favicons, backdrops)
   if (data.socialMedia) {
     for (const asset of data.socialMedia) {

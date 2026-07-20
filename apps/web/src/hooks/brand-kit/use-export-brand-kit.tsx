@@ -28,15 +28,10 @@ export function useExportBrandKit() {
       setIsExporting(true);
       setExportType("pdf");
 
-      // Dynamically load react-pdf to avoid initial bundle bloat
-      const { pdf } = await import("@react-pdf/renderer");
-      const { BrandGuidelinesPDF } = await import(
-        "../../components/brand-kit/export/brand-guidelines-pdf"
+      const { renderBrandGuidelinesPdf } = await import(
+        "../../lib/brand-kit/render-brand-guidelines-pdf"
       );
-
-      const asPdf = pdf();
-      asPdf.updateContainer(<BrandGuidelinesPDF data={data} />);
-      const blob = await asPdf.toBlob();
+      const blob = await renderBrandGuidelinesPdf(data);
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
