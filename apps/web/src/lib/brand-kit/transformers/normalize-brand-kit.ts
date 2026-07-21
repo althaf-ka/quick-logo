@@ -7,7 +7,11 @@ import { mapDeliverables } from "./map-deliverables";
 
 import type { InferResponseType } from "@quicklogo/api-client";
 import { api } from "@/lib/api";
-import type { BusinessCardBrief, SocialMediaBrief } from "@quicklogo/shared";
+import {
+  brandKitDeliverablesSchema,
+  type BusinessCardBrief,
+  type SocialMediaBrief,
+} from "@quicklogo/shared";
 
 type BrandKitApiResponse = InferResponseType<
   (typeof api.brandKits)[":id"]["$get"]
@@ -36,8 +40,13 @@ export function normalizeBrandKit(
       : undefined,
   };
 
-  // Build deliverables settings
-  const deliverables: DeliverablesConfig = mapDeliverables(results);
+  const requestedDeliverables = brandKitDeliverablesSchema.safeParse(
+    brandKit.requestedDeliverables,
+  );
+  const deliverables: DeliverablesConfig = mapDeliverables(
+    results,
+    requestedDeliverables.success ? requestedDeliverables.data : undefined,
+  );
 
   return {
     id: brandKit.id,

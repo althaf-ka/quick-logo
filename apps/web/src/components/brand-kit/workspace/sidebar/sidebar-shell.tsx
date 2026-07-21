@@ -32,7 +32,6 @@ export interface SidebarShellProps {
   // Results Props
   brandKitId?: string;
   results?: BrandKitResultsData | null;
-  onDownloadAll?: () => void;
   revisions?: NormalizedBrandKit["revisions"];
   onRestoreRevision?: (sourceRevisionId: string) => void;
 

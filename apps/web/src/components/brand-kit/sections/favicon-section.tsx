@@ -1,15 +1,22 @@
 import { SectionHeader, SectionContent } from "./section-header";
-import { WarningCircleIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { ZoomableImage } from "@/components/global/zoomable-image";
 import { Button } from "@quicklogo/ui/components/button";
-import { DownloadSimpleIcon } from "@phosphor-icons/react";
-import { downloadImage } from "@/lib/download";
+import { downloadSquarePng } from "@/lib/download";
+import { toast } from "@quicklogo/ui/components/sonner";
 export interface FaviconSize {
   size: number;
   label: string;
   url: string;
   type?: string;
+}
+
+function downloadIcon(url: string, size: number, filename: string): void {
+  void downloadSquarePng(url, size, filename).catch((error: unknown) => {
+    console.error("Favicon download failed:", error);
+    toast.error("Could not prepare this icon. Please try again.");
+  });
 }
 
 interface FaviconSectionProps {
@@ -77,7 +84,11 @@ function CombinedBrowserTabMockup({
                 size="sm"
                 className="text-muted-foreground/40 hover:text-primary hover:bg-primary/10 h-6 w-6 cursor-pointer p-0 transition-colors"
                 onClick={() =>
-                  downloadImage(icon.url, `favicon-${icon.size}.png`)
+                  downloadIcon(
+                    icon.url,
+                    icon.size,
+                    `favicon-${icon.size}x${icon.size}.png`,
+                  )
                 }
                 title={`Download ${icon.size}x${icon.size}`}
               >
@@ -138,7 +149,11 @@ function CombinedAppMockup({ icons }: { icons: FaviconSize[] }) {
                 size="sm"
                 className="text-muted-foreground/40 hover:text-primary hover:bg-primary/10 h-6 w-6 cursor-pointer p-0 transition-colors"
                 onClick={() =>
-                  downloadImage(icon.url, `app-icon-${icon.size}.png`)
+                  downloadIcon(
+                    icon.url,
+                    icon.size,
+                    `app-icon-${icon.size}x${icon.size}.png`,
+                  )
                 }
                 title={`Download ${icon.size}x${icon.size}`}
               >

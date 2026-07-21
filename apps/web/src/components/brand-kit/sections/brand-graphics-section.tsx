@@ -32,8 +32,8 @@ export function BrandGraphicsSection({ data }: BrandGraphicsSectionProps) {
       title: "Backdrop Post",
       subtitle: "1:1 Ratio",
       url: data.backdropPostUrl,
-      aspectClass: "aspect-[4/5] sm:aspect-auto",
-      imageClass: "max-w-[360px] aspect-[4/5]",
+      aspectClass: "aspect-square sm:aspect-auto",
+      imageClass: "max-w-[360px] aspect-square",
     },
     {
       id: "backdrop-story",

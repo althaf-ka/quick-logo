@@ -68,6 +68,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           guidelines: data.guidelines,
           socialMediaBrief: data.socialMediaBrief,
           businessCardBrief: data.businessCardBrief,
+          requestedDeliverables: data.deliverables,
           creditsUsed: cost,
         });
       } catch (error) {

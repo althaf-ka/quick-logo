@@ -1,4 +1,8 @@
 import type { StructuredBrandContext } from "../utils/brand-kit-context";
+import type {
+  BrandKitDeliverables,
+  RefinementSectionId,
+} from "../validators/brand-kits";
 
 export interface GenerateImageMessage {
   type?: "image";
@@ -38,15 +42,7 @@ export interface GenerateBrandKitMessage extends StructuredBrandContext {
   prompt: string;
   typographyStyle: string;
   productImageUrls?: string[];
-  deliverables: {
-    logoVariations?: boolean;
-    socialMedia: boolean;
-    businessCard: boolean;
-    favicon: boolean;
-    brandGraphics?: boolean;
-    brandPresentation?: boolean;
-    brandGuidelines?: boolean;
-  };
+  deliverables: BrandKitDeliverables;
   extractedColors: string[];
 }
 
@@ -56,17 +52,7 @@ export interface RefineBrandKitMessage {
   brandKitId: string;
   userId: string;
   creditsUsed: number;
-  sectionId:
-    | "logo-variations"
-    | "color-palette"
-    | "typography"
-    | "social-media"
-    | "business-card"
-    | "favicon"
-    | "brand-graphics"
-    | "brand-presentation"
-    | "brand-guidelines"
-    | "global";
+  sectionId: RefinementSectionId;
   refinementPrompt: string;
   typographyStyle?: string;
   targetItemId?: string;

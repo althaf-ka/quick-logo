@@ -5,8 +5,8 @@ import { SidebarShell } from "@/components/brand-kit/workspace/sidebar/sidebar-s
 import { BrandKitResults } from "@/components/brand-kit/results/brand-kit-results";
 import { BrandQuestionnaire } from "@/components/brand-kit/setup/brand-questionnaire";
 import { useBrandKit } from "@/hooks/brand-kit/use-brand-kit";
+import { useClientLogoVariations } from "@/hooks/brand-kit/use-client-logo-variations";
 import { getSectionLabel } from "@quicklogo/shared";
-import { downloadBrandKit } from "@/utils/download-kit";
 import {
   SlidersHorizontalIcon,
   SparkleIcon,
@@ -48,6 +48,7 @@ export function BrandKitWorkspace({
   }, []);
 
   const bk = useBrandKit({ imageId, brandKitId });
+  const results = useClientLogoVariations(bk.results);
 
   return (
     <div className="flex h-full overflow-hidden bg-zinc-950">
@@ -73,7 +74,7 @@ export function BrandKitWorkspace({
                   }
                 />
               </motion.div>
-            ) : bk.normalizedData?.status === "failed" && !bk.results ? (
+            ) : bk.normalizedData?.status === "failed" && !results ? (
               <motion.div
                 key="generation-failed"
                 variants={pageTransition}
@@ -86,7 +87,7 @@ export function BrandKitWorkspace({
                   message={bk.normalizedData.errorMessage}
                 />
               </motion.div>
-            ) : bk.isGenerating && !bk.results ? (
+            ) : bk.isGenerating && !results ? (
               <motion.div
                 key="generating"
                 variants={pageTransition}
@@ -101,7 +102,7 @@ export function BrandKitWorkspace({
                   stage={bk.normalizedData?.generationStage}
                 />
               </motion.div>
-            ) : bk.results ? (
+            ) : results ? (
               <motion.div
                 key="results"
                 variants={pageTransition}
@@ -111,7 +112,7 @@ export function BrandKitWorkspace({
                 className="relative w-full"
               >
                 <BrandKitResults
-                  data={bk.results}
+                  data={results}
                   headerAction={
                     isCompact ? (
                       <div className="flex items-center gap-2">
@@ -251,8 +252,7 @@ export function BrandKitWorkspace({
           isFromPlatform={bk.isFromPlatform}
           extractedColors={bk.extractedColors}
           brandKitId={bk.brandKitId ?? undefined}
-          results={bk.results}
-          onDownloadAll={() => downloadBrandKit(bk.results!)}
+          results={results}
           revisions={bk.normalizedData?.revisions}
           refiningSectionId={bk.refiningSectionId ?? null}
           onCloseRefinement={() => bk.setTargetSection(null)}
@@ -287,8 +287,7 @@ export function BrandKitWorkspace({
                 isFromPlatform={bk.isFromPlatform}
                 extractedColors={bk.extractedColors}
                 brandKitId={bk.brandKitId ?? undefined}
-                results={bk.results}
-                onDownloadAll={() => downloadBrandKit(bk.results!)}
+                results={results}
                 revisions={bk.normalizedData?.revisions}
                 refiningSectionId={bk.refiningSectionId ?? null}
                 onCloseRefinement={() => bk.setTargetSection(null)}

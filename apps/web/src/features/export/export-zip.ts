@@ -1,52 +1,66 @@
-import { zipSync, strToU8 } from "fflate";
+import { strToU8, zip } from "fflate";
 import type { BrandKitResultsData } from "../../components/brand-kit/results/brand-kit-results";
 import { createIcoFromPng } from "../../utils/image-utils";
+import { createMonochromeLogoPng } from "../../lib/brand-kit/create-monochrome-logo";
+import { renderSquarePng } from "../../lib/image-processing";
 
-/**
- * Helper to fetch an image and return its Uint8Array buffer
- */
-async function fetchImageBuffer(url: string): Promise<Uint8Array | null> {
+interface FetchedAsset {
+  bytes: Uint8Array;
+  extension: string;
+}
+
+const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
+  "image/avif": "avif",
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/svg+xml": "svg",
+  "image/webp": "webp",
+};
+
+function isExportableAssetUrl(url: string | undefined): url is string {
+  return Boolean(url && !url.includes("placehold.co"));
+}
+
+function inferAssetExtension(contentType: string | null, url: string): string {
+  const mime = contentType?.split(";", 1)[0]?.trim().toLowerCase();
+  if (mime && EXTENSION_BY_CONTENT_TYPE[mime]) {
+    return EXTENSION_BY_CONTENT_TYPE[mime];
+  }
+
+  try {
+    const match = new URL(url).pathname.match(/\.([a-z0-9]+)$/i);
+    if (match?.[1]) return match[1].toLowerCase();
+  } catch {
+    // Use the safe default below for malformed or object URLs.
+  }
+
+  return "png";
+}
+
+async function fetchAsset(url: string): Promise<FetchedAsset | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-    const arrayBuffer = await response.arrayBuffer();
-    return new Uint8Array(arrayBuffer);
+    return {
+      bytes: new Uint8Array(await response.arrayBuffer()),
+      extension: inferAssetExtension(response.headers.get("content-type"), url),
+    };
   } catch (error) {
-    console.error("Error fetching image for zip:", error);
+    console.error("Error fetching asset for ZIP:", error);
     return null;
   }
 }
 
-/**
- * Helper to fetch and resize an image
- */
-async function fetchAndResizeImage(
+async function addRemoteAsset(
+  zipData: Record<string, Uint8Array>,
+  pathWithoutExtension: string,
   url: string,
-  size: number,
-): Promise<Uint8Array | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return resolve(null);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 0, 0, size, size);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          blob.arrayBuffer().then((ab) => resolve(new Uint8Array(ab)));
-        } else {
-          resolve(null);
-        }
-      }, "image/png");
-    };
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+): Promise<void> {
+  const asset = await fetchAsset(url);
+  if (asset) {
+    zipData[`${pathWithoutExtension}.${asset.extension}`] = asset.bytes;
+  }
 }
 
 /**
@@ -58,6 +72,20 @@ function generateColorSwatchSvg(hex: string): string {
 </svg>`;
 }
 
+function createZipArchive(
+  files: Record<string, Uint8Array>,
+): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    zip(files, (error, archive) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(archive);
+    });
+  });
+}
+
 /**
  * Main export function
  */
@@ -66,29 +94,35 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
 
   // 1. Fetch Logos
   if (data.logoVariations && data.logoVariations.length > 0) {
-    for (const [index, variation] of data.logoVariations.entries()) {
-      if (variation.url) {
-        const buffer = await fetchImageBuffer(variation.url);
-        if (buffer) {
-          let ext = "png";
-          try {
-            const parts = new URL(variation.url).pathname.split(".");
-            if (parts.length > 1) ext = parts.pop() || "png";
-          } catch {
-            // fallback for invalid URL strings
-            const fallbackParts = variation.url.split("?")[0].split(".");
-            if (fallbackParts.length > 1) ext = fallbackParts.pop() || "png";
-          }
-          const filename = `logos/${variation.label.toLowerCase().replace(/\s+/g, "-")}-${index + 1}.${ext}`;
-          zipData[filename] = buffer;
-        }
+    const primaryUrl = data.logoVariations.find(
+      (variation) => variation.id === "primary",
+    )?.url;
+    const exportableVariations = data.logoVariations.filter(
+      (variation) =>
+        variation.id !== "mono" || !primaryUrl || variation.url !== primaryUrl,
+    );
+
+    for (const [index, variation] of exportableVariations.entries()) {
+      if (isExportableAssetUrl(variation.url)) {
+        await addRemoteAsset(
+          zipData,
+          `logos/${variation.label.toLowerCase().replace(/\s+/g, "-")}-${index + 1}`,
+          variation.url,
+        );
       }
     }
-  } else if (data.logoUrl) {
-    const buffer = await fetchImageBuffer(data.logoUrl);
-    if (buffer) {
-      zipData["logos/primary-logo.png"] = buffer;
+
+    const hasMonochrome = exportableVariations.some(
+      (variation) => variation.id === "mono",
+    );
+    if (!hasMonochrome && primaryUrl) {
+      const monochromeBlob = await createMonochromeLogoPng(primaryUrl);
+      zipData["logos/monochrome.png"] = new Uint8Array(
+        await monochromeBlob.arrayBuffer(),
+      );
     }
+  } else if (data.logoUrl) {
+    await addRemoteAsset(zipData, "logos/primary-logo", data.logoUrl);
   }
 
   // 2. Generate Color Swatches
@@ -137,25 +171,25 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
   // 5. Fetch other assets (social media, print, favicons, backdrops)
   if (data.socialMedia) {
     for (const asset of data.socialMedia) {
-      if (asset.url && !asset.url.includes("placehold.co")) {
-        const buffer = await fetchImageBuffer(asset.url);
-        if (buffer) {
-          const typeName = asset.type
-            ? asset.type.toLowerCase().replace(/\s+/g, "-")
-            : "header";
-          zipData[
-            `social-media/${asset.platform.toLowerCase()}-${typeName}.png`
-          ] = buffer;
-        }
+      if (isExportableAssetUrl(asset.url)) {
+        const typeName = asset.type
+          ? asset.type.toLowerCase().replace(/\s+/g, "-")
+          : "header";
+        await addRemoteAsset(
+          zipData,
+          `social-media/${asset.platform.toLowerCase()}-${typeName}`,
+          asset.url,
+        );
       }
     }
   }
 
   if (data.favicons) {
     for (const icon of data.favicons) {
-      if (icon.url && !icon.url.includes("placehold.co")) {
-        const buffer = await fetchAndResizeImage(icon.url, icon.size);
-        if (buffer) {
+      if (isExportableAssetUrl(icon.url)) {
+        try {
+          const blob = await renderSquarePng(icon.url, icon.size);
+          const buffer = new Uint8Array(await blob.arrayBuffer());
           if (icon.size === 16) {
             zipData[`favicons/favicon-16x16.png`] = buffer;
           } else if (icon.size === 32) {
@@ -170,6 +204,8 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
           } else {
             zipData[`favicons/favicon-${icon.size}x${icon.size}.png`] = buffer;
           }
+        } catch (error) {
+          console.error(`Failed to resize favicon ${icon.size}:`, error);
         }
       }
     }
@@ -181,30 +217,52 @@ export async function exportBrandKitToZip(data: BrandKitResultsData) {
       backdropStoryUrl: data.brandedBackdrops!.storyUrl,
     };
 
-    if (bg.backdropPostUrl && !bg.backdropPostUrl.includes("placehold.co")) {
-      const buffer = await fetchImageBuffer(bg.backdropPostUrl);
-      if (buffer) zipData["brand-graphics/backdrop-post.png"] = buffer;
+    if (isExportableAssetUrl(bg.backdropPostUrl)) {
+      await addRemoteAsset(
+        zipData,
+        "brand-graphics/backdrop-post",
+        bg.backdropPostUrl,
+      );
     }
-    if (bg.backdropStoryUrl && !bg.backdropStoryUrl.includes("placehold.co")) {
-      const buffer = await fetchImageBuffer(bg.backdropStoryUrl);
-      if (buffer) zipData["brand-graphics/backdrop-story.png"] = buffer;
+    if (isExportableAssetUrl(bg.backdropStoryUrl)) {
+      await addRemoteAsset(
+        zipData,
+        "brand-graphics/backdrop-story",
+        bg.backdropStoryUrl,
+      );
     }
   }
 
-  if (data.businessCard?.frontUrl) {
-    const buffer = await fetchImageBuffer(data.businessCard.frontUrl);
-    if (buffer) zipData["print/business-card-front.png"] = buffer;
-  }
-  if (data.businessCard?.backUrl) {
-    const buffer = await fetchImageBuffer(data.businessCard.backUrl);
-    if (buffer) zipData["print/business-card-back.png"] = buffer;
+  const presentationUrl = data.brandPresentation?.presentationUrl;
+  if (isExportableAssetUrl(presentationUrl)) {
+    await addRemoteAsset(
+      zipData,
+      "presentation/brand-presentation",
+      presentationUrl,
+    );
   }
 
-  // Bundle Zip synchronously (fast enough for small assets)
-  const zipped = zipSync(zipData);
+  if (isExportableAssetUrl(data.businessCard?.frontUrl)) {
+    await addRemoteAsset(
+      zipData,
+      "print/business-card-front",
+      data.businessCard.frontUrl,
+    );
+  }
+  if (isExportableAssetUrl(data.businessCard?.backUrl)) {
+    await addRemoteAsset(
+      zipData,
+      "print/business-card-back",
+      data.businessCard.backUrl,
+    );
+  }
+
+  const zipped = await createZipArchive(zipData);
 
   // Trigger download
-  const blob = new Blob([zipped], { type: "application/zip" });
+  const archiveBuffer = new ArrayBuffer(zipped.byteLength);
+  new Uint8Array(archiveBuffer).set(zipped);
+  const blob = new Blob([archiveBuffer], { type: "application/zip" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

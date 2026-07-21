@@ -37,10 +37,7 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
       <ZoomableImage
         src={v.url}
         alt={v.label}
-        className={cn(
-          "max-h-full max-w-full object-contain transition-all duration-300",
-          v.id === "mono" && "contrast-125 grayscale",
-        )}
+        className="max-h-full max-w-full object-contain transition-all duration-300"
       />
     </div>
   );
@@ -49,6 +46,14 @@ function LogoVariationImage({ v }: { v: LogoVariation }) {
 export function LogoVariationsSection({
   variations,
 }: LogoVariationsSectionProps) {
+  const primaryUrl = variations.find(
+    (variation) => variation.id === "primary",
+  )?.url;
+  const visibleVariations = variations.filter(
+    (variation) =>
+      variation.id !== "mono" || !primaryUrl || variation.url !== primaryUrl,
+  );
+
   return (
     <div className="relative">
       <SectionHeader
@@ -58,7 +63,7 @@ export function LogoVariationsSection({
 
       <SectionContent sectionId="logo-variations">
         <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {variations.map((v) => (
+          {visibleVariations.map((v) => (
             <div key={v.id} className="group flex flex-col">
               <LogoVariationImage v={v} />
               <div className="mt-auto px-3 py-2">

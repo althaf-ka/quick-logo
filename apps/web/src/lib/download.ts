@@ -1,5 +1,18 @@
+import { renderSquarePng } from "@/lib/image-processing";
+
 export interface DownloadImageOptions {
   filename?: string;
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = blobUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 function resolveFilename(
@@ -41,15 +54,7 @@ export async function downloadImage(
     if (!response.ok) throw new Error("Network response was not ok");
 
     const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-
-    const anchor = document.createElement("a");
-    anchor.href = blobUrl;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    window.URL.revokeObjectURL(blobUrl);
+    downloadBlob(blob, filename);
   } catch (error) {
     console.error("Download failed:", error);
 
@@ -61,4 +66,13 @@ export async function downloadImage(
     anchor.click();
     document.body.removeChild(anchor);
   }
+}
+
+export async function downloadSquarePng(
+  url: string,
+  size: number,
+  filename: string,
+): Promise<void> {
+  const blob = await renderSquarePng(url, size);
+  downloadBlob(blob, filename);
 }

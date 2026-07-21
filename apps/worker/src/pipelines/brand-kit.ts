@@ -395,12 +395,6 @@ export class BrandKitPipeline {
             url: darkAndIconUrls?.darkModeUrl ?? fallbackLogoUrl,
           },
           {
-            id: "mono",
-            label: "Monochrome",
-            background: "light",
-            url: fallbackLogoUrl,
-          },
-          {
             id: "icon",
             label: "Icon Only",
             background: "transparent",

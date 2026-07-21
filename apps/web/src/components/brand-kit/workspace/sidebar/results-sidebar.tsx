@@ -15,7 +15,6 @@ import { useExportBrandKit } from "@/hooks/brand-kit/use-export-brand-kit";
 export interface ResultsSidebarProps {
   brandKitId?: string;
   results?: BrandKitResultsData | null;
-  onDownloadAll?: () => void;
   revisions?: NormalizedBrandKit["revisions"];
   onRestoreRevision?: (sourceRevisionId: string) => void;
 }

@@ -4,6 +4,7 @@ import { SparkleIcon } from "@phosphor-icons/react";
 import { Skeleton } from "@quicklogo/ui/components/skeleton";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { useBrandKitSection } from "./section-context";
+import { isBrandKitRefinementSection } from "@quicklogo/shared";
 
 interface SectionHeaderProps {
   title: string;
@@ -23,13 +24,14 @@ export function SectionHeader({
   const { targetSectionId, onRefine, refiningSectionId } = useBrandKitSection();
   const isTargeted = targetSectionId === sectionId;
   const isRefining = refiningSectionId === sectionId;
+  const canRefine = isBrandKitRefinementSection(sectionId);
 
   return (
     <div className={cn("flex items-center justify-between pb-3", className)}>
       <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
         {title}
       </h3>
-      {onRefine && !hideRefine ? (
+      {onRefine && canRefine && !hideRefine ? (
         <Button
           variant="outline"
           size="sm"

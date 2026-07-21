@@ -4,6 +4,7 @@ import type {
   SocialMediaConfig,
   PresentationConfig,
 } from "../../../types/brand-kit";
+import type { BrandKitDeliverables } from "@quicklogo/shared";
 
 type GenerateResults = {
   logoVariations?: unknown[];
@@ -34,7 +35,15 @@ type GenerateResults = {
   logoUrl?: string;
 };
 
-export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
+export function mapDeliverables(
+  results: GenerateResults,
+  requested: Partial<BrandKitDeliverables> = {},
+): DeliverablesConfig {
+  const isEnabled = (
+    key: keyof BrandKitDeliverables,
+    hasGeneratedResult: boolean,
+  ) => hasGeneratedResult || requested[key] === true;
+
   const logoVariationsExist = !!(
     results.logoVariations && results.logoVariations.length > 0
   );
@@ -91,33 +100,33 @@ export function mapDeliverables(results: GenerateResults): DeliverablesConfig {
 
   return {
     logoVariations: {
-      enabled: logoVariationsExist,
+      enabled: isEnabled("logoVariations", logoVariationsExist),
       config: results.logoVariations
         ? { variations: results.logoVariations }
         : {},
     },
     socialMedia: {
-      enabled: socialMediaExist,
+      enabled: isEnabled("socialMedia", socialMediaExist),
       config: socialMediaConfig,
     },
     businessCard: {
-      enabled: businessCardExist,
+      enabled: isEnabled("businessCard", businessCardExist),
       config: businessCardConfig,
     },
     favicon: {
-      enabled: faviconExist,
+      enabled: isEnabled("favicon", faviconExist),
       config: results.favicons ? { sizes: results.favicons } : {},
     },
     brandGraphics: {
-      enabled: brandGraphicsExist,
+      enabled: isEnabled("brandGraphics", brandGraphicsExist),
       config: results.brandGraphics || results.brandedBackdrops || {},
     },
     brandPresentation: {
-      enabled: brandPresentationExist,
+      enabled: isEnabled("brandPresentation", brandPresentationExist),
       config: presentationConfig,
     },
     brandGuidelines: {
-      enabled: !!results.brandGuidelines,
+      enabled: isEnabled("brandGuidelines", !!results.brandGuidelines),
       config: {
         depth:
           results.brandGuidelines?.depth === "complete"

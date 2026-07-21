@@ -85,6 +85,18 @@ export const structuredBrandContextSchema = z.object({
   _hydratedAt: z.number().optional(),
 });
 
+export const brandKitDeliverablesSchema = z.object({
+  logoVariations: z.boolean().optional(),
+  socialMedia: z.boolean(),
+  businessCard: z.boolean(),
+  favicon: z.boolean(),
+  brandGraphics: z.boolean().optional(),
+  brandPresentation: z.boolean().optional(),
+  brandGuidelines: z.boolean().optional(),
+});
+
+export type BrandKitDeliverables = z.infer<typeof brandKitDeliverablesSchema>;
+
 export const generateBrandKitSchema = z
   .object({
     sourceImageId: z.string().optional(),
@@ -99,15 +111,7 @@ export const generateBrandKitSchema = z
       .array(z.url({ error: "Invalid product image URL" }))
       .max(MAX_BRAND_PRESENTATION_REFERENCE_IMAGES)
       .optional(),
-    deliverables: z.object({
-      logoVariations: z.boolean().optional(),
-      socialMedia: z.boolean(),
-      businessCard: z.boolean(),
-      favicon: z.boolean(),
-      brandGraphics: z.boolean().optional(),
-      brandPresentation: z.boolean().optional(),
-      brandGuidelines: z.boolean().optional(),
-    }),
+    deliverables: brandKitDeliverablesSchema,
     extractedColors: z.array(z.string()),
   })
   .merge(structuredBrandContextSchema)
@@ -193,19 +197,28 @@ export const generateBrandKitSchema = z
     }
   });
 
+export const BRAND_KIT_REFINEMENT_SECTION_IDS = [
+  "color-palette",
+  "typography",
+  "social-media",
+  "business-card",
+  "brand-graphics",
+  "brand-presentation",
+  "brand-guidelines",
+  "global",
+] as const;
+
+export type RefinementSectionId =
+  (typeof BRAND_KIT_REFINEMENT_SECTION_IDS)[number];
+
+export function isBrandKitRefinementSection(
+  sectionId: string,
+): sectionId is RefinementSectionId {
+  return BRAND_KIT_REFINEMENT_SECTION_IDS.some((id) => id === sectionId);
+}
+
 const refineBrandKitSectionBase = z.object({
-  sectionId: z.enum([
-    "logo-variations",
-    "color-palette",
-    "typography",
-    "social-media",
-    "business-card",
-    "favicon",
-    "brand-graphics",
-    "brand-presentation",
-    "brand-guidelines",
-    "global",
-  ]),
+  sectionId: z.enum(BRAND_KIT_REFINEMENT_SECTION_IDS),
   refinementPrompt: z.string().min(1, "Refinement instruction is required"),
   typographyStyle: z.string().optional(), // In case they are refining typography and changed the dropdown
   targetItemId: z.string().optional(),
@@ -255,10 +268,6 @@ export const refineBrandKitSectionSchema =
       }
     }
   });
-
-export type RefinementSectionId = z.infer<
-  typeof refineBrandKitSectionBase
->["sectionId"];
 
 export const restoreSectionSchema = z.object({
   sourceRevisionId: z.string(),
