@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { AUTH_KEYS } from "@/hooks/use-auth";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";
 import type { RefinementSectionId, RestoreSectionId } from "@quicklogo/shared";
@@ -8,10 +9,32 @@ import type { RefinementSectionId, RestoreSectionId } from "@quicklogo/shared";
 interface UseBrandKitRefinementOptions {
   brandKitId: string | null;
   typographyStyle?: string;
+  activeRefinement?: NormalizedBrandKit["activeRefinement"];
 }
 
-const REFINEMENT_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+type DeterministicEditInput =
+  | {
+      action: "set-font";
+      role: "heading" | "body";
+      family: string;
+    }
+  | {
+      action: "set-palette";
+      colors: Array<{ hex: string; role: string }>;
+    };
+
 const REFINEMENT_POLL_INTERVAL_MS = 4000;
+
+async function readErrorMessage(response: Response, fallback: string) {
+  const data = await response.json().catch(() => null);
+  if (!data || typeof data !== "object") return fallback;
+  const error = (data as { error?: unknown }).error;
+  if (typeof error === "string") return error;
+  const issues = (data as { issues?: unknown }).issues;
+  if (!Array.isArray(issues) || issues.length === 0) return fallback;
+  const message = (issues[0] as { message?: unknown }).message;
+  return typeof message === "string" ? message : fallback;
+}
 
 export interface CreativeSessionMessage {
   role: "user" | "assistant" | "system";
@@ -28,6 +51,7 @@ export interface RefinementHistoryEntry {
 export function useBrandKitRefinement({
   brandKitId,
   typographyStyle,
+  activeRefinement,
 }: UseBrandKitRefinementOptions) {
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
@@ -36,10 +60,11 @@ export function useBrandKitRefinement({
     null,
   );
   const [targetItemId, setTargetItemId] = useState<string | null>(null);
-  const [activeRevTracker, setActiveRevTracker] = useState<{
-    id?: string;
-    count: number;
-  } | null>(null);
+  const [activeRefinementId, setActiveRefinementId] = useState<string | null>(
+    null,
+  );
+  const hydratedRefinementId = useRef<string | null>(null);
+  const handledRefinementId = useRef<string | null>(null);
 
   // Conversational session memory
   const [conversationHistory, setConversationHistory] = useState<
@@ -52,159 +77,206 @@ export function useBrandKitRefinement({
   const hydrateFromBrandKit = useCallback((normalized: NormalizedBrandKit) => {
     // Populate session memory from normalized revisions if available
     const historyEntries: RefinementHistoryEntry[] = normalized.revisions
-      .filter((r) => r.triggerType.startsWith("refine_"))
+      .filter((r) => r.revisionType === "refinement")
       .map((r) => ({
-        assetId: r.triggerType.replace("refine_", ""),
-        prompt: (r.results as { lastPrompt?: string })?.lastPrompt || "",
+        assetId: r.targetItemId
+          ? `${r.sectionId}:${r.targetItemId}`
+          : (r.sectionId ?? "brand-kit"),
+        prompt: r.refinementPrompt || "",
         timestamp: r.createdAt,
       }));
     setRefinementHistory(historyEntries);
   }, []);
 
-  const { mutate: mutateRefine, isPending: isRefiningKit } = useMutation({
-    mutationFn: async ({
-      sectionId,
-      refinementPrompt,
-      targetItemId: mutationTargetItemId,
-    }: {
-      sectionId: RefinementSectionId;
-      refinementPrompt: string;
-      targetItemId?: string;
-    }) => {
-      if (!brandKitId) throw new Error("No active brand kit session");
-      const res = await api.brandKits[":id"].refine.$post({
-        param: { id: brandKitId },
-        json: {
-          sectionId,
-          refinementPrompt,
-          typographyStyle,
-          targetItemId: mutationTargetItemId,
-        },
+  useEffect(() => {
+    if (
+      activeRefinement &&
+      hydratedRefinementId.current !== activeRefinement.id
+    ) {
+      hydratedRefinementId.current = activeRefinement.id;
+      setActiveRefinementId(activeRefinement.id);
+      setRefiningSectionId(activeRefinement.sectionId);
+      setTargetItemId(activeRefinement.targetItemId || null);
+    }
+  }, [activeRefinement]);
+
+  const { data: refinementOperation } = useQuery({
+    queryKey: ["brand-kit-refinement", brandKitId, activeRefinementId],
+    queryFn: async () => {
+      if (!brandKitId || !activeRefinementId) return null;
+      const response = await api.brandKits[":id"].refinements[
+        ":refinementId"
+      ].$get({
+        param: { id: brandKitId, refinementId: activeRefinementId },
       });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        let errorMessage = errData?.error || "Failed to refine";
-        const errJson = errData as Record<string, unknown>;
-        if (
-          errJson?.issues &&
-          Array.isArray(errJson.issues) &&
-          errJson.issues.length > 0
-        ) {
-          errorMessage = (errJson.issues[0] as { message: string }).message;
-        }
-        throw new Error(errorMessage);
+      if (!response.ok) {
+        throw new Error(
+          await readErrorMessage(response, "Failed to check refinement status"),
+        );
       }
-      return res.json();
+      return response.json();
     },
-    onMutate: ({
-      sectionId,
-      refinementPrompt,
-      targetItemId: mutationTargetItemId,
-    }) => {
-      const cached = queryClient.getQueryData<NormalizedBrandKit | null>([
-        "brand-kit",
-        brandKitId,
-      ]);
-      const activeRev = cached?.revisions.find((r) => r.isActive);
-
-      if (!refinementPrompt.startsWith("__FONT_OVERRIDE__")) {
-        setRefiningSectionId(sectionId);
-        setTargetItemId(mutationTargetItemId || null);
-        setActiveRevTracker({
-          id: activeRev?.id,
-          count: cached?.revisions.length || 0,
-        });
-      }
-      return { previousActiveRevisionId: activeRev?.id };
+    enabled: Boolean(brandKitId && activeRefinementId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.refinement.status;
+      return status === "queued" || status === "processing"
+        ? REFINEMENT_POLL_INTERVAL_MS
+        : false;
     },
-    onSuccess: (_, variables, context) => {
-      // Font overrides skip general refetches to avoid visual jumps
-      if (variables.refinementPrompt.startsWith("__FONT_OVERRIDE__")) return;
-      queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
-
-      // Update local conversation history
-      setConversationHistory((prev) => [
-        ...prev,
-        {
-          role: "user",
-          content: variables.refinementPrompt,
-          timestamp: new Date().toISOString(),
-        },
-        {
-          role: "assistant",
-          content: `Refinement started successfully for the ${variables.sectionId} deliverable.`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-      setPrompt("");
-      setTargetSection(null);
-
-      const prevRevId = context?.previousActiveRevisionId;
-      if (prevRevId) {
-        toast.success("Refinement started. Changes will appear shortly.", {
-          action: {
-            label: "Undo Previous",
-            onClick: () => mutateRestoreFull({ sourceRevisionId: prevRevId }),
-          },
-        });
-      } else {
-        toast.success("Refinement started. Changes will appear shortly.");
-      }
-    },
-    onError: (err: Error, variables) => {
-      if (variables.refinementPrompt.startsWith("__FONT_OVERRIDE__")) {
-        queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
-      }
-      setRefiningSectionId(null);
-      setTargetItemId(null);
-      setActiveRevTracker(null);
-      toast.error(err.message || "Failed to start refinement");
-    },
-    // Removed onSettled clear to allow polling to dictate completion
   });
 
-  useEffect(() => {
-    if (!refiningSectionId || !brandKitId || !activeRevTracker) return;
+  const { mutate: mutateRefine, isPending: isSubmittingRefinement } =
+    useMutation({
+      mutationFn: async ({
+        sectionId,
+        refinementPrompt,
+        targetItemId: mutationTargetItemId,
+      }: {
+        sectionId: RefinementSectionId;
+        refinementPrompt: string;
+        targetItemId?: string;
+      }) => {
+        if (!brandKitId) throw new Error("No active brand kit session");
+        const res = await api.brandKits[":id"].refine.$post({
+          param: { id: brandKitId },
+          json: {
+            sectionId,
+            refinementPrompt,
+            typographyStyle,
+            targetItemId: mutationTargetItemId,
+          },
+        });
+        if (!res.ok) {
+          throw new Error(await readErrorMessage(res, "Failed to refine"));
+        }
+        return res.json();
+      },
+      onMutate: ({ sectionId, targetItemId: mutationTargetItemId }) => {
+        setRefiningSectionId(sectionId);
+        setTargetItemId(mutationTargetItemId || null);
+      },
+      onSuccess: (data, variables) => {
+        hydratedRefinementId.current = data.refinementId;
+        setActiveRefinementId(data.refinementId);
+        void queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
 
-    // Queue retries can legitimately outlive one model call. Stop the local
-    // spinner eventually without implying that the background job was killed.
-    const timeout = setTimeout(() => {
-      setRefiningSectionId(null);
-      setTargetItemId(null);
-      setActiveRevTracker(null);
-      toast.info(
-        "This refinement is taking longer than expected and will continue in the background.",
-        { id: "refine-timeout" },
-      );
-    }, REFINEMENT_POLL_TIMEOUT_MS);
+        // Update local conversation history
+        setConversationHistory((prev) => [
+          ...prev,
+          {
+            role: "user",
+            content: variables.refinementPrompt,
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: "assistant",
+            content: `Refinement queued for the ${variables.sectionId} deliverable.`,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+        setPrompt("");
+        setTargetSection(null);
+        toast.success("Refinement queued. Changes will appear shortly.");
+      },
+      onError: (err: Error) => {
+        setRefiningSectionId(null);
+        setTargetItemId(null);
+        void queryClient.invalidateQueries({
+          queryKey: ["brand-kit", brandKitId],
+        });
+        void queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
+        toast.error(err.message || "Failed to start refinement");
+      },
+    });
 
-    const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
-
+  const { mutate: mutateEdit, isPending: isSavingEdit } = useMutation({
+    mutationFn: async (edit: DeterministicEditInput) => {
+      if (!brandKitId) throw new Error("No active brand kit session");
       const cached = queryClient.getQueryData<NormalizedBrandKit | null>([
         "brand-kit",
         brandKitId,
       ]);
-      if (cached) {
-        const currentActiveId = cached.revisions.find((r) => r.isActive)?.id;
-        const currentCount = cached.revisions.length;
+      const activeRevision = cached?.revisions.find(
+        (revision) => revision.isActive,
+      );
+      if (!activeRevision) throw new Error("No active brand kit revision");
 
-        if (
-          (currentActiveId && currentActiveId !== activeRevTracker.id) ||
-          currentCount > activeRevTracker.count
-        ) {
-          setRefiningSectionId(null);
-          setTargetItemId(null);
-          setActiveRevTracker(null);
-        }
+      const response = await api.brandKits[":id"].edit.$post({
+        param: { id: brandKitId },
+        json: { ...edit, baseRevisionId: activeRevision.id },
+      });
+      if (!response.ok) {
+        throw new Error(
+          await readErrorMessage(response, "Failed to save brand kit edit"),
+        );
       }
-    }, REFINEMENT_POLL_INTERVAL_MS);
+      return response.json();
+    },
+    onMutate: async (edit) => {
+      const queryKey = ["brand-kit", brandKitId] as const;
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<NormalizedBrandKit | null>(
+        queryKey,
+      );
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [refiningSectionId, brandKitId, activeRevTracker, queryClient]);
+      queryClient.setQueryData<NormalizedBrandKit | null>(
+        queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            revisions: current.revisions.map((revision) => {
+              if (!revision.isActive) return revision;
+              const results = revision.results;
+              if (edit.action === "set-palette") {
+                return {
+                  ...revision,
+                  results: { ...results, colorPalette: edit.colors },
+                };
+              }
+
+              const typography = results.typography as
+                | Record<"heading" | "body", Record<string, unknown>>
+                | undefined;
+              if (!typography?.[edit.role]) return revision;
+              return {
+                ...revision,
+                results: {
+                  ...results,
+                  typography: {
+                    ...typography,
+                    [edit.role]: {
+                      ...typography[edit.role],
+                      family: edit.family,
+                      name: edit.family,
+                    },
+                  },
+                },
+              };
+            }),
+          };
+        },
+      );
+
+      return { previous };
+    },
+    onSuccess: (_data, edit) => {
+      toast.success(
+        edit.action === "set-font" ? "Font updated." : "Palette updated.",
+      );
+    },
+    onError: (error: Error, _edit, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["brand-kit", brandKitId], context.previous);
+      }
+      toast.error(error.message || "Failed to save brand kit edit");
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["brand-kit", brandKitId],
+      });
+    },
+  });
 
   const { mutate: mutateRestore, isPending: isRestoringKit } = useMutation({
     mutationFn: async ({
@@ -222,15 +294,19 @@ export function useBrandKitRefinement({
           sourceRevisionId,
         },
       });
-      if (!res.ok) throw new Error("Failed to restore revision");
+      if (!res.ok) {
+        throw new Error(
+          await readErrorMessage(res, "Failed to restore revision"),
+        );
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
       toast.success("Section restored!");
     },
-    onError: () => {
-      toast.error("Failed to restore section");
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to restore section");
     },
   });
 
@@ -248,18 +324,67 @@ export function useBrandKitRefinement({
             sourceRevisionId,
           },
         });
-        if (!res.ok) throw new Error("Failed to restore revision");
+        if (!res.ok) {
+          throw new Error(
+            await readErrorMessage(res, "Failed to restore revision"),
+          );
+        }
         return res.json();
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
         toast.success("Brand Kit restored to previous version!");
       },
-      onError: () => {
-        toast.error("Failed to restore Brand Kit");
+      onError: (error: Error) => {
+        toast.error(error.message || "Failed to restore Brand Kit");
       },
     },
   );
+
+  useEffect(() => {
+    const operation = refinementOperation?.refinement;
+    if (!operation) return;
+
+    if (operation.status === "queued" || operation.status === "processing") {
+      setRefiningSectionId(operation.sectionId);
+      setTargetItemId(operation.targetItemId || null);
+      return;
+    }
+
+    if (handledRefinementId.current === operation.id) return;
+    handledRefinementId.current = operation.id;
+    setRefiningSectionId(null);
+    setTargetItemId(null);
+    setActiveRefinementId(null);
+    void queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
+    void queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
+
+    if (operation.status === "completed") {
+      toast.success("Refinement completed.", {
+        id: `refinement-${operation.id}`,
+        action: {
+          label: "Undo",
+          onClick: () =>
+            mutateRestoreFull({ sourceRevisionId: operation.baseRevisionId }),
+        },
+      });
+      return;
+    }
+
+    toast.error(operation.errorMessage || "Refinement failed.", {
+      id: `refinement-${operation.id}`,
+      description: operation.refundedAt
+        ? `${operation.creditsUsed} credits were refunded.`
+        : undefined,
+    });
+  }, [
+    brandKitId,
+    mutateRestoreFull,
+    queryClient,
+    refinementOperation?.refinement,
+  ]);
+
+  const isRefiningKit = isSubmittingRefinement || Boolean(refiningSectionId);
 
   return {
     prompt,
@@ -273,6 +398,8 @@ export function useBrandKitRefinement({
     conversationHistory,
     refinementHistory,
     mutateRefine,
+    mutateEdit,
+    isSavingEdit,
     isRefiningKit,
     mutateRestore,
     isRestoringKit,

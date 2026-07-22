@@ -25,12 +25,14 @@ interface TypographySectionProps {
   pairing: TypographyPairing;
   brandName?: string;
   onFontChange?: (role: "heading" | "body", family: string) => void;
+  isSaving?: boolean;
 }
 
 export function TypographySection({
   pairing,
   brandName,
   onFontChange,
+  isSaving = false,
 }: TypographySectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const headingSample =
@@ -89,11 +91,13 @@ export function TypographySection({
                 label="Heading Font"
                 value={pairing.heading.family}
                 onValueChange={(family) => onFontChange("heading", family)}
+                disabled={isSaving}
               />
               <FontPicker
                 label="Body Font"
                 value={pairing.body.family}
                 onValueChange={(family) => onFontChange("body", family)}
+                disabled={isSaving}
               />
             </div>
           </div>

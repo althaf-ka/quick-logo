@@ -74,6 +74,8 @@ interface BrandKitResultsProps {
   data: BrandKitResultsData;
   onRefine: (sectionId: string | null, targetItemId?: string) => void;
   onFontChange: (role: "heading" | "body", family: string) => void;
+  onPaletteChange: (colors: PaletteColor[]) => void;
+  isSavingEdit?: boolean;
   refiningSectionId?: string | null;
   targetSectionId?: string | null;
   targetItemId?: string | null;
@@ -138,6 +140,8 @@ export function BrandKitResults({
   data,
   onRefine,
   onFontChange,
+  onPaletteChange,
+  isSavingEdit,
   refiningSectionId,
   targetSectionId,
   targetItemId,
@@ -206,6 +210,7 @@ export function BrandKitResults({
                 pairing={data.typography}
                 brandName={data.brandName}
                 onFontChange={onFontChange}
+                isSaving={isSavingEdit}
               />
             </FocusWrapper>
 
@@ -215,8 +220,13 @@ export function BrandKitResults({
               refiningSectionId={refiningSectionId}
               isMobile={isMobile}
               anyRefining={anyRefining}
+              targetSectionId={targetSectionId}
             >
-              <ColorPaletteSection colors={data.colorPalette} />
+              <ColorPaletteSection
+                colors={data.colorPalette}
+                onPaletteChange={onPaletteChange}
+                isSaving={isSavingEdit}
+              />
             </FocusWrapper>
           </div>
 

@@ -79,3 +79,23 @@ export class BadRequestError extends AppError {
     super(400, "BAD_REQUEST", message);
   }
 }
+
+export class RefinementInProgressError extends AppError {
+  constructor() {
+    super(
+      409,
+      ERROR_CODES.REFINEMENT_IN_PROGRESS,
+      "Another refinement is already processing for this brand kit.",
+    );
+  }
+}
+
+export class RevisionConflictError extends AppError {
+  constructor() {
+    super(
+      409,
+      ERROR_CODES.REVISION_CONFLICT,
+      "The brand kit changed while this edit was being saved. Review the latest version and try again.",
+    );
+  }
+}

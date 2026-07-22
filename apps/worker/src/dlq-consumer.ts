@@ -48,6 +48,8 @@ export async function processDlqBatch(
           refinementId: body.refinementId,
           userId: body.userId,
           creditsUsed: body.creditsUsed,
+          errorMessage:
+            "This refinement could not be completed after several attempts.",
         });
       } else {
         const imageId = extractImageId(body);

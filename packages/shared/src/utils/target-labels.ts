@@ -30,6 +30,14 @@ export function getSectionLabel(
     case "typography":
       label = "Typography System";
       break;
+    case "colorPalette":
+    case "color-palette":
+      label = "Color Palette";
+      break;
+    case "brandGuidelines":
+    case "brand-guidelines":
+      label = "Brand Guidelines";
+      break;
   }
 
   if (targetItemId) {

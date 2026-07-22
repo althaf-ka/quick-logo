@@ -17,8 +17,13 @@ interface BusinessCardSectionProps {
 }
 
 export function BusinessCardSection({ card }: BusinessCardSectionProps) {
-  const { targetSectionId, targetItemId, cancelRefine, onRefine } =
-    useBrandKitSection();
+  const {
+    targetSectionId,
+    targetItemId,
+    refiningSectionId,
+    cancelRefine,
+    onRefine,
+  } = useBrandKitSection();
   const isFrontTargeted =
     targetSectionId === "business-card" && targetItemId === "front";
   const isBackTargeted =
@@ -45,7 +50,10 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
             title="Front"
             subtitle={formatLabel}
             isTargeted={isFrontTargeted}
-            isPlaceholder={card.frontUrl.includes("placehold.co")}
+            isPlaceholder={
+              card.frontUrl.includes("placehold.co") ||
+              Boolean(refiningSectionId)
+            }
             onToggleRefine={() =>
               isFrontTargeted
                 ? cancelRefine?.()
@@ -77,7 +85,10 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
               title="Back"
               subtitle={formatLabel}
               isTargeted={isBackTargeted}
-              isPlaceholder={card.backUrl?.includes("placehold.co")}
+              isPlaceholder={
+                card.backUrl?.includes("placehold.co") ||
+                Boolean(refiningSectionId)
+              }
               onToggleRefine={() =>
                 isBackTargeted
                   ? cancelRefine?.()

@@ -9,6 +9,7 @@ import type { InferResponseType } from "@quicklogo/api-client";
 import { api } from "@/lib/api";
 import {
   brandKitDeliverablesSchema,
+  isBrandKitRefinementSection,
   type BusinessCardBrief,
   type SocialMediaBrief,
 } from "@quicklogo/shared";
@@ -20,7 +21,7 @@ type BrandKitApiResponse = InferResponseType<
 export function normalizeBrandKit(
   rawResponse: BrandKitApiResponse,
 ): NormalizedBrandKit {
-  const { brandKit, revisions } = rawResponse;
+  const { activeRefinement, brandKit, revisions } = rawResponse;
 
   // Find active revision or use fallback
   const activeRevision =
@@ -52,11 +53,11 @@ export function normalizeBrandKit(
     id: brandKit.id,
     brandName: brandKit.brandName || "",
     logoUrl: brandKit.customLogoUrl || results.logoUrl || undefined,
-    extractedColors:
-      (brandKit.extractedColors as string[]) ||
-      (results.colorPalette
-        ? (results.colorPalette as Record<string, string>[]).map((c) => c.hex)
-        : []),
+    extractedColors: results.colorPalette
+      ? (results.colorPalette as Record<string, string>[]).map((color) =>
+          color.hex.toUpperCase(),
+        )
+      : ((brandKit.extractedColors as string[]) ?? []),
     typographyPreference,
     deliverables,
     status: brandKit.status || "pending",
@@ -65,6 +66,19 @@ export function normalizeBrandKit(
     generationProgress: brandKit.generationProgress || 0,
     generationStage: brandKit.generationStage || "Queued",
     refundedAt: brandKit.refundedAt || undefined,
+    activeRefinement:
+      activeRefinement &&
+      isBrandKitRefinementSection(activeRefinement.sectionId) &&
+      (activeRefinement.status === "queued" ||
+        activeRefinement.status === "processing")
+        ? {
+            id: activeRefinement.id,
+            sectionId: activeRefinement.sectionId,
+            targetItemId: activeRefinement.targetItemId || undefined,
+            status: activeRefinement.status,
+            creditsUsed: activeRefinement.creditsUsed,
+          }
+        : undefined,
     industry: brandKit.industry || undefined,
     tagline: brandKit.tagline || undefined,
     targetAudience: brandKit.targetAudience || undefined,
@@ -82,8 +96,14 @@ export function normalizeBrandKit(
     revisions: revisions.map((r) => ({
       id: r.id,
       isActive: r.isActive,
+      revisionNumber: r.revisionNumber,
+      label: r.label || `Brand kit version ${r.revisionNumber}`,
+      revisionType: r.revisionType,
+      sectionId: r.sectionId || undefined,
+      targetItemId: r.targetItemId || undefined,
+      sourceRevisionId: r.sourceRevisionId || undefined,
+      refinementPrompt: r.refinementPrompt || undefined,
       results: r.results as Record<string, unknown>,
-      triggerType: r.triggerType || "unknown",
       createdAt: r.createdAt
         ? new Date(r.createdAt).toISOString()
         : new Date().toISOString(),

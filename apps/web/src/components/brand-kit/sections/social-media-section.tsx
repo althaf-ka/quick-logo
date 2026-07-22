@@ -58,8 +58,13 @@ function getRatioLabel(asset: SocialMediaAsset): string {
 }
 
 export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
-  const { targetSectionId, targetItemId, cancelRefine, onRefine } =
-    useBrandKitSection();
+  const {
+    targetSectionId,
+    targetItemId,
+    refiningSectionId,
+    cancelRefine,
+    onRefine,
+  } = useBrandKitSection();
 
   const getTargetItemId = (asset: SocialMediaAsset) => {
     if (asset.type === "Profile") return "instagram-profile";
@@ -129,7 +134,7 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
                 subtitle={getRatioLabel(asset)}
                 icon={<PlatformIcon platform={asset.platform} />}
                 isTargeted={isAssetTargeted}
-                isPlaceholder={isPlaceholder}
+                isPlaceholder={isPlaceholder || Boolean(refiningSectionId)}
                 onToggleRefine={
                   itemId ? () => handleToggleRefine(itemId) : undefined
                 }

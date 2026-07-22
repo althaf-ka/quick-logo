@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/lib/api";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useBrandKitSession } from "./use-brand-kit-session";
 import { useBrandKitGeneration } from "./use-brand-kit-generation";
 import { useBrandKitRefinement } from "./use-brand-kit-refinement";
@@ -11,7 +11,6 @@ import {
   extractColorsFromUrl,
 } from "@/lib/brand-kit/extract-colors";
 import { toast } from "@quicklogo/ui/components/sonner";
-import type { NormalizedBrandKit } from "../../types/brand-kit";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
 import type {
   StructuredBrandContext,
@@ -33,7 +32,6 @@ export function useBrandKit({
   brandKitId: initialBrandKitId,
 }: UseBrandKitOptions) {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   // 1. Instantiate lower-level hooks
   const storageKeySuffix = initialBrandKitId
@@ -93,6 +91,7 @@ export function useBrandKit({
   const refinement = useBrandKitRefinement({
     brandKitId: brandKitId,
     typographyStyle: typographyPreference.mood,
+    activeRefinement: normalizedData?.activeRefinement,
   });
   const {
     isRefiningKit,
@@ -107,6 +106,8 @@ export function useBrandKit({
     refinementHistory,
     hydrateFromBrandKit: hydrateRefinement,
     mutateRefine,
+    mutateEdit,
+    isSavingEdit,
     mutateRestore,
     mutateRestoreFull,
   } = refinement;
@@ -285,42 +286,17 @@ export function useBrandKit({
   const handleFontChange = useCallback(
     (role: "heading" | "body", family: string) => {
       if (!brandKitId || !results) return;
-
-      queryClient.setQueryData<NormalizedBrandKit | null>(
-        ["brand-kit", brandKitId],
-        (current) => {
-          if (!current) return current;
-          return {
-            ...current,
-            revisions: current.revisions.map((revision) => {
-              if (!revision.isActive) return revision;
-              const revisionResults =
-                revision.results as unknown as BrandKitResultsData;
-              return {
-                ...revision,
-                results: {
-                  ...revisionResults,
-                  typography: {
-                    ...revisionResults.typography,
-                    [role]: {
-                      ...revisionResults.typography[role],
-                      family,
-                      name: family,
-                    },
-                  },
-                },
-              };
-            }),
-          };
-        },
-      );
-
-      mutateRefine({
-        sectionId: "typography",
-        refinementPrompt: `__FONT_OVERRIDE__:${role}:${family}`,
-      });
+      mutateEdit({ action: "set-font", role, family });
     },
-    [brandKitId, results, queryClient, mutateRefine],
+    [brandKitId, results, mutateEdit],
+  );
+
+  const handlePaletteChange = useCallback(
+    (colors: Array<{ hex: string; role: string }>) => {
+      if (!brandKitId || !results) return;
+      mutateEdit({ action: "set-palette", colors });
+    },
+    [brandKitId, results, mutateEdit],
   );
 
   const generationCredits = computeBrandKitCost({
@@ -338,6 +314,7 @@ export function useBrandKit({
       : generationCredits;
   const totalCredits = isGenerating
     ? (activeOperationCredits ??
+      normalizedData?.activeRefinement?.creditsUsed ??
       normalizedData?.creditsUsed ??
       pendingOperationCredits)
     : pendingOperationCredits;
@@ -493,6 +470,8 @@ export function useBrandKit({
     handleLogoRemove,
     handleMockupUpload,
     handleFontChange,
+    handlePaletteChange,
+    isSavingEdit,
     handleGenerate,
     handleRefine: (
       sectionId: string,
@@ -534,14 +513,11 @@ export function useBrandKit({
     },
     getSectionHistory: (sectionPrefix: string) => {
       if (!normalizedData) return [];
-      return normalizedData.revisions.filter((r) => {
-        const type = r.triggerType;
-        return (
-          type === "initial_generation" ||
-          type.startsWith(`refine_${sectionPrefix}`) ||
-          type.startsWith(`restore_${sectionPrefix}`)
-        );
-      });
+      return normalizedData.revisions.filter(
+        (revision) =>
+          revision.revisionType === "initial" ||
+          revision.sectionId === sectionPrefix,
+      );
     },
   };
 }

@@ -1,4 +1,8 @@
-import type { StructuredBrandContext } from "@quicklogo/shared";
+import type {
+  BrandKitRevisionType,
+  RefinementSectionId,
+  StructuredBrandContext,
+} from "@quicklogo/shared";
 
 export type WorkspaceState =
   | "foundation"
@@ -72,11 +76,24 @@ export interface NormalizedBrandKit extends StructuredBrandContext {
   generationProgress: number;
   generationStage: string;
   refundedAt?: string;
+  activeRefinement?: {
+    id: string;
+    sectionId: RefinementSectionId;
+    targetItemId?: string;
+    status: "queued" | "processing";
+    creditsUsed: number;
+  };
   revisions: Array<{
     id: string;
     isActive: boolean;
+    revisionNumber: number;
+    label: string;
+    revisionType: BrandKitRevisionType;
+    sectionId?: string;
+    targetItemId?: string;
+    sourceRevisionId?: string;
+    refinementPrompt?: string;
     results: Record<string, unknown>;
-    triggerType: string;
     createdAt: string;
   }>;
 }

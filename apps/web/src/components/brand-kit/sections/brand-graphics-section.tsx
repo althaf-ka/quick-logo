@@ -12,8 +12,13 @@ interface BrandGraphicsSectionProps {
 }
 
 export function BrandGraphicsSection({ data }: BrandGraphicsSectionProps) {
-  const { targetSectionId, targetItemId, cancelRefine, onRefine } =
-    useBrandKitSection();
+  const {
+    targetSectionId,
+    targetItemId,
+    refiningSectionId,
+    cancelRefine,
+    onRefine,
+  } = useBrandKitSection();
 
   const isTargeted = (itemId: string) =>
     targetSectionId === "brand-graphics" && targetItemId === itemId;
@@ -60,7 +65,10 @@ export function BrandGraphicsSection({ data }: BrandGraphicsSectionProps) {
               title={graphic.title}
               subtitle={graphic.subtitle}
               isTargeted={isTargeted(graphic.id)}
-              isPlaceholder={graphic.url.includes("placehold.co")}
+              isPlaceholder={
+                graphic.url.includes("placehold.co") ||
+                Boolean(refiningSectionId)
+              }
               onToggleRefine={() => handleToggleRefine(graphic.id)}
             >
               <div

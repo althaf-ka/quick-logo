@@ -1,12 +1,14 @@
 import type { Database } from "@quicklogo/db";
 import {
   brandKits,
+  brandKitRefinements,
   brandKitRevisions,
   images,
   eq,
   and,
   sql,
 } from "@quicklogo/db";
+import { getSectionLabel } from "@quicklogo/shared";
 
 interface SocialMasterCheckpoint {
   url: string;
@@ -60,13 +62,38 @@ export class BrandKitRepository {
     });
   }
 
-  async getActiveRevision(brandKitId: string) {
+  async getRevision(brandKitId: string, revisionId: string) {
     return this.db.query.brandKitRevisions.findFirst({
       where: and(
+        eq(brandKitRevisions.id, revisionId),
         eq(brandKitRevisions.brandKitId, brandKitId),
-        eq(brandKitRevisions.isActive, true),
       ),
     });
+  }
+
+  async getRefinement(brandKitId: string, refinementId: string) {
+    return this.db.query.brandKitRefinements.findFirst({
+      where: and(
+        eq(brandKitRefinements.id, refinementId),
+        eq(brandKitRefinements.brandKitId, brandKitId),
+      ),
+    });
+  }
+
+  async markRefinementProcessing(
+    brandKitId: string,
+    refinementId: string,
+  ): Promise<void> {
+    await this.db
+      .update(brandKitRefinements)
+      .set({ status: "processing", updatedAt: new Date() })
+      .where(
+        and(
+          eq(brandKitRefinements.id, refinementId),
+          eq(brandKitRefinements.brandKitId, brandKitId),
+          eq(brandKitRefinements.status, "queued"),
+        ),
+      );
   }
 
   async getSocialMasterCheckpoint(
@@ -139,7 +166,12 @@ export class BrandKitRepository {
     if (existing) {
       await this.db
         .update(brandKitRevisions)
-        .set({ isActive: false, results })
+        .set({
+          isActive: false,
+          label: "Initial generation",
+          revisionType: "initial",
+          results,
+        })
         .where(eq(brandKitRevisions.id, existing.id));
       return;
     }
@@ -147,22 +179,37 @@ export class BrandKitRepository {
       brandKitId,
       isActive: false,
       revisionNumber: 1,
+      label: "Initial generation",
+      revisionType: "initial",
       triggerType: "initial_generation",
       results,
     });
   }
 
-  async hasRevisionTrigger(
-    brandKitId: string,
-    triggerType: string,
-  ): Promise<boolean> {
-    const revision = await this.db.query.brandKitRevisions.findFirst({
+  async getRevisionByTrigger(brandKitId: string, triggerType: string) {
+    return this.db.query.brandKitRevisions.findFirst({
       where: and(
         eq(brandKitRevisions.brandKitId, brandKitId),
         eq(brandKitRevisions.triggerType, triggerType),
       ),
     });
-    return !!revision;
+  }
+
+  async completeRefinement(
+    refinementId: string,
+    resultRevisionId: string,
+  ): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(brandKitRefinements)
+      .set({
+        status: "completed",
+        resultRevisionId,
+        errorMessage: null,
+        completedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(brandKitRefinements.id, refinementId));
   }
 
   async saveInitialGeneration(
@@ -183,12 +230,19 @@ export class BrandKitRepository {
     const revisionStatement = existing
       ? this.db
           .update(brandKitRevisions)
-          .set({ isActive: true, results })
+          .set({
+            isActive: true,
+            label: "Initial generation",
+            revisionType: "initial",
+            results,
+          })
           .where(eq(brandKitRevisions.id, existing.id))
       : this.db.insert(brandKitRevisions).values({
           brandKitId,
           isActive: true,
           revisionNumber: 1,
+          label: "Initial generation",
+          revisionType: "initial",
           triggerType: "initial_generation",
           results,
         });
@@ -221,16 +275,23 @@ export class BrandKitRepository {
   async saveRefinement(
     brandKitId: string,
     sectionId: string,
+    targetItemId: string | null | undefined,
     refinementId: string,
     results: Record<string, any>,
   ) {
     const triggerType = `refine_${sectionId}:${refinementId}`;
-    if (await this.hasRevisionTrigger(brandKitId, triggerType)) return;
+    const existing = await this.getRevisionByTrigger(brandKitId, triggerType);
+    const now = new Date();
+    if (existing) {
+      await this.completeRefinement(refinementId, existing.id);
+      return;
+    }
 
     const [maxRev] = await this.db
       .select({ max: sql<number>`MAX(revision_number)` })
       .from(brandKitRevisions)
       .where(eq(brandKitRevisions.brandKitId, brandKitId));
+    const revisionId = crypto.randomUUID();
 
     await this.db.batch([
       this.db
@@ -244,12 +305,27 @@ export class BrandKitRepository {
         ),
 
       this.db.insert(brandKitRevisions).values({
+        id: revisionId,
         brandKitId,
         isActive: true,
         revisionNumber: (maxRev.max || 0) + 1,
+        label: `Refined ${getSectionLabel(sectionId, targetItemId)}`,
+        revisionType: "refinement",
+        sectionId,
+        targetItemId: targetItemId ?? null,
         triggerType,
         results,
       }),
+      this.db
+        .update(brandKitRefinements)
+        .set({
+          status: "completed",
+          resultRevisionId: revisionId,
+          errorMessage: null,
+          completedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(brandKitRefinements.id, refinementId)),
     ]);
   }
 }

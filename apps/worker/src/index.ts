@@ -89,6 +89,7 @@ export default {
                 refinementId: message.body.refinementId,
                 userId: message.body.userId,
                 creditsUsed: message.body.creditsUsed,
+                errorMessage: "This refinement could not be completed.",
               });
             } else if (isRuntimeImageMessage(message.body)) {
               const imageId = extractImageId(message.body);

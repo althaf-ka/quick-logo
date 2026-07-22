@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX `brand_kit_revision_active_unique` ON `brand_kit_revision` (`brand_kit_id`) WHERE "brand_kit_revision"."is_active" = 1;--> statement-breakpoint
+CREATE UNIQUE INDEX `brand_kit_revision_number_unique` ON `brand_kit_revision` (`brand_kit_id`,`revision_number`);

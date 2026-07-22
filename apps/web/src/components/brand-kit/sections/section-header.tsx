@@ -12,6 +12,7 @@ interface SectionHeaderProps {
   refineLabel?: string;
   hideRefine?: boolean;
   className?: string;
+  actions?: React.ReactNode;
 }
 
 export function SectionHeader({
@@ -20,6 +21,7 @@ export function SectionHeader({
   refineLabel = "Refine Section",
   hideRefine = false,
   className,
+  actions,
 }: SectionHeaderProps) {
   const { targetSectionId, onRefine, refiningSectionId } = useBrandKitSection();
   const isTargeted = targetSectionId === sectionId;
@@ -27,27 +29,35 @@ export function SectionHeader({
   const canRefine = isBrandKitRefinementSection(sectionId);
 
   return (
-    <div className={cn("flex items-center justify-between pb-3", className)}>
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-2 pb-3",
+        className,
+      )}
+    >
       <h3 className="font-mono text-[11px] font-black tracking-widest uppercase">
         {title}
       </h3>
-      {onRefine && canRefine && !hideRefine ? (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isRefining}
-          className={cn(
-            "h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all active:scale-95",
-            isTargeted
-              ? "border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
-              : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
-          )}
-          onClick={() => onRefine(isTargeted ? "" : sectionId)}
-        >
-          <SparkleIcon className="text-primary size-3" />
-          {isRefining ? "Processing..." : isTargeted ? "Cancel" : refineLabel}
-        </Button>
-      ) : null}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {actions}
+        {onRefine && canRefine && !hideRefine ? (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isRefining}
+            className={cn(
+              "h-auto cursor-pointer gap-1.5 border px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider uppercase transition-all active:scale-95",
+              isTargeted
+                ? "border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
+                : "text-foreground/70 hover:bg-primary/10 hover:text-primary",
+            )}
+            onClick={() => onRefine(isTargeted ? "" : sectionId)}
+          >
+            <SparkleIcon className="text-primary size-3" />
+            {isRefining ? "Processing..." : isTargeted ? "Cancel" : refineLabel}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -26,6 +26,7 @@ interface FontPickerProps {
   onValueChange: (family: string) => void;
   label?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 const VISIBLE_BATCH_SIZE = 40;
@@ -35,6 +36,7 @@ export function FontPicker({
   onValueChange,
   label,
   placeholder = "Search fonts...",
+  disabled = false,
 }: FontPickerProps) {
   const apiKey = import.meta.env.VITE_GOOGLE_FONTS_API_KEY ?? "";
   const hasApiKey = apiKey.trim().length > 0;
@@ -127,6 +129,7 @@ export function FontPicker({
             <Button
               variant="outline"
               size="sm"
+              disabled={disabled}
               className="bg-muted/30 hover:bg-muted/50 h-9 w-full cursor-pointer justify-between border-transparent px-3 text-xs font-normal transition-colors"
             />
           }

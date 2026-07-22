@@ -610,7 +610,15 @@ export class BrandKitPipeline {
 
     try {
       const triggerType = `refine_${sectionId}:${refinementId}`;
-      if (await this.repository.hasRevisionTrigger(brandKitId, triggerType)) {
+      const existingRevision = await this.repository.getRevisionByTrigger(
+        brandKitId,
+        triggerType,
+      );
+      if (existingRevision) {
+        await this.repository.completeRefinement(
+          refinementId,
+          existingRevision.id,
+        );
         this.logger.info("Refinement already completed; skipping replay", {
           brandKitId,
           refinementId,
@@ -618,16 +626,36 @@ export class BrandKitPipeline {
         return;
       }
 
+      const refinement = await this.repository.getRefinement(
+        brandKitId,
+        refinementId,
+      );
+      if (!refinement) {
+        throw new PipelineError("Refinement operation no longer exists", false);
+      }
+      if (refinement.status === "completed" || refinement.status === "failed") {
+        this.logger.info("Refinement operation is already terminal", {
+          brandKitId,
+          refinementId,
+          status: refinement.status,
+        });
+        return;
+      }
+
+      await this.repository.markRefinementProcessing(brandKitId, refinementId);
+
       const currentBrandKit = await this.repository.getBrandKit(brandKitId);
       if (!currentBrandKit) {
         throw new PipelineError("Brand kit no longer exists", false);
       }
 
-      const activeRevision =
-        await this.repository.getActiveRevision(brandKitId);
+      const activeRevision = await this.repository.getRevision(
+        brandKitId,
+        refinement.baseRevisionId,
+      );
 
       if (!activeRevision) {
-        throw new PipelineError("No active revision found", false);
+        throw new PipelineError("Base revision no longer exists", false);
       }
 
       const newMergedJSON = await mergeRevisionResults({
@@ -645,6 +673,7 @@ export class BrandKitPipeline {
       await this.repository.saveRefinement(
         brandKitId,
         sectionId,
+        targetItemId,
         refinementId,
         newMergedJSON,
       );

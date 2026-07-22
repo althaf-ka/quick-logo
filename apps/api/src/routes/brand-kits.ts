@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { createId } from "@paralleldrive/cuid2";
 import {
   brandKits,
+  brandKitRefinements,
   brandKitRevisions,
   images,
   eq,
@@ -9,6 +10,8 @@ import {
   sql,
   and,
   desc,
+  or,
+  getTableColumns,
 } from "@quicklogo/db";
 import {
   generateBrandKitSchema,
@@ -20,14 +23,40 @@ import {
   getSocialAssetTargetId,
   computeBrandKitCost,
   computeBrandKitRefinementCost,
+  getSectionLabel,
+  brandKitDeterministicEditSchema,
 } from "@quicklogo/shared";
 import deepEqual from "fast-deep-equal";
 import { Hono } from "hono";
 import { deductCredits, refundCreditsOnce } from "../lib/credits";
-import { NotFoundError, BadRequestError } from "../lib/errors";
+import {
+  NotFoundError,
+  BadRequestError,
+  RefinementInProgressError,
+  RevisionConflictError,
+} from "../lib/errors";
 import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
+
+async function findActiveRefinement(db: Variables["db"], brandKitId: string) {
+  return db.query.brandKitRefinements.findFirst({
+    where: and(
+      eq(brandKitRefinements.brandKitId, brandKitId),
+      or(
+        eq(brandKitRefinements.status, "queued"),
+        eq(brandKitRefinements.status, "processing"),
+      ),
+    ),
+  });
+}
+
+function hexToRgb(hex: string) {
+  const value = hex.slice(1);
+  return [0, 2, 4]
+    .map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16))
+    .join(",");
+}
 
 const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
   .post(
@@ -167,6 +196,138 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     },
   )
   .post(
+    "/:id/edit",
+    requireAuth,
+    zValidator("json", brandKitDeterministicEditSchema, validationHook),
+    async (c) => {
+      const db = c.get("db");
+      const user = c.get("user");
+      const brandKitId = c.req.param("id");
+      const edit = c.req.valid("json");
+
+      const [activeRevision] = await db
+        .select({
+          id: brandKitRevisions.id,
+          revisionNumber: brandKitRevisions.revisionNumber,
+          results: brandKitRevisions.results,
+        })
+        .from(brandKitRevisions)
+        .innerJoin(brandKits, eq(brandKitRevisions.brandKitId, brandKits.id))
+        .where(
+          and(
+            eq(brandKitRevisions.brandKitId, brandKitId),
+            eq(brandKitRevisions.isActive, true),
+            eq(brandKits.userId, user.id),
+          ),
+        )
+        .limit(1);
+
+      if (!activeRevision) throw new NotFoundError("Active brand kit revision");
+      if (activeRevision.id !== edit.baseRevisionId) {
+        throw new RevisionConflictError();
+      }
+      if (await findActiveRefinement(db, brandKitId)) {
+        throw new RefinementInProgressError();
+      }
+
+      const currentResults = activeRevision.results as Record<string, unknown>;
+      const nextResults = { ...currentResults };
+      let sectionId: "typography" | "color-palette";
+      let targetItemId: string | null = null;
+      let label: string;
+
+      if (edit.action === "set-font") {
+        const typography = currentResults.typography as
+          | Record<"heading" | "body", Record<string, unknown>>
+          | undefined;
+        if (!typography?.[edit.role]) {
+          throw new BadRequestError(
+            "Typography is missing from this brand kit",
+          );
+        }
+        nextResults.typography = {
+          ...typography,
+          [edit.role]: {
+            ...typography[edit.role],
+            family: edit.family,
+            name: edit.family,
+          },
+        };
+        sectionId = "typography";
+        targetItemId = edit.role;
+        label = `Set ${edit.role} font to ${edit.family}`;
+      } else {
+        nextResults.colorPalette = edit.colors.map((color) => ({
+          hex: color.hex,
+          role: color.role,
+          rgb: hexToRgb(color.hex),
+        }));
+        sectionId = "color-palette";
+        label = "Updated Color Palette";
+      }
+
+      if (deepEqual(currentResults, nextResults)) {
+        return c.json({
+          status: "unchanged" as const,
+          revisionId: activeRevision.id,
+          revisionNumber: activeRevision.revisionNumber,
+        });
+      }
+
+      const revisionId = createId();
+      try {
+        await db.batch([
+          db
+            .update(brandKitRevisions)
+            .set({ isActive: false })
+            .where(
+              and(
+                eq(brandKitRevisions.id, activeRevision.id),
+                eq(brandKitRevisions.isActive, true),
+              ),
+            ),
+          db.insert(brandKitRevisions).values({
+            id: revisionId,
+            brandKitId,
+            isActive: true,
+            revisionNumber: sql<number>`(
+              SELECT COALESCE(MAX(${brandKitRevisions.revisionNumber}), 0) + 1
+              FROM ${brandKitRevisions}
+              WHERE ${brandKitRevisions.brandKitId} = ${brandKitId}
+            )`,
+            label,
+            revisionType: "manual_edit",
+            sectionId,
+            targetItemId,
+            sourceRevisionId: activeRevision.id,
+            triggerType: `manual_${edit.action}:${revisionId}`,
+            results: nextResults,
+          }),
+        ]);
+      } catch (error) {
+        const latestRevision = await db.query.brandKitRevisions.findFirst({
+          where: and(
+            eq(brandKitRevisions.brandKitId, brandKitId),
+            eq(brandKitRevisions.isActive, true),
+          ),
+        });
+        if (latestRevision?.id !== activeRevision.id) {
+          throw new RevisionConflictError();
+        }
+        throw error;
+      }
+
+      return c.json(
+        {
+          status: "updated" as const,
+          revisionId,
+          revisionNumber: activeRevision.revisionNumber + 1,
+        },
+        201,
+      );
+    },
+  )
+  .post(
     "/:id/refine",
     requireAuth,
     zValidator("json", refineBrandKitSectionSchema, validationHook),
@@ -182,17 +343,21 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
       if (!brandKit) throw new NotFoundError("Brand kit");
 
-      if (data.targetItemId) {
-        const activeRevision = await db.query.brandKitRevisions.findFirst({
-          where: and(
-            eq(brandKitRevisions.brandKitId, id),
-            eq(brandKitRevisions.isActive, true),
-          ),
-        });
-        if (!activeRevision || !activeRevision.results) {
-          throw new BadRequestError("No active revision to refine");
-        }
+      const activeRevision = await db.query.brandKitRevisions.findFirst({
+        where: and(
+          eq(brandKitRevisions.brandKitId, id),
+          eq(brandKitRevisions.isActive, true),
+        ),
+      });
+      if (!activeRevision || !activeRevision.results) {
+        throw new BadRequestError("No active revision to refine");
+      }
 
+      if (await findActiveRefinement(db, id)) {
+        throw new RefinementInProgressError();
+      }
+
+      if (data.targetItemId) {
         const results = activeRevision.results as Record<string, unknown>;
 
         if (data.sectionId === "business-card") {
@@ -250,8 +415,33 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         data.sectionId,
         data.targetItemId,
       );
-      await deductCredits(db, user.id, cost);
       const refinementId = createId();
+
+      const createdRefinement = await db
+        .insert(brandKitRefinements)
+        .values({
+          id: refinementId,
+          brandKitId: id,
+          baseRevisionId: activeRevision.id,
+          sectionId: data.sectionId,
+          targetItemId: data.targetItemId,
+          prompt: data.refinementPrompt,
+          creditsUsed: cost,
+        })
+        .onConflictDoNothing()
+        .returning({ id: brandKitRefinements.id });
+      if (createdRefinement.length === 0) {
+        throw new RefinementInProgressError();
+      }
+
+      try {
+        await deductCredits(db, user.id, cost);
+      } catch (error) {
+        await db
+          .delete(brandKitRefinements)
+          .where(eq(brandKitRefinements.id, refinementId));
+        throw error;
+      }
 
       try {
         await c.env.GENERATION_QUEUE.send(
@@ -266,18 +456,63 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           { contentType: "json" },
         );
       } catch (error) {
-        await refundCreditsOnce(db, {
+        const refunded = await refundCreditsOnce(db, {
           refundId: `brand-kit-refine-enqueue:${refinementId}`,
           userId: user.id,
           credits: cost,
           reason: "brand_kit_refinement_enqueue_failed",
         });
+        const now = new Date();
+        await db
+          .update(brandKitRefinements)
+          .set({
+            status: "failed",
+            errorMessage: "Unable to queue refinement",
+            ...(refunded && { refundedAt: now }),
+            completedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(brandKitRefinements.id, refinementId));
         throw error;
       }
 
-      return c.json({ status: "processing" }, 202);
+      return c.json({ refinementId, status: "queued" as const }, 202);
     },
   )
+  .get("/:id/refinements/:refinementId", requireAuth, async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+    const brandKitId = c.req.param("id");
+    const refinementId = c.req.param("refinementId");
+
+    const refinement = await db
+      .select({
+        id: brandKitRefinements.id,
+        sectionId: brandKitRefinements.sectionId,
+        targetItemId: brandKitRefinements.targetItemId,
+        status: brandKitRefinements.status,
+        creditsUsed: brandKitRefinements.creditsUsed,
+        errorMessage: brandKitRefinements.errorMessage,
+        refundedAt: brandKitRefinements.refundedAt,
+        baseRevisionId: brandKitRefinements.baseRevisionId,
+        resultRevisionId: brandKitRefinements.resultRevisionId,
+        createdAt: brandKitRefinements.createdAt,
+        completedAt: brandKitRefinements.completedAt,
+      })
+      .from(brandKitRefinements)
+      .innerJoin(brandKits, eq(brandKitRefinements.brandKitId, brandKits.id))
+      .where(
+        and(
+          eq(brandKitRefinements.id, refinementId),
+          eq(brandKitRefinements.brandKitId, brandKitId),
+          eq(brandKits.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (!refinement[0]) throw new NotFoundError("Refinement");
+    return c.json({ refinement: refinement[0] });
+  })
   .get("/:id", requireAuth, async (c) => {
     const db = c.get("db");
     const user = c.get("user");
@@ -289,13 +524,23 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
     if (!brandKit) throw new NotFoundError("Brand kit");
 
-    const revisions = await db
-      .select()
-      .from(brandKitRevisions)
-      .where(eq(brandKitRevisions.brandKitId, id))
-      .orderBy(brandKitRevisions.revisionNumber);
+    const [revisions, activeRefinement] = await Promise.all([
+      db
+        .select({
+          ...getTableColumns(brandKitRevisions),
+          refinementPrompt: brandKitRefinements.prompt,
+        })
+        .from(brandKitRevisions)
+        .leftJoin(
+          brandKitRefinements,
+          eq(brandKitRefinements.resultRevisionId, brandKitRevisions.id),
+        )
+        .where(eq(brandKitRevisions.brandKitId, id))
+        .orderBy(brandKitRevisions.revisionNumber),
+      findActiveRefinement(db, id),
+    ]);
 
-    return c.json({ brandKit, revisions });
+    return c.json({ brandKit, revisions, activeRefinement });
   })
   .post(
     "/:id/restore-section",
@@ -312,6 +557,9 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .from(brandKits)
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
       if (!brandKit) throw new NotFoundError("Brand kit");
+      if (await findActiveRefinement(db, id)) {
+        throw new RefinementInProgressError();
+      }
 
       const activeRevision = await db.query.brandKitRevisions.findFirst({
         where: and(
@@ -354,8 +602,12 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       };
 
       const key = sectionKeyMap[sectionId];
-      if (key && sourceResults[key]) {
-        newMergedJSON[key] = sourceResults[key];
+      if (key) {
+        if (Object.prototype.hasOwnProperty.call(sourceResults, key)) {
+          newMergedJSON[key] = sourceResults[key];
+        } else {
+          delete newMergedJSON[key];
+        }
       }
 
       if (deepEqual(currentResults, newMergedJSON)) {
@@ -382,6 +634,10 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           brandKitId: id,
           isActive: true,
           revisionNumber: (maxRev?.max || 0) + 1,
+          label: `Restored ${getSectionLabel(sectionId)} from V${sourceRevision.revisionNumber}`,
+          revisionType: "section_restore",
+          sectionId,
+          sourceRevisionId,
           triggerType: `restore_${sectionId}`,
           results: newMergedJSON,
         }),
@@ -405,6 +661,9 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .from(brandKits)
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
       if (!brandKit) throw new NotFoundError("Brand kit");
+      if (await findActiveRefinement(db, id)) {
+        throw new RefinementInProgressError();
+      }
 
       const activeRevision = await db.query.brandKitRevisions.findFirst({
         where: and(
@@ -436,6 +695,12 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         return c.json({ status: "success" });
       }
 
+      const [maxRev] = await db
+        .select({ max: sql<number>`MAX(revision_number)` })
+        .from(brandKitRevisions)
+        .where(eq(brandKitRevisions.brandKitId, id));
+      const revisionId = createId();
+
       await db.batch([
         db
           .update(brandKitRevisions)
@@ -446,14 +711,20 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               eq(brandKitRevisions.isActive, true),
             ),
           ),
-
-        db
-          .update(brandKitRevisions)
-          .set({ isActive: true })
-          .where(eq(brandKitRevisions.id, sourceRevisionId)),
+        db.insert(brandKitRevisions).values({
+          id: revisionId,
+          brandKitId: id,
+          isActive: true,
+          revisionNumber: (maxRev?.max || 0) + 1,
+          label: `Restored full kit from V${sourceRevision.revisionNumber}`,
+          revisionType: "full_restore",
+          sourceRevisionId,
+          triggerType: `restore_full:${sourceRevisionId}`,
+          results: sourceResults,
+        }),
       ]);
 
-      return c.json({ status: "success" });
+      return c.json({ status: "success", revisionId });
     },
   );
 

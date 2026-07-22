@@ -130,11 +130,14 @@ export function BrandKitWorkspace({
                     ) : null
                   }
                   onRefine={(sectionId, targetItemId) => {
+                    if (bk.refiningSectionId) return;
                     bk.setTargetSection(sectionId);
                     if (targetItemId) bk.setTargetItemId(targetItemId);
                     else bk.setTargetItemId(null);
                   }}
                   onFontChange={bk.handleFontChange}
+                  onPaletteChange={bk.handlePaletteChange}
+                  isSavingEdit={bk.isSavingEdit}
                   refiningSectionId={bk.refiningSectionId}
                   targetSectionId={bk.targetSection}
                   targetItemId={bk.targetItemId}

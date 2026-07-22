@@ -61,11 +61,20 @@ export async function mergeRevisionResults({
   activeRevisionResults: any;
 }) {
   let newMergedJSON = { ...activeRevisionResults };
+  const activePalette = Array.isArray(newMergedJSON.colorPalette)
+    ? newMergedJSON.colorPalette
+        .map((color: { hex?: unknown }) => color.hex)
+        .filter((hex: unknown): hex is string => typeof hex === "string")
+    : [];
+  const activeColors =
+    activePalette.length > 0
+      ? activePalette
+      : (currentBrandKit?.extractedColors ?? []);
 
   const brandAssetContext = normalizeBrandContext(
     currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
     {
-      colors: currentBrandKit?.extractedColors,
+      colors: activeColors,
       industry: currentBrandKit?.industry,
       tagline:
         currentBrandKit?.tagline || newMergedJSON.brandPresentation?.tagline,
@@ -251,22 +260,6 @@ export async function mergeRevisionResults({
     }
   } else if (
     sectionId === "typography" &&
-    refinementPrompt.startsWith("__FONT_OVERRIDE__")
-  ) {
-    const [, role, family] = refinementPrompt.split(":");
-
-    if ((role === "heading" || role === "body") && family) {
-      newMergedJSON.typography = {
-        ...newMergedJSON.typography,
-        [role]: {
-          ...newMergedJSON.typography?.[role],
-          family,
-          name: family,
-        },
-      };
-    }
-  } else if (
-    sectionId === "typography" &&
     refinementPrompt === "__AI_SUGGEST_TYPOGRAPHY__"
   ) {
     const typographyStyle = currentBrandKit?.typographyStyle ?? "";
@@ -401,7 +394,7 @@ export async function mergeRevisionResults({
                     bodyFont: newMergedJSON.typography?.body?.family,
                     bodyWeight: newMergedJSON.typography?.body?.weight,
                     productImageUrls: currentBrandKit?.productImageUrls,
-                    colors: currentBrandKit?.extractedColors,
+                    colors: activeColors,
                     tagline:
                       brandPresentation.tagline || currentBrandKit?.tagline,
                     brandDescription:
@@ -551,7 +544,7 @@ export async function mergeRevisionResults({
                     bodyFont: newMergedJSON.typography?.body?.family,
                     bodyWeight: newMergedJSON.typography?.body?.weight,
                     productImageUrls: currentBrandKit?.productImageUrls,
-                    colors: currentBrandKit?.extractedColors,
+                    colors: activeColors,
                     tagline: parsedJson.tagline || currentBrandKit?.tagline,
                     brandDescription:
                       currentBrandKit?.prompt || "Professional brand kit",

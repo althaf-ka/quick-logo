@@ -1,6 +1,7 @@
 import type { Database } from "@quicklogo/db";
 import {
   brandKits,
+  brandKitRefinements,
   creditRefunds,
   images,
   projects,
@@ -204,12 +205,28 @@ export async function refundBrandKitRefinementCredits(
     refinementId: string;
     userId: string;
     creditsUsed: number;
+    errorMessage?: string;
   },
 ): Promise<boolean> {
-  return refundCreditsOnce(db, {
+  const refunded = await refundCreditsOnce(db, {
     refundId: `brand-kit-refine:${params.refinementId}`,
     userId: params.userId,
     credits: params.creditsUsed,
     reason: "brand_kit_refinement_failed",
   });
+
+  const now = new Date();
+  await db
+    .update(brandKitRefinements)
+    .set({
+      status: "failed",
+      errorMessage:
+        params.errorMessage || "We couldn't complete this refinement.",
+      ...(params.creditsUsed > 0 && { refundedAt: now }),
+      completedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(brandKitRefinements.id, params.refinementId));
+
+  return refunded;
 }

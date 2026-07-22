@@ -7,6 +7,7 @@ import {
   CircleIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
+import type { BrandKitRevisionType } from "@quicklogo/shared";
 import type { NormalizedBrandKit } from "@/types/brand-kit";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
@@ -17,19 +18,28 @@ export interface ResultsSidebarProps {
   results?: BrandKitResultsData | null;
   revisions?: NormalizedBrandKit["revisions"];
   onRestoreRevision?: (sourceRevisionId: string) => void;
+  refiningSectionId?: string | null;
 }
 
-function getRevisionColor(triggerType: string) {
-  if (triggerType === "initial_generation") return "text-emerald-400";
-  if (triggerType.startsWith("refine_")) return "text-blue-400";
-  if (triggerType.startsWith("restore_")) return "text-amber-400";
-  return "text-muted-foreground/50";
+function getRevisionColor(revisionType: BrandKitRevisionType) {
+  switch (revisionType) {
+    case "initial":
+      return "text-emerald-400";
+    case "refinement":
+      return "text-blue-400";
+    case "manual_edit":
+      return "text-violet-400";
+    case "section_restore":
+    case "full_restore":
+      return "text-amber-400";
+  }
 }
 
 export function ResultsSidebar({
   results,
   revisions,
   onRestoreRevision,
+  refiningSectionId,
 }: ResultsSidebarProps) {
   const reversedRevisions = [...(revisions || [])].reverse();
   const { isExporting, exportType, exportZip, exportPdf } = useExportBrandKit();
@@ -197,21 +207,30 @@ export function ResultsSidebar({
           Version History
         </h3>
         <div className="space-y-1.5">
-          {reversedRevisions.map((rev, idx) => {
+          {reversedRevisions.map((rev) => {
             const isCurrent = rev.isActive;
             return (
-              <div
+              <button
+                type="button"
                 key={rev.id}
                 onClick={() => {
-                  if (!isCurrent && onRestoreRevision) {
-                    onRestoreRevision(rev.id);
-                  }
+                  onRestoreRevision?.(rev.id);
                 }}
+                disabled={
+                  isCurrent || Boolean(refiningSectionId) || !onRestoreRevision
+                }
+                title={
+                  !isCurrent && refiningSectionId
+                    ? "Wait for the active refinement to finish before restoring"
+                    : undefined
+                }
                 className={cn(
-                  "group relative flex items-center gap-2.5 border px-2.5 py-2 transition-all duration-300",
+                  "group relative flex w-full items-center gap-2.5 border px-2.5 py-2 text-left transition-all duration-300",
                   isCurrent
                     ? "border-primary/30 bg-primary/[0.03] cursor-default shadow-[inset_2px_0_0_rgba(var(--primary),0.5)]"
-                    : "cursor-pointer border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
+                    : refiningSectionId
+                      ? "cursor-not-allowed border-white/[0.06] bg-white/[0.01] opacity-50"
+                      : "cursor-pointer border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
                 )}
               >
                 <div className="flex items-center gap-1.5">
@@ -221,7 +240,7 @@ export function ResultsSidebar({
                       "size-1.5 transition-colors",
                       isCurrent
                         ? "text-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-                        : getRevisionColor(rev.triggerType),
+                        : getRevisionColor(rev.revisionType),
                     )}
                   />
                   <ClockCounterClockwiseIcon
@@ -241,7 +260,7 @@ export function ResultsSidebar({
                         isCurrent ? "text-primary" : "text-foreground/90",
                       )}
                     >
-                      V{reversedRevisions.length - idx}
+                      V{rev.revisionNumber}
                     </span>
                     {isCurrent ? (
                       <span className="bg-primary/15 text-primary rounded-[2px] px-1 py-[1px] font-mono text-[7px] font-black tracking-widest uppercase">
@@ -249,6 +268,17 @@ export function ResultsSidebar({
                       </span>
                     ) : null}
                   </div>
+                  <span className="text-foreground/70 truncate font-mono text-[8px]">
+                    {rev.label}
+                  </span>
+                  {rev.refinementPrompt ? (
+                    <span
+                      className="text-muted-foreground/50 truncate font-mono text-[8px]"
+                      title={rev.refinementPrompt}
+                    >
+                      “{rev.refinementPrompt}”
+                    </span>
+                  ) : null}
                   <span
                     className={cn(
                       "truncate font-mono text-[8px] transition-colors",
@@ -265,7 +295,7 @@ export function ResultsSidebar({
                     })}
                   </span>
                 </div>
-              </div>
+              </button>
             );
           })}
           {reversedRevisions.length === 0 ? (

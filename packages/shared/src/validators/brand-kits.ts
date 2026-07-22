@@ -217,11 +217,83 @@ export function isBrandKitRefinementSection(
   return BRAND_KIT_REFINEMENT_SECTION_IDS.some((id) => id === sectionId);
 }
 
+const paletteColorSchema = z.object({
+  hex: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-f]{6}$/i, "Use a six-digit hex color such as #1A2B3C")
+    .transform((value) => value.toUpperCase()),
+  role: z
+    .string()
+    .trim()
+    .min(1, "Color role is required")
+    .max(40, "Color role must be 40 characters or fewer"),
+  rgb: z.string().optional(),
+});
+
+export const brandKitPaletteSchema = z
+  .array(paletteColorSchema)
+  .min(2, "A brand palette requires at least two colors")
+  .max(8, "A brand palette supports at most eight colors")
+  .superRefine((colors, ctx) => {
+    const hexes = new Set<string>();
+    const roles = new Set<string>();
+    colors.forEach((color, index) => {
+      const normalizedRole = color.role.toLowerCase();
+      if (hexes.has(color.hex)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Palette colors must be unique",
+          path: [index, "hex"],
+        });
+      }
+      if (roles.has(normalizedRole)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Palette roles must be unique",
+          path: [index, "role"],
+        });
+      }
+      hexes.add(color.hex);
+      roles.add(normalizedRole);
+    });
+  });
+
+export const brandKitDeterministicEditSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("set-font"),
+    baseRevisionId: z.string().min(1),
+    role: z.enum(["heading", "body"]),
+    family: z
+      .string()
+      .trim()
+      .min(1, "Font family is required")
+      .max(100, "Font family must be 100 characters or fewer")
+      .regex(
+        /^[^\u0000-\u001f\u007f]+$/,
+        "Font family contains unsupported characters",
+      ),
+  }),
+  z.object({
+    action: z.literal("set-palette"),
+    baseRevisionId: z.string().min(1),
+    colors: brandKitPaletteSchema,
+  }),
+]);
+
+export type BrandKitDeterministicEdit = z.infer<
+  typeof brandKitDeterministicEditSchema
+>;
+
 const refineBrandKitSectionBase = z.object({
   sectionId: z.enum(BRAND_KIT_REFINEMENT_SECTION_IDS),
-  refinementPrompt: z.string().min(1, "Refinement instruction is required"),
+  refinementPrompt: z
+    .string()
+    .trim()
+    .min(1, "Refinement instruction is required")
+    .max(700, "Refinement instruction must be 700 characters or fewer"),
   typographyStyle: z.string().optional(), // In case they are refining typography and changed the dropdown
-  targetItemId: z.string().optional(),
+  targetItemId: z.string().trim().min(1).max(100).optional(),
 });
 
 export const refineBrandKitSectionSchema =
@@ -289,13 +361,7 @@ export type RestoreSectionId = z.infer<
 >["sectionId"];
 
 export const brandKitColorPaletteResponseSchema = z.object({
-  colorPalette: z.array(
-    z.object({
-      hex: z.string(),
-      role: z.string(),
-      rgb: z.string().optional(),
-    }),
-  ),
+  colorPalette: brandKitPaletteSchema,
 });
 
 export const brandKitTypographyResponseSchema = z.object({
@@ -332,15 +398,7 @@ export const restoreFullBrandKitSchema = z.object({
 });
 
 export const brandKitGlobalRefinementResponseSchema = z.object({
-  colorPalette: z
-    .array(
-      z.object({
-        hex: z.string(),
-        role: z.string(),
-        rgb: z.string().optional(),
-      }),
-    )
-    .optional(),
+  colorPalette: brandKitPaletteSchema.optional(),
   brandPresentation: z
     .object({
       tagline: z.string().optional(),
