@@ -28,6 +28,7 @@ import {
 interface BrandKitWorkspaceProps {
   imageId?: string;
   brandKitId?: string;
+  onBrandKitCreated?: (brandKitId: string) => void;
 }
 
 function getRefinementTargetContext(
@@ -79,6 +80,7 @@ function getRefinementTargetDescription(
 export function BrandKitWorkspace({
   imageId,
   brandKitId,
+  onBrandKitCreated,
 }: BrandKitWorkspaceProps) {
   const [isCompact, setIsCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -93,7 +95,7 @@ export function BrandKitWorkspace({
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  const bk = useBrandKit({ imageId, brandKitId });
+  const bk = useBrandKit({ imageId, brandKitId, onBrandKitCreated });
   const results = useClientLogoVariations(bk.results);
 
   return (
@@ -306,9 +308,10 @@ export function BrandKitWorkspace({
           brandKitId={bk.brandKitId ?? undefined}
           results={results}
           revisions={bk.normalizedData?.revisions}
+          selectedRevisionId={bk.previewRevision?.id}
           refiningSectionId={bk.refiningSectionId ?? null}
           onCloseRefinement={() => bk.setTargetSection(null)}
-          onRestoreRevision={bk.handleRestoreFull}
+          onSelectRevision={bk.handlePreviewRevision}
           deliverables={bk.deliverables}
           totalCredits={bk.totalCredits}
           generationProgress={bk.normalizedData?.generationProgress}
@@ -341,9 +344,10 @@ export function BrandKitWorkspace({
                 brandKitId={bk.brandKitId ?? undefined}
                 results={results}
                 revisions={bk.normalizedData?.revisions}
+                selectedRevisionId={bk.previewRevision?.id}
                 refiningSectionId={bk.refiningSectionId ?? null}
                 onCloseRefinement={() => bk.setTargetSection(null)}
-                onRestoreRevision={bk.handleRestoreFull}
+                onSelectRevision={bk.handlePreviewRevision}
                 deliverables={bk.deliverables}
                 totalCredits={bk.totalCredits}
                 generationProgress={bk.normalizedData?.generationProgress}

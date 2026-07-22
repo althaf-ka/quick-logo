@@ -229,21 +229,37 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .limit(1);
 
       if (!activeRevision) throw new NotFoundError("Active brand kit revision");
-      if (activeRevision.id !== edit.baseRevisionId) {
+      if (activeRevision.id !== edit.expectedActiveRevisionId) {
         throw new RevisionConflictError();
       }
       if (await findActiveRefinement(db, brandKitId, user.id)) {
         throw new RefinementInProgressError();
       }
 
-      const currentResults = activeRevision.results as Record<string, unknown>;
-      const nextResults = { ...currentResults };
+      const baseRevision =
+        edit.baseRevisionId === activeRevision.id
+          ? activeRevision
+          : await db.query.brandKitRevisions.findFirst({
+              columns: {
+                id: true,
+                revisionNumber: true,
+                results: true,
+              },
+              where: and(
+                eq(brandKitRevisions.id, edit.baseRevisionId),
+                eq(brandKitRevisions.brandKitId, brandKitId),
+              ),
+            });
+      if (!baseRevision) throw new NotFoundError("Brand kit revision");
+
+      const baseResults = baseRevision.results as Record<string, unknown>;
+      const nextResults = { ...baseResults };
       let sectionId: "typography" | "color-palette";
       let targetItemId: string | null = null;
       let label: string;
 
       if (edit.action === "set-font") {
-        const typography = currentResults.typography as
+        const typography = baseResults.typography as
           | Record<"heading" | "body", Record<string, unknown>>
           | undefined;
         if (!typography?.[edit.role]) {
@@ -272,7 +288,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         label = "Updated Color Palette";
       }
 
-      if (deepEqual(currentResults, nextResults)) {
+      if (deepEqual(baseResults, nextResults)) {
         return c.json({
           status: "unchanged" as const,
           revisionId: activeRevision.id,
@@ -305,7 +321,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             revisionType: "manual_edit",
             sectionId,
             targetItemId,
-            sourceRevisionId: activeRevision.id,
+            sourceRevisionId: baseRevision.id,
             triggerType: `manual_${edit.action}:${revisionId}`,
             results: nextResults,
           }),
@@ -317,7 +333,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             eq(brandKitRevisions.isActive, true),
           ),
         });
-        if (latestRevision?.id !== activeRevision.id) {
+        if (latestRevision?.id !== edit.expectedActiveRevisionId) {
           throw new RevisionConflictError();
         }
         throw error;
@@ -358,19 +374,35 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       if (!activeRevision || !activeRevision.results) {
         throw new BadRequestError("No active revision to refine");
       }
+      if (activeRevision.id !== data.expectedActiveRevisionId) {
+        throw new RevisionConflictError();
+      }
 
       if (await findActiveRefinement(db, id, user.id)) {
         throw new RefinementInProgressError();
       }
 
-      const results = activeRevision.results as Record<string, unknown>;
+      const baseRevision =
+        data.baseRevisionId === activeRevision.id
+          ? activeRevision
+          : await db.query.brandKitRevisions.findFirst({
+              where: and(
+                eq(brandKitRevisions.id, data.baseRevisionId),
+                eq(brandKitRevisions.brandKitId, id),
+              ),
+            });
+      if (!baseRevision?.results) {
+        throw new NotFoundError("Brand kit revision");
+      }
+
+      const results = baseRevision.results as Record<string, unknown>;
       if (data.sectionId === "business-card") {
         const businessCard = results.businessCard as
           | Record<string, string>
           | undefined;
         if (!businessCard) {
           throw new BadRequestError(
-            "Business card does not exist in active revision",
+            "Business card does not exist in the selected revision",
           );
         }
         const requiredSides = data.targetItemId
@@ -379,7 +411,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         for (const side of requiredSides) {
           if (!businessCard[`${side}Url`]) {
             throw new BadRequestError(
-              `Business card ${side} does not exist in active revision`,
+              `Business card ${side} does not exist in the selected revision`,
             );
           }
         }
@@ -392,13 +424,13 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           presentation.presentationUrl.includes("placehold.co")
         ) {
           throw new BadRequestError(
-            "Brand Presentation does not exist in the active revision",
+            "Brand Presentation does not exist in the selected revision",
           );
         }
       } else if (data.sectionId === "brand-guidelines") {
         if (!results.brandGuidelines) {
           throw new BadRequestError(
-            "Brand Guidelines do not exist in the active revision",
+            "Brand Guidelines do not exist in the selected revision",
           );
         }
       } else if (data.sectionId === "brand-graphics") {
@@ -407,7 +439,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           | undefined;
         if (!graphics) {
           throw new BadRequestError(
-            "Brand graphics do not exist in the active revision",
+            "Brand graphics do not exist in the selected revision",
           );
         }
         const requiredGraphics = data.targetItemId
@@ -420,7 +452,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               : (graphics.backdropStoryUrl ?? graphics.storyUrl);
           if (!url || url.includes("placehold.co")) {
             throw new BadRequestError(
-              `Brand graphic ${targetId} does not exist in the active revision`,
+              `Brand graphic ${targetId} does not exist in the selected revision`,
             );
           }
         }
@@ -429,7 +461,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           const socialAssets = results.socialMedia;
           if (!Array.isArray(socialAssets))
             throw new BadRequestError(
-              "Social media assets do not exist in active revision",
+              "Social media assets do not exist in the selected revision",
             );
 
           const found = socialAssets.some(
@@ -438,7 +470,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
           );
           if (!found)
             throw new BadRequestError(
-              `Social asset '${data.targetItemId}' does not exist in active revision`,
+              `Social asset '${data.targetItemId}' does not exist in the selected revision`,
             );
         }
       }
@@ -454,7 +486,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .values({
           id: refinementId,
           brandKitId: id,
-          baseRevisionId: activeRevision.id,
+          baseRevisionId: baseRevision.id,
           sectionId: data.sectionId,
           targetItemId: data.targetItemId,
           prompt: data.refinementPrompt,
@@ -483,7 +515,10 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             brandKitId: id,
             userId: user.id,
             creditsUsed: cost,
-            ...data,
+            sectionId: data.sectionId,
+            refinementPrompt: data.refinementPrompt,
+            typographyStyle: data.typographyStyle,
+            targetItemId: data.targetItemId,
           },
           { contentType: "json" },
         );

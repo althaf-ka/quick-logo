@@ -5,6 +5,7 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 3 * 60 * 1000,
       refetchOnWindowFocus: true,
+      refetchIntervalInBackground: false,
       retry: (failureCount: number, error: unknown) => {
         if (error && typeof error === "object" && "status" in error) {
           if (error.status === 401) return false;

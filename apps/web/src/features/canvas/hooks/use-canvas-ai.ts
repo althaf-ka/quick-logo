@@ -29,6 +29,29 @@ export type GenerationStatus =
   | "done"
   | "error";
 
+function waitUntilDocumentIsVisible(signal: AbortSignal) {
+  if (document.visibilityState === "visible") return Promise.resolve();
+
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      signal.removeEventListener("abort", handleAbort);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      cleanup();
+      resolve();
+    };
+    const handleAbort = () => {
+      cleanup();
+      reject(new Error("Generation was cancelled"));
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    signal.addEventListener("abort", handleAbort, { once: true });
+  });
+}
+
 export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
   const {
     models: availableModels,
@@ -245,6 +268,7 @@ export function useCanvasAI(canvas: fabric.Canvas | null, imageId: string) {
           if (signal.aborted) {
             throw new Error("Generation was cancelled");
           }
+          await waitUntilDocumentIsVisible(signal);
           const pollRes = await api.images[":id"].$get({
             param: { id: newImageId },
           });

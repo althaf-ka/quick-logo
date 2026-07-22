@@ -10,6 +10,9 @@ interface UseBrandKitRefinementOptions {
   brandKitId: string | null;
   typographyStyle?: string;
   activeRefinement?: NormalizedBrandKit["activeRefinement"];
+  baseRevisionId?: string;
+  expectedActiveRevisionId?: string;
+  onRevisionCreated?: () => void;
 }
 
 type DeterministicEditInput =
@@ -52,6 +55,9 @@ export function useBrandKitRefinement({
   brandKitId,
   typographyStyle,
   activeRefinement,
+  baseRevisionId,
+  expectedActiveRevisionId,
+  onRevisionCreated,
 }: UseBrandKitRefinementOptions) {
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState("");
@@ -117,6 +123,7 @@ export function useBrandKitRefinement({
       return response.json();
     },
     enabled: Boolean(brandKitId && activeRefinementId),
+    staleTime: REFINEMENT_POLL_INTERVAL_MS,
     refetchInterval: (query) => {
       const status = query.state.data?.refinement.status;
       return status === "queued" || status === "processing"
@@ -137,10 +144,15 @@ export function useBrandKitRefinement({
         targetItemId?: string;
       }) => {
         if (!brandKitId) throw new Error("No active brand kit session");
+        if (!baseRevisionId || !expectedActiveRevisionId) {
+          throw new Error("No Brand Kit revision is available to refine");
+        }
         const res = await api.brandKits[":id"].refine.$post({
           param: { id: brandKitId },
           json: {
             sectionId,
+            baseRevisionId,
+            expectedActiveRevisionId,
             refinementPrompt,
             typographyStyle,
             targetItemId: mutationTargetItemId,
@@ -192,18 +204,13 @@ export function useBrandKitRefinement({
   const { mutate: mutateEdit, isPending: isSavingEdit } = useMutation({
     mutationFn: async (edit: DeterministicEditInput) => {
       if (!brandKitId) throw new Error("No active brand kit session");
-      const cached = queryClient.getQueryData<NormalizedBrandKit | null>([
-        "brand-kit",
-        brandKitId,
-      ]);
-      const activeRevision = cached?.revisions.find(
-        (revision) => revision.isActive,
-      );
-      if (!activeRevision) throw new Error("No active brand kit revision");
+      if (!baseRevisionId || !expectedActiveRevisionId) {
+        throw new Error("No Brand Kit revision is available to edit");
+      }
 
       const response = await api.brandKits[":id"].edit.$post({
         param: { id: brandKitId },
-        json: { ...edit, baseRevisionId: activeRevision.id },
+        json: { ...edit, baseRevisionId, expectedActiveRevisionId },
       });
       if (!response.ok) {
         throw new Error(
@@ -226,7 +233,7 @@ export function useBrandKitRefinement({
           return {
             ...current,
             revisions: current.revisions.map((revision) => {
-              if (!revision.isActive) return revision;
+              if (revision.id !== baseRevisionId) return revision;
               const results = revision.results;
               if (edit.action === "set-palette") {
                 return {
@@ -260,7 +267,11 @@ export function useBrandKitRefinement({
 
       return { previous };
     },
-    onSuccess: (_data, edit) => {
+    onSuccess: (data, edit) => {
+      if (data.status === "unchanged") {
+        toast.info("No changes to save.");
+        return;
+      }
       toast.success(
         edit.action === "set-font" ? "Font updated." : "Palette updated.",
       );
@@ -271,10 +282,11 @@ export function useBrandKitRefinement({
       }
       toast.error(error.message || "Failed to save brand kit edit");
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({
+    onSettled: async (data) => {
+      await queryClient.invalidateQueries({
         queryKey: ["brand-kit", brandKitId],
       });
+      if (data?.status === "updated") onRevisionCreated?.();
     },
   });
 
@@ -356,10 +368,13 @@ export function useBrandKitRefinement({
     setRefiningSectionId(null);
     setTargetItemId(null);
     setActiveRefinementId(null);
-    void queryClient.invalidateQueries({ queryKey: ["brand-kit", brandKitId] });
+    const refreshBrandKit = queryClient.invalidateQueries({
+      queryKey: ["brand-kit", brandKitId],
+    });
     void queryClient.invalidateQueries({ queryKey: AUTH_KEYS.user });
 
     if (operation.status === "completed") {
+      void refreshBrandKit.then(() => onRevisionCreated?.());
       toast.success("Refinement completed.", {
         id: `refinement-${operation.id}`,
         action: {
@@ -371,6 +386,7 @@ export function useBrandKitRefinement({
       return;
     }
 
+    void refreshBrandKit;
     toast.error(operation.errorMessage || "Refinement failed.", {
       id: `refinement-${operation.id}`,
       description: operation.refundedAt
@@ -380,6 +396,7 @@ export function useBrandKitRefinement({
   }, [
     brandKitId,
     mutateRestoreFull,
+    onRevisionCreated,
     queryClient,
     refinementOperation?.refinement,
   ]);

@@ -9,6 +9,8 @@ import type { generateBrandKitSchema } from "@quicklogo/shared";
 
 export type GeneratePayload = z.infer<typeof generateBrandKitSchema>;
 
+const BRAND_KIT_POLL_INTERVAL_MS = 2500;
+
 interface UseBrandKitGenerationOptions {
   brandKitId?: string;
   onGenerationSuccess?: (brandKitId: string) => void;
@@ -37,10 +39,13 @@ export function useBrandKitGeneration({
       const raw = await res.json();
       return normalizeBrandKit(raw);
     },
+    staleTime: BRAND_KIT_POLL_INTERVAL_MS,
     refetchInterval: (query) => {
       const data = query.state.data as NormalizedBrandKit | null;
       const status = data?.status;
-      if (status === "pending" || status === "processing") return 2500;
+      if (status === "pending" || status === "processing") {
+        return BRAND_KIT_POLL_INTERVAL_MS;
+      }
       return false;
     },
     enabled: !!brandKitId,

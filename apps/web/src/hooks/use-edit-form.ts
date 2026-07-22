@@ -18,6 +18,7 @@ export interface EditHistoryEntry {
 type EditStatus = "idle" | "generating" | "polling" | "done" | "error";
 
 const DEFAULT_MODEL = "quick-seedream";
+const IMAGE_STATUS_POLL_INTERVAL_MS = 15000;
 
 type ImageHistoryResponse = InferResponseType<
   (typeof api.images)[":id"]["$get"],
@@ -118,9 +119,12 @@ export function useEditForm({
       return res.json();
     },
     enabled: !!activeEditImageId,
+    staleTime: IMAGE_STATUS_POLL_INTERVAL_MS,
     refetchInterval: (query) => {
       const status = query.state.data?.image?.status;
-      return status === "completed" || status === "failed" ? false : 15000;
+      return status === "completed" || status === "failed"
+        ? false
+        : IMAGE_STATUS_POLL_INTERVAL_MS;
     },
   });
 

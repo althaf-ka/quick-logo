@@ -3,8 +3,8 @@ import {
   FileZipIcon,
   FilePdfIcon,
   CircleDashedIcon,
-  ClockCounterClockwiseIcon,
   CircleIcon,
+  EyeIcon,
   InfoIcon,
 } from "@phosphor-icons/react";
 import { getSectionLabel, type BrandKitRevisionType } from "@quicklogo/shared";
@@ -23,7 +23,8 @@ export interface ResultsSidebarProps {
   brandKitId?: string;
   results?: BrandKitResultsData | null;
   revisions?: NormalizedBrandKit["revisions"];
-  onRestoreRevision?: (sourceRevisionId: string) => void;
+  selectedRevisionId?: string | null;
+  onSelectRevision?: (revisionId: string) => void;
   refiningSectionId?: string | null;
 }
 
@@ -69,7 +70,8 @@ function getRevisionDisplayLabel(
 export function ResultsSidebar({
   results,
   revisions,
-  onRestoreRevision,
+  selectedRevisionId,
+  onSelectRevision,
   refiningSectionId,
 }: ResultsSidebarProps) {
   const reversedRevisions = [...(revisions || [])].reverse();
@@ -240,8 +242,9 @@ export function ResultsSidebar({
         <div className="space-y-1.5">
           {reversedRevisions.map((rev) => {
             const isCurrent = rev.isActive;
-            const restoreDisabled =
-              Boolean(refiningSectionId) || !onRestoreRevision;
+            const isViewing = rev.id === selectedRevisionId;
+            const selectionDisabled =
+              Boolean(refiningSectionId) || !onSelectRevision;
             const formattedDate = new Date(rev.createdAt).toLocaleString(
               undefined,
               {
@@ -257,25 +260,33 @@ export function ResultsSidebar({
                 key={rev.id}
                 className={cn(
                   "relative border border-white/[0.06] bg-white/[0.01] px-3 py-2.5 transition-colors",
-                  isCurrent
-                    ? "border-l-primary bg-primary/[0.03] border-l-2"
-                    : restoreDisabled
-                      ? "opacity-50"
-                      : "hover:border-white/[0.12] hover:bg-white/[0.025]",
+                  isViewing
+                    ? "border-l-primary bg-primary/[0.06] border-l-2"
+                    : isCurrent
+                      ? "border-l-2 border-l-emerald-400 bg-emerald-400/[0.03]"
+                      : selectionDisabled
+                        ? "opacity-50"
+                        : "hover:border-white/[0.12] hover:bg-white/[0.025]",
                 )}
               >
-                {!isCurrent ? (
+                {!isCurrent || selectedRevisionId ? (
                   <button
                     type="button"
-                    aria-label={`Restore version ${rev.revisionNumber}: ${getRevisionDisplayLabel(rev)}`}
-                    disabled={restoreDisabled}
+                    aria-label={
+                      isCurrent
+                        ? `Return to current version ${rev.revisionNumber}`
+                        : `View version ${rev.revisionNumber}: ${getRevisionDisplayLabel(rev)}`
+                    }
+                    disabled={selectionDisabled}
                     onClick={() => {
-                      onRestoreRevision?.(rev.id);
+                      onSelectRevision?.(rev.id);
                     }}
                     title={
                       refiningSectionId
-                        ? "Wait for the active refinement to finish before restoring"
-                        : `Restore version ${rev.revisionNumber}`
+                        ? "Wait for the active refinement to finish before viewing another version"
+                        : isCurrent
+                          ? `Return to current version ${rev.revisionNumber}`
+                          : `View version ${rev.revisionNumber}`
                     }
                     className="focus-visible:ring-ring/50 absolute inset-0 z-0 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-inset disabled:cursor-not-allowed"
                   />
@@ -288,8 +299,10 @@ export function ResultsSidebar({
                     className={cn(
                       "mt-1.5 size-1.5 shrink-0",
                       isCurrent
-                        ? "text-primary"
-                        : getRevisionColor(rev.revisionType),
+                        ? "text-emerald-400"
+                        : isViewing
+                          ? "text-primary"
+                          : getRevisionColor(rev.revisionType),
                     )}
                   />
                   <div className="min-w-0 flex-1">
@@ -298,23 +311,29 @@ export function ResultsSidebar({
                         <span
                           className={cn(
                             "font-mono text-[9px] font-bold tracking-wider uppercase",
-                            isCurrent ? "text-primary" : "text-foreground/90",
+                            isCurrent
+                              ? "text-emerald-300"
+                              : isViewing
+                                ? "text-primary"
+                                : "text-foreground/90",
                           )}
                         >
                           V{rev.revisionNumber}
                         </span>
                         {isCurrent ? (
-                          <span className="bg-primary/10 text-primary px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-wider uppercase">
+                          <span className="bg-emerald-400/10 px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-wider text-emerald-300 uppercase">
                             Current
+                          </span>
+                        ) : null}
+                        {isViewing ? (
+                          <span className="bg-primary/10 text-primary px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-wider uppercase">
+                            Viewing
                           </span>
                         ) : null}
                       </div>
                       <div className="text-muted-foreground/45 flex shrink-0 items-center gap-1.5">
                         {!isCurrent ? (
-                          <ClockCounterClockwiseIcon
-                            aria-hidden="true"
-                            className="size-3"
-                          />
+                          <EyeIcon aria-hidden="true" className="size-3" />
                         ) : null}
                         <time
                           dateTime={rev.createdAt}

@@ -33,7 +33,8 @@ export interface SidebarShellProps {
   brandKitId?: string;
   results?: BrandKitResultsData | null;
   revisions?: NormalizedBrandKit["revisions"];
-  onRestoreRevision?: (sourceRevisionId: string) => void;
+  selectedRevisionId?: string | null;
+  onSelectRevision?: (revisionId: string) => void;
 
   // Refinement Props
   refiningSectionId: string | null;

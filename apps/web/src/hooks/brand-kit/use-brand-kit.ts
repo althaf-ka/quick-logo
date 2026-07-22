@@ -25,11 +25,13 @@ import {
 interface UseBrandKitOptions {
   imageId?: string;
   brandKitId?: string;
+  onBrandKitCreated?: (brandKitId: string) => void;
 }
 
 export function useBrandKit({
   imageId,
   brandKitId: initialBrandKitId,
+  onBrandKitCreated,
 }: UseBrandKitOptions) {
   const { user } = useAuth();
 
@@ -63,10 +65,11 @@ export function useBrandKit({
 
   const generation = useBrandKitGeneration({
     brandKitId: initialBrandKitId,
-    onGenerationSuccess: () => {
+    onGenerationSuccess: (brandKitId) => {
       clearDraft();
       // Move to generating state while waiting for polling to complete
       setWorkspaceState("generating");
+      onBrandKitCreated?.(brandKitId);
     },
   });
   const {
@@ -84,14 +87,39 @@ export function useBrandKit({
   // Track mockup uploads
   const [isUploadingMockups, setIsUploadingMockups] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [previewRevisionId, setPreviewRevisionId] = useState<string | null>(
+    null,
+  );
   const [activeOperationCredits, setActiveOperationCredits] = useState<
     number | null
   >(null);
+
+  const activeRevision = useMemo(
+    () => normalizedData?.revisions.find((revision) => revision.isActive),
+    [normalizedData?.revisions],
+  );
+  const previewRevision = useMemo(
+    () =>
+      previewRevisionId
+        ? normalizedData?.revisions.find(
+            (revision) =>
+              revision.id === previewRevisionId && !revision.isActive,
+          )
+        : undefined,
+    [normalizedData?.revisions, previewRevisionId],
+  );
+  const clearRevisionPreview = useCallback(
+    () => setPreviewRevisionId(null),
+    [],
+  );
 
   const refinement = useBrandKitRefinement({
     brandKitId: brandKitId,
     typographyStyle: typographyPreference.mood,
     activeRefinement: normalizedData?.activeRefinement,
+    baseRevisionId: previewRevision?.id ?? activeRevision?.id,
+    expectedActiveRevisionId: activeRevision?.id,
+    onRevisionCreated: clearRevisionPreview,
   });
   const {
     isRefiningKit,
@@ -215,15 +243,16 @@ export function useBrandKit({
 
   const results = useMemo(() => {
     if (!normalizedData) return null;
-    const activeRev = normalizedData.revisions?.find((r) => r.isActive);
-    if (!activeRev) return null;
-    const revisionResults = activeRev.results as unknown as BrandKitResultsData;
+    const selectedRevision = previewRevision ?? activeRevision;
+    if (!selectedRevision) return null;
+    const revisionResults =
+      selectedRevision.results as unknown as BrandKitResultsData;
     return {
       ...revisionResults,
       brandName: revisionResults.brandName || normalizedData.brandName,
       logoUrl: revisionResults.logoUrl || normalizedData.logoUrl,
     };
-  }, [normalizedData]);
+  }, [activeRevision, normalizedData, previewRevision]);
 
   // 3. Orchestrated File Uploads & Generation
   const handleLogoUpload = useCallback(
@@ -417,6 +446,33 @@ export function useBrandKit({
     ],
   );
 
+  const handlePreviewRevision = useCallback(
+    (revisionId: string) => {
+      if (
+        isRefiningKit ||
+        refinement.isRestoringKit ||
+        refinement.isRestoringFull
+      )
+        return;
+      const revision = normalizedData?.revisions.find(
+        (candidate) => candidate.id === revisionId,
+      );
+      setTargetSection(null);
+      setTargetItemId(null);
+      setPreviewRevisionId(revision?.isActive ? null : (revision?.id ?? null));
+      setSidebarOpen(false);
+    },
+    [
+      isRefiningKit,
+      normalizedData?.revisions,
+      refinement.isRestoringFull,
+      refinement.isRestoringKit,
+      setTargetItemId,
+      setTargetSection,
+      setSidebarOpen,
+    ],
+  );
+
   return {
     // Session State
     workspaceState,
@@ -443,6 +499,8 @@ export function useBrandKit({
     brandKitId,
     normalizedData,
     results,
+    activeRevision,
+    previewRevision,
     isGenerating,
     isQueryLoading,
     isImageLoading,
@@ -464,6 +522,7 @@ export function useBrandKit({
     // UI state
     sidebarOpen,
     setSidebarOpen,
+    handlePreviewRevision,
 
     // Actions
     handleLogoUpload,

@@ -263,6 +263,7 @@ export const brandKitDeterministicEditSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("set-font"),
     baseRevisionId: z.string().min(1),
+    expectedActiveRevisionId: z.string().min(1),
     role: z.enum(["heading", "body"]),
     family: z
       .string()
@@ -277,6 +278,7 @@ export const brandKitDeterministicEditSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("set-palette"),
     baseRevisionId: z.string().min(1),
+    expectedActiveRevisionId: z.string().min(1),
     colors: brandKitPaletteSchema,
   }),
 ]);
@@ -287,6 +289,8 @@ export type BrandKitDeterministicEdit = z.infer<
 
 const refineBrandKitSectionBase = z.object({
   sectionId: z.enum(BRAND_KIT_REFINEMENT_SECTION_IDS),
+  baseRevisionId: z.string().min(1),
+  expectedActiveRevisionId: z.string().min(1),
   refinementPrompt: z
     .string()
     .trim()

@@ -95,7 +95,7 @@ export class RevisionConflictError extends AppError {
     super(
       409,
       ERROR_CODES.REVISION_CONFLICT,
-      "The brand kit changed while this edit was being saved. Review the latest version and try again.",
+      "The current Brand Kit changed in another session. Review the latest version and try again.",
     );
   }
 }

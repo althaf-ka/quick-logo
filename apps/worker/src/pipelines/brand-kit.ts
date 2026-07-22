@@ -688,6 +688,7 @@ export class BrandKitPipeline {
         sectionId,
         targetItemId,
         refinementId,
+        refinement.baseRevisionId,
         newMergedJSON,
       );
       this.logger.info(`Completed refinement for brandKitId=${brandKitId}`, {

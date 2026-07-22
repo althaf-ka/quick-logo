@@ -7,6 +7,8 @@ type BatchResponse = InferResponseType<
   200
 >;
 
+const BATCH_POLL_INTERVAL_MS = 15000;
+
 export function useBatchStatus(batchId: string | null) {
   return useQuery({
     queryKey: ["batches", batchId],
@@ -21,10 +23,11 @@ export function useBatchStatus(batchId: string | null) {
       return (await res.json()) as BatchResponse;
     },
     enabled: !!batchId,
+    staleTime: BATCH_POLL_INTERVAL_MS,
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return false;
-      return data.status === "processing" ? 15000 : false;
+      return data.status === "processing" ? BATCH_POLL_INTERVAL_MS : false;
     },
   });
 }

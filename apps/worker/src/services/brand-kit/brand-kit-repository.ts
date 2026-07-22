@@ -284,6 +284,7 @@ export class BrandKitRepository {
     sectionId: string,
     targetItemId: string | null | undefined,
     refinementId: string,
+    sourceRevisionId: string,
     results: Record<string, any>,
   ) {
     const triggerType = `refine_${sectionId}:${refinementId}`;
@@ -320,6 +321,7 @@ export class BrandKitRepository {
         revisionType: "refinement",
         sectionId,
         targetItemId: targetItemId ?? null,
+        sourceRevisionId,
         triggerType,
         results,
       }),
