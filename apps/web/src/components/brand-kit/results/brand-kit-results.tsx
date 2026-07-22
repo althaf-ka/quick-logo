@@ -164,7 +164,7 @@ export function BrandKitResults({
           onRefine(sectionId, targetItemId),
       }}
     >
-      <div className="mx-auto w-full max-w-6xl px-6 pt-12 pb-4 sm:px-8 md:px-12 lg:px-16">
+      <div className="mx-auto w-full max-w-6xl px-6 pt-12 pb-12 sm:px-8 md:px-12 lg:px-16">
         {/* Header */}
         <div className="mb-6 flex flex-row items-end justify-between gap-4">
           <div>

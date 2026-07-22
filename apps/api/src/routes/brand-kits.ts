@@ -383,27 +383,49 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             );
           }
         }
-      } else if (data.targetItemId) {
-        if (data.sectionId === "brand-graphics") {
-          const bg = results.brandGraphics as
-            | Record<string, string>
-            | undefined;
-          if (!bg)
+      } else if (data.sectionId === "brand-presentation") {
+        const presentation = results.brandPresentation as
+          | { presentationUrl?: string }
+          | undefined;
+        if (
+          !presentation?.presentationUrl ||
+          presentation.presentationUrl.includes("placehold.co")
+        ) {
+          throw new BadRequestError(
+            "Brand Presentation does not exist in the active revision",
+          );
+        }
+      } else if (data.sectionId === "brand-guidelines") {
+        if (!results.brandGuidelines) {
+          throw new BadRequestError(
+            "Brand Guidelines do not exist in the active revision",
+          );
+        }
+      } else if (data.sectionId === "brand-graphics") {
+        const graphics = (results.brandGraphics ?? results.brandedBackdrops) as
+          | Record<string, string>
+          | undefined;
+        if (!graphics) {
+          throw new BadRequestError(
+            "Brand graphics do not exist in the active revision",
+          );
+        }
+        const requiredGraphics = data.targetItemId
+          ? [data.targetItemId]
+          : ["backdrop-post", "backdrop-story"];
+        for (const targetId of requiredGraphics) {
+          const url =
+            targetId === "backdrop-post"
+              ? (graphics.backdropPostUrl ?? graphics.feedUrl)
+              : (graphics.backdropStoryUrl ?? graphics.storyUrl);
+          if (!url || url.includes("placehold.co")) {
             throw new BadRequestError(
-              "Brand graphics do not exist in active revision",
+              `Brand graphic ${targetId} does not exist in the active revision`,
             );
-          const validItems = ["backdrop-post", "backdrop-story"];
-          if (data.targetItemId && validItems.includes(data.targetItemId)) {
-            const urlKey =
-              data.targetItemId.replace(/-([a-z])/g, (_: string, c: string) =>
-                c.toUpperCase(),
-              ) + "Url";
-            if (!bg[urlKey])
-              throw new BadRequestError(
-                `Brand graphic ${data.targetItemId} does not exist in active revision`,
-              );
           }
-        } else if (data.sectionId === "social-media") {
+        }
+      } else if (data.targetItemId) {
+        if (data.sectionId === "social-media") {
           const socialAssets = results.socialMedia;
           if (!Array.isArray(socialAssets))
             throw new BadRequestError(

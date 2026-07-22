@@ -14,7 +14,11 @@ export function BrandGuidelinesSection({ data }: BrandGuidelinesSectionProps) {
 
   return (
     <div>
-      <SectionHeader title="Brand Guidelines" sectionId="brand-guidelines" />
+      <SectionHeader
+        title="Brand Guidelines"
+        sectionId="brand-guidelines"
+        refineLabel="Refine Guidance"
+      />
       <SectionContent sectionId="brand-guidelines">
         <div className="bg-card flex flex-col gap-4 border p-4 sm:p-6">
           <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-end">
@@ -94,26 +98,45 @@ export function BrandGuidelinesSection({ data }: BrandGuidelinesSectionProps) {
               <div className="flex min-h-32 items-end justify-center gap-5 bg-white p-5 text-black">
                 <div className="flex flex-col items-center gap-2">
                   {guidelines.primaryLogoUrl ? (
-                    <img
-                      src={guidelines.primaryLogoUrl}
-                      alt="Minimum logo size"
-                      className="max-h-10 w-28 object-contain"
-                    />
+                    <div className="flex h-12 items-center justify-center border border-black/10 bg-zinc-100 px-1">
+                      <img
+                        src={guidelines.primaryLogoUrl}
+                        alt="Full logo at its recommended minimum digital width"
+                        className="max-h-10 max-w-full object-contain"
+                        style={{
+                          width: guidelines.logoRules.minimumDigitalWidth,
+                        }}
+                      />
+                    </div>
                   ) : null}
                   <span className="font-mono text-[8px]">
-                    {guidelines.logoRules.minimumDigitalWidth}px
+                    Full logo · {guidelines.logoRules.minimumDigitalWidth}px
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <div className="size-8 border border-black/20" />
+                  {guidelines.smallMarkLogoUrl ? (
+                    <div
+                      className="flex items-center justify-center border border-black/10 bg-zinc-100"
+                      style={{
+                        width: guidelines.logoRules.minimumMarkSize,
+                        height: guidelines.logoRules.minimumMarkSize,
+                      }}
+                    >
+                      <img
+                        src={guidelines.smallMarkLogoUrl}
+                        alt="Standalone mark at its recommended minimum digital size"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  ) : null}
                   <span className="font-mono text-[8px]">
-                    {guidelines.logoRules.minimumMarkSize}px
+                    Small mark · {guidelines.logoRules.minimumMarkSize}px
                   </span>
                 </div>
               </div>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Recommended digital minimums preserve clarity. Verify small
-                reproduction before production use.
+                Use the standalone icon at very small sizes when available.
+                Always verify clarity on the final display and background.
               </p>
             </div>
 

@@ -17,6 +17,8 @@ export function BrandPresentationSection({
       <SectionHeader
         title="Brand Presentation"
         sectionId="brand-presentation"
+        refineLabel="Refine Presentation"
+        hideRefine={isPlaceholder}
       />
       <SectionContent sectionId="brand-presentation">
         <div className="bg-muted/10 relative flex aspect-[3/2] w-full items-center justify-center overflow-hidden">

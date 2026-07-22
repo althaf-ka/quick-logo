@@ -326,7 +326,7 @@ export async function generateAndUpload(
     .url;
 }
 
-async function generateAssetWithTimeout({
+export async function generateAssetWithTimeout({
   provider,
   params,
   storage,
@@ -1028,6 +1028,9 @@ export async function generateBrandGraphics({
   refinementPrompt,
   context,
   targetItemId,
+  existingPostUrl,
+  existingStoryUrl,
+  assetVersionId,
 }: {
   ai: Ai;
   env: Env;
@@ -1038,6 +1041,9 @@ export async function generateBrandGraphics({
   refinementPrompt?: string;
   context?: ValidatedBrandContext;
   targetItemId?: string;
+  existingPostUrl?: string;
+  existingStoryUrl?: string;
+  assetVersionId?: string;
 }): Promise<BrandGraphicUrls & AssetSectionTally> {
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
@@ -1052,6 +1058,11 @@ export async function generateBrandGraphics({
 
   for (const variant of variants) {
     total++;
+    const isPost = variant.targetId === "backdrop-post";
+    const currentGraphicUrl = isPost ? existingPostUrl : existingStoryUrl;
+    const companionGraphicUrl = isPost
+      ? (urls.backdropStoryUrl ?? existingStoryUrl)
+      : (urls.backdropPostUrl ?? existingPostUrl);
     const url = await generateAssetWithTimeout({
       provider,
       params: buildBrandGraphicGenerationParams({
@@ -1062,11 +1073,16 @@ export async function generateBrandGraphics({
         defaultParams: mapping.defaultParams,
         refinementPrompt,
         context,
+        currentGraphicUrl,
+        companionGraphicUrl,
       }),
       storage,
-      uploadPath: `${ASSET_ROOT}/${brandKitId}/${variant.storageSuffix}`,
+      uploadPath: assetVersionId
+        ? `${ASSET_ROOT}/${brandKitId}/refinements/${assetVersionId}/${variant.storageSuffix}`
+        : `${ASSET_ROOT}/${brandKitId}/${variant.storageSuffix}`,
       timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
-      label: "asset-generator",
+      label: assetVersionId ? "brand-graphics-refinement" : "asset-generator",
+      failFastOnNonRetryable: Boolean(assetVersionId),
     });
     if (url) urls[toUrlKey(variant.targetId)] = url;
     else failed++;

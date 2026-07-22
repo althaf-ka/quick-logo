@@ -33,6 +33,7 @@ import {
   type SocialMediaAsset,
 } from "./asset-generator";
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
+import { generateBrandGuidelinesRefinement } from "./brand-guidelines-refinement";
 import type { StorageProvider } from "@quicklogo/storage";
 import type { Env } from "../../types";
 import { createLogger } from "@quicklogo/server-telemetry";
@@ -215,33 +216,66 @@ export async function mergeRevisionResults({
     }
   } else if (sectionId === "brand-graphics") {
     const actualLogoUrl =
-      currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
-    if (actualLogoUrl) {
-      const graphicUrls = await generateBrandGraphics({
-        ai,
-        env,
-        storage,
-        brandKitId,
-        brandName:
-          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
-        sourceLogoUrl: actualLogoUrl,
-        refinementPrompt,
-        context: brandAssetContext,
-        targetItemId,
-      });
-      const existing =
-        newMergedJSON.brandGraphics ?? newMergedJSON.brandedBackdrops;
-      newMergedJSON.brandGraphics = {
-        backdropPostUrl:
-          graphicUrls.backdropPostUrl ??
-          existing?.backdropPostUrl ??
-          existing?.feedUrl,
-        backdropStoryUrl:
-          graphicUrls.backdropStoryUrl ??
-          existing?.backdropStoryUrl ??
-          existing?.storyUrl,
-      };
+      currentBrandKit?.customLogoUrl ||
+      newMergedJSON.logoUrl ||
+      newMergedJSON.logoVariations?.[0]?.url;
+    if (!actualLogoUrl) {
+      throw new PipelineError(
+        "Brand Graphics refinement requires an approved logo",
+        false,
+      );
     }
+
+    const existing =
+      newMergedJSON.brandGraphics ?? newMergedJSON.brandedBackdrops;
+    const postUrl = existing?.backdropPostUrl ?? existing?.feedUrl;
+    const storyUrl = existing?.backdropStoryUrl ?? existing?.storyUrl;
+    const existingPostUrl =
+      typeof postUrl === "string" && !postUrl.includes("placehold.co")
+        ? postUrl
+        : undefined;
+    const existingStoryUrl =
+      typeof storyUrl === "string" && !storyUrl.includes("placehold.co")
+        ? storyUrl
+        : undefined;
+    const missingRequestedGraphic = targetItemId
+      ? targetItemId === "backdrop-post"
+        ? !existingPostUrl
+        : !existingStoryUrl
+      : !existingPostUrl || !existingStoryUrl;
+    if (missingRequestedGraphic) {
+      throw new PipelineError(
+        "The requested Brand Graphics artwork is unavailable for refinement",
+        false,
+      );
+    }
+    const graphicUrls = await generateBrandGraphics({
+      ai,
+      env,
+      storage,
+      brandKitId,
+      brandName:
+        currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+      sourceLogoUrl: actualLogoUrl,
+      refinementPrompt,
+      context: brandAssetContext,
+      targetItemId,
+      existingPostUrl,
+      existingStoryUrl,
+      assetVersionId: refinementId,
+    });
+
+    if (graphicUrls.failed > 0) {
+      throw new PipelineError(
+        `Failed to refine ${graphicUrls.failed} of ${graphicUrls.total} brand graphics`,
+        true,
+      );
+    }
+
+    newMergedJSON.brandGraphics = {
+      backdropPostUrl: graphicUrls.backdropPostUrl ?? existingPostUrl,
+      backdropStoryUrl: graphicUrls.backdropStoryUrl ?? existingStoryUrl,
+    };
   } else if (sectionId === "business-card") {
     const actualLogoUrl =
       currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
@@ -534,6 +568,8 @@ export async function mergeRevisionResults({
       targetAudience: currentBrandKit?.targetAudience,
       selectedVibes: currentBrandKit?.selectedVibes,
       brandPersonality: currentBrandKit?.brandPersonality,
+      brandDescription: currentBrandKit?.prompt,
+      additionalContext: currentBrandKit?.additionalContext,
     });
 
     if (!refinementRequest) {
@@ -543,6 +579,21 @@ export async function mergeRevisionResults({
       throw new Error(
         `Refinement for section '${sectionId}' is not currently supported`,
       );
+    } else if (refinementRequest.sectionKey === "brandGuidelines") {
+      const updates = await generateBrandGuidelinesRefinement({
+        ai,
+        request: refinementRequest.request,
+      });
+      newMergedJSON.brandGuidelines = {
+        ...newMergedJSON.brandGuidelines,
+        ...updates,
+        ...(updates.voice && {
+          voice: {
+            ...newMergedJSON.brandGuidelines?.voice,
+            ...updates.voice,
+          },
+        }),
+      };
     } else {
       const response = await ai.run(
         "@cf/meta/llama-3.1-8b-instruct-fp8",
@@ -568,39 +619,48 @@ export async function mergeRevisionResults({
         } else if (refinementRequest.sectionKey === "brandPresentation") {
           if (parsedJson.tagline && parsedJson.description) {
             const actualLogoUrl =
-              newMergedJSON.logoVariations?.[0]?.url ||
-              currentBrandKit?.customLogoUrl;
+              currentBrandKit?.customLogoUrl ||
+              newMergedJSON.logoUrl ||
+              newMergedJSON.logoVariations?.[0]?.url;
 
-            const newPresentationUrl =
-              (actualLogoUrl
-                ? await generateBrandPresentationImage({
-                    ai,
-                    env,
-                    storage,
-                    brandKitId,
-                    brandName:
-                      currentBrandKit?.brandName ||
-                      newMergedJSON.brandName ||
-                      "Brand",
-                    sourceLogoUrl: actualLogoUrl,
-                    refinementPrompt,
-                    headingFont: newMergedJSON.typography?.heading?.family,
-                    headingWeight: newMergedJSON.typography?.heading?.weight,
-                    bodyFont: newMergedJSON.typography?.body?.family,
-                    bodyWeight: newMergedJSON.typography?.body?.weight,
-                    productImageUrls: currentBrandKit?.productImageUrls,
-                    colors: activeColors,
-                    tagline: parsedJson.tagline || currentBrandKit?.tagline,
-                    brandDescription:
-                      currentBrandKit?.prompt || "Professional brand kit",
-                    industry: currentBrandKit?.industry,
-                    targetAudience: currentBrandKit?.targetAudience,
-                    selectedVibes: currentBrandKit?.selectedVibes,
-                    brandPersonality: currentBrandKit?.brandPersonality,
-                    additionalContext: currentBrandKit?.additionalContext,
-                  })
-                : undefined) ??
-              newMergedJSON.brandPresentation?.presentationUrl;
+            const newPresentationUrl = actualLogoUrl
+              ? await generateBrandPresentationImage({
+                  ai,
+                  env,
+                  storage,
+                  brandKitId,
+                  brandName:
+                    currentBrandKit?.brandName ||
+                    newMergedJSON.brandName ||
+                    "Brand",
+                  sourceLogoUrl: actualLogoUrl,
+                  currentPresentationUrl:
+                    newMergedJSON.brandPresentation?.presentationUrl,
+                  assetVersionId: refinementId,
+                  refinementPrompt,
+                  headingFont: newMergedJSON.typography?.heading?.family,
+                  headingWeight: newMergedJSON.typography?.heading?.weight,
+                  bodyFont: newMergedJSON.typography?.body?.family,
+                  bodyWeight: newMergedJSON.typography?.body?.weight,
+                  productImageUrls: currentBrandKit?.productImageUrls,
+                  colors: activeColors,
+                  tagline: parsedJson.tagline || currentBrandKit?.tagline,
+                  brandDescription:
+                    currentBrandKit?.prompt || "Professional brand kit",
+                  industry: currentBrandKit?.industry,
+                  targetAudience: currentBrandKit?.targetAudience,
+                  selectedVibes: currentBrandKit?.selectedVibes,
+                  brandPersonality: currentBrandKit?.brandPersonality,
+                  additionalContext: currentBrandKit?.additionalContext,
+                })
+              : undefined;
+
+            if (!newPresentationUrl) {
+              throw new PipelineError(
+                "Brand Presentation refinement requires an approved logo and presentation image.",
+                false,
+              );
+            }
 
             newMergedJSON.brandPresentation = {
               tagline: parsedJson.tagline,
@@ -613,26 +673,6 @@ export async function mergeRevisionResults({
             );
             throw new Error("AI returned invalid brand presentation schema");
           }
-        } else if (refinementRequest.sectionKey === "brandGuidelines") {
-          const validated =
-            brandGuidelinesRefinementResponseSchema.safeParse(parsedJson);
-          if (!validated.success || Object.keys(validated.data).length === 0) {
-            logger.warn(
-              "[revision-merger] Brand guidelines refinement validation failed",
-              { error: validated.success ? undefined : validated.error },
-            );
-            throw new Error("AI returned invalid brand guidelines schema");
-          }
-          newMergedJSON.brandGuidelines = {
-            ...newMergedJSON.brandGuidelines,
-            ...validated.data,
-            ...(validated.data.voice && {
-              voice: {
-                ...newMergedJSON.brandGuidelines?.voice,
-                ...validated.data.voice,
-              },
-            }),
-          };
         }
       } catch (e) {
         logger.error(

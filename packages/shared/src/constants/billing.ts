@@ -19,6 +19,7 @@ export const BRAND_KIT_BASE_COST = 5;
 export const BRAND_KIT_REFINEMENT_COST = 2;
 export const SOCIAL_KIT_FULL_REFINEMENT_COST = 3;
 export const BUSINESS_CARD_FULL_REFINEMENT_COST = 4;
+export const BRAND_GRAPHICS_FULL_REFINEMENT_COST = 3;
 
 export type BrandKitPaidSection =
   | "logoVariations"
@@ -69,6 +70,9 @@ export function computeBrandKitRefinementCost(
   }
   if (sectionId === "business-card" && !targetItemId) {
     return BUSINESS_CARD_FULL_REFINEMENT_COST;
+  }
+  if (sectionId === "brand-graphics" && !targetItemId) {
+    return BRAND_GRAPHICS_FULL_REFINEMENT_COST;
   }
   return BRAND_KIT_REFINEMENT_COST;
 }

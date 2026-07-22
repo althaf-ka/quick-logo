@@ -357,6 +357,8 @@ export interface BuildBrandKitRefinementRequestInput {
   targetAudience?: string;
   selectedVibes?: string[];
   brandPersonality?: string;
+  brandDescription?: string;
+  additionalContext?: string;
 }
 
 export function buildBrandKitRefinementRequest({
@@ -368,6 +370,8 @@ export function buildBrandKitRefinementRequest({
   targetAudience,
   selectedVibes,
   brandPersonality,
+  brandDescription,
+  additionalContext,
 }: BuildBrandKitRefinementRequestInput): {
   sectionKey: BrandKitSectionKey;
   request: BrandKitJsonRequest;
@@ -377,9 +381,9 @@ export function buildBrandKitRefinementRequest({
   const sectionSchema = BRAND_KIT_SECTION_SCHEMAS[sectionKey];
   const sectionInstruction =
     sectionId === "brand-presentation"
-      ? "You are refining the brand presentation tagline and description story. Make sure it incorporates the user's instructions while remaining professional and catchy."
+      ? "You are refining the brand presentation tagline and description. Return both complete fields. Preserve the existing copy unless the user's instruction explicitly requests a copy change; visual-only requests must not rewrite it."
       : sectionId === "brand-guidelines"
-        ? "You are refining brand guideline copy and verbal identity. Return the complete applicable copy fields, preserve facts not targeted by the request, and never invent contact details or measurable logo specifications."
+        ? "You are refining only written brand strategy and voice guidance. Change only fields explicitly affected by the user's request. Return null for every unaffected field. When voice is affected, return its complete traits, dos, and donts arrays; otherwise return null for voice. Preserve established facts. Never modify or invent palette values, typography, logo assets, clear-space ratios, minimum sizes, misuse measurements, contact details, or other technical specifications."
         : "You are refining the color palette of a brand. Keep it cohesive and professional.";
 
   let context = `Brand Name: ${brandName}\n`;
@@ -387,6 +391,11 @@ export function buildBrandKitRefinementRequest({
   if (targetAudience) context += `Target Audience: ${targetAudience}\n`;
   if (selectedVibes?.length) context += `Vibe: ${selectedVibes.join(", ")}\n`;
   if (brandPersonality) context += `Personality: ${brandPersonality}\n`;
+  if (sectionId === "brand-presentation") {
+    if (brandDescription) context += `Brand Description: ${brandDescription}\n`;
+    if (additionalContext)
+      context += `Additional Context: ${additionalContext}\n`;
+  }
 
   context += `Refinement Request: ${refinementPrompt}\nOriginal JSON state for context: ${JSON.stringify(currentResults[sectionKey])}`;
 
@@ -472,6 +481,8 @@ export interface BuildBrandGraphicParamsInput {
   backendModel: string;
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
   context?: ValidatedBrandContext;
+  currentGraphicUrl?: string;
+  companionGraphicUrl?: string;
 }
 
 export function buildBrandGraphicGenerationParams({
@@ -482,6 +493,8 @@ export function buildBrandGraphicGenerationParams({
   defaultParams,
   refinementPrompt,
   context,
+  currentGraphicUrl,
+  companionGraphicUrl,
 }: BuildBrandGraphicParamsInput & {
   refinementPrompt?: string;
 }): GenerationParams {
@@ -489,15 +502,35 @@ export function buildBrandGraphicGenerationParams({
   // Post graphics are square (1:1); story graphics are tall (9:16).
   const isStory = variation.includes("story");
   const dimensions = isStory ? STORY_DIMENSIONS : SQUARE_DIMENSIONS;
-  return buildAssetParams({
-    prompt: BRAND_GRAPHIC_PROMPTS[variation](ctx),
-    referenceImage: sourceLogoUrl,
-    referenceStrength: 60,
+  const basePrompt = BRAND_GRAPHIC_PROMPTS[variation](ctx);
+
+  if (!currentGraphicUrl) {
+    return buildAssetParams({
+      prompt: basePrompt,
+      referenceImage: sourceLogoUrl,
+      referenceStrength: 60,
+      ...dimensions,
+      backendModel,
+      defaultParams,
+      refinementPrompt,
+    });
+  }
+
+  const params = buildAssetParams({
+    prompt: `${basePrompt}\n\nEDITING REFERENCES\nFigure 1 is the current approved ${isStory ? "story" : "social post"} background and is the primary edit source.${companionGraphicUrl ? ` Figure 2 is the approved companion ${isStory ? "social post" : "story"} background and should guide visual coordination. Figure 3 is the approved logo and is identity context only.` : " Figure 2 is the approved logo and is identity context only."} Make only the changes explicitly requested by the user. Preserve all unaffected composition, shapes, textures, spacing, palette relationships, and negative space. Do not place the reference logo, text, typography, watermarks, or unrelated new elements into the background. If the user explicitly requests a completely new direction, a new composition is allowed, but it must remain a text-free background consistent with the approved identity and any supplied companion graphic.`,
+    referenceStrength: 90,
     ...dimensions,
     backendModel,
     defaultParams,
     refinementPrompt,
   });
+  params.referenceImages = [
+    currentGraphicUrl,
+    ...(companionGraphicUrl ? [companionGraphicUrl] : []),
+    sourceLogoUrl,
+  ];
+  params.canvasMode = "img2img";
+  return params;
 }
 
 export interface BuildBusinessCardParamsInput {
@@ -565,6 +598,7 @@ export function buildBusinessCardGenerationParams({
 export function buildBrandPresentationGenerationParams({
   brandName,
   sourceLogoUrl,
+  currentPresentationUrl,
   backendModel,
   defaultParams,
   refinementPrompt,
@@ -584,6 +618,7 @@ export function buildBrandPresentationGenerationParams({
 }: {
   brandName: string;
   sourceLogoUrl: string;
+  currentPresentationUrl?: string;
   backendModel: string;
   defaultParams?: Omit<GenerationParams, "prompt" | "backendModel">;
   refinementPrompt?: string;
@@ -619,15 +654,19 @@ export function buildBrandPresentationGenerationParams({
 
   if (selectedVibes?.length || brandPersonality) {
     basePrompt += ` Brand aesthetic: ${selectedVibes?.join(", ") || "modern"}. Personality: ${brandPersonality || "professional"}.`;
-  } else if (fallbackPrompt) {
-    basePrompt += ` Context: ${fallbackPrompt}.`;
   }
+  if (fallbackPrompt) basePrompt += ` Brand description: ${fallbackPrompt}.`;
   if (additionalContext)
     basePrompt += ` Additional direction: ${additionalContext}.`;
 
-  basePrompt += ` Figure 1 is the approved logo. Preserve its exact geometry, spelling, proportions, and colors; never redraw, reinterpret, or invent a replacement mark. The approved AI-selected type system is ${headingFont || "the approved heading font"} at weight ${headingWeight || "700"} for headings and ${bodyFont || "the approved body font"} at weight ${bodyWeight || "400"} for body copy. Use these exact typefaces wherever text is rendered; do not replace them with unrelated fonts. Keep copy restrained and hierarchy clear.`;
+  if (currentPresentationUrl) {
+    basePrompt += ` Figure 1 is the current approved presentation board and must be the primary editing reference. Make only the changes explicitly requested by the user. Unless directly targeted, preserve the existing composition, panel structure, imagery, product placement, logo treatment, palette, typography, tagline, written copy, spacing, and overall brand recognition. Do not introduce unrelated redesigns or "improvements." If the user explicitly requests a completely new direction, that instruction overrides composition preservation: create a genuinely new composition while still retaining the approved logo, brand identity, exact requested copy, and truthful product appearance. Figure 2 is the approved logo.`;
+  } else {
+    basePrompt += ` Figure 1 is the approved logo.`;
+  }
+  basePrompt += ` Preserve the logo's exact geometry, spelling, proportions, and colors; never redraw, reinterpret, or invent a replacement mark. The approved AI-selected type system is ${headingFont || "the approved heading font"} at weight ${headingWeight || "700"} for headings and ${bodyFont || "the approved body font"} at weight ${bodyWeight || "400"} for body copy. Use these exact typefaces wherever text is rendered; do not replace them with unrelated fonts. Keep copy restrained and hierarchy clear.`;
   if (hasProductImages) {
-    basePrompt += ` Figures 2 onward are approved product or brand photographs. Keep their subjects recognizable and use them as hero imagery in one or two panels. Build the remaining panels from relevant campaign applications: packaging or product collateral, an outdoor poster or billboard, a digital advertisement, environmental signage, and one close-up graphic-system detail.`;
+    basePrompt += ` Figures ${currentPresentationUrl ? "3" : "2"} onward are approved product or brand photographs. Keep their subjects recognizable and use them as hero imagery in one or two panels. Build the remaining panels from relevant campaign applications: packaging or product collateral, an outdoor poster or billboard, a digital advertisement, environmental signage, and one close-up graphic-system detail.`;
   } else {
     basePrompt += ` No product photography is supplied. Treat this as a service, digital, or organization brand and do not invent a packaged product. Show credible service-brand touchpoints selected for the industry: a responsive website or app screen, outdoor or office signage, a campaign poster or billboard, a proposal or presentation cover, professional stationery, and one close-up graphic-system detail.`;
   }
@@ -642,7 +681,11 @@ export function buildBrandPresentationGenerationParams({
     refinementPrompt,
   });
 
-  params.referenceImages = [sourceLogoUrl, ...referenceProductImages];
+  params.referenceImages = [
+    ...(currentPresentationUrl ? [currentPresentationUrl] : []),
+    sourceLogoUrl,
+    ...referenceProductImages,
+  ];
   params.canvasMode = "img2img";
   return params;
 }

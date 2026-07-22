@@ -62,6 +62,14 @@ export function getSectionLabel(
       const socialTargetLabel = socialTargetLabels[targetItemId];
       if (socialTargetLabel) return `${label} · ${socialTargetLabel}`;
     }
+    if (sectionId === "brandGraphics" || sectionId === "brand-graphics") {
+      const graphicTargetLabels: Record<string, string> = {
+        "backdrop-post": "Social Post Background",
+        "backdrop-story": "Story Background",
+      };
+      const graphicTargetLabel = graphicTargetLabels[targetItemId];
+      if (graphicTargetLabel) return `${label} · ${graphicTargetLabel}`;
+    }
     const formattedTarget = targetItemId
       .split("-")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

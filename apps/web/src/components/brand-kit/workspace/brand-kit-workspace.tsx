@@ -41,6 +41,9 @@ function getRefinementTargetContext(
   if (sectionId === "business-card" && !targetItemId) {
     return "Business Card";
   }
+  if (sectionId === "brand-graphics" && !targetItemId) {
+    return "Brand Graphics";
+  }
   return getSectionLabel(sectionId, targetItemId);
 }
 
@@ -58,6 +61,17 @@ function getRefinementTargetDescription(
       return "Front and back will be refined as one coordinated design. Stored details, print format, and QR destination will be preserved.";
     }
     return `Only the ${targetItemId} side will change. The other side will remain unchanged, and stored card details will be preserved.`;
+  }
+  if (sectionId === "brand-presentation") {
+    return "Only the presentation will change. The current board is the main reference; your approved logo, any uploaded product images, palette, and typography guide the result.";
+  }
+  if (sectionId === "brand-graphics") {
+    return targetItemId
+      ? "Only this background will change. The other graphic will remain unchanged."
+      : "The social post and story backgrounds will be refined as a coordinated pair.";
+  }
+  if (sectionId === "brand-guidelines") {
+    return "Updates written brand purpose, audience, personality, and voice guidance. Colors, typography, logo assets, and measured usage rules remain unchanged.";
   }
   return undefined;
 }

@@ -90,6 +90,7 @@ export interface BrandGuidelinesViewModel {
   depth: "essential" | "complete";
   isComplete: boolean;
   primaryLogoUrl?: string;
+  smallMarkLogoUrl?: string;
   logoVariations: NonNullable<BrandKitResultsData["logoVariations"]>;
   foundation: {
     tagline?: string;
@@ -119,6 +120,9 @@ export function buildBrandGuidelinesViewModel(
   if (!guidelines) return null;
 
   const primaryLogoUrl = results.logoVariations?.[0]?.url || results.logoUrl;
+  const smallMarkLogoUrl =
+    results.logoVariations?.find((variation) => variation.id === "icon")?.url ||
+    primaryLogoUrl;
   const colors = results.colorPalette.map((color, index) => {
     const rgb = hexToRgb(color.hex);
     const whiteRatio = contrastRatio(color.hex, "#ffffff");
@@ -168,6 +172,7 @@ export function buildBrandGuidelinesViewModel(
     depth: guidelines.depth,
     isComplete: guidelines.depth === "complete",
     primaryLogoUrl,
+    smallMarkLogoUrl,
     logoVariations: results.logoVariations || [],
     foundation: {
       tagline: guidelines.tagline || results.brandPresentation?.tagline,
