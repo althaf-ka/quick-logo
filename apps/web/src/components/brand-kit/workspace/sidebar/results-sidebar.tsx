@@ -44,10 +44,15 @@ function getRevisionColor(revisionType: BrandKitRevisionType) {
 function getRevisionDisplayLabel(
   revision: NormalizedBrandKit["revisions"][number],
 ) {
+  const usesCompactTargetLabel =
+    revision.sectionId === "socialMedia" ||
+    revision.sectionId === "social-media" ||
+    revision.sectionId === "businessCard" ||
+    revision.sectionId === "business-card";
   if (
     revision.revisionType === "refinement" &&
-    (revision.sectionId === "socialMedia" ||
-      revision.sectionId === "social-media") &&
+    usesCompactTargetLabel &&
+    revision.sectionId &&
     revision.targetItemId
   ) {
     const targetLabel = getSectionLabel(

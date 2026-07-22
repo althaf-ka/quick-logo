@@ -28,6 +28,7 @@ import {
 } from "@quicklogo/shared";
 import deepEqual from "fast-deep-equal";
 import { Hono } from "hono";
+import { recoverStaleBrandKitRefinement } from "../lib/brand-kit-refinements";
 import { deductCredits, refundCreditsOnce } from "../lib/credits";
 import {
   NotFoundError,
@@ -39,7 +40,12 @@ import { validationHook } from "../lib/validator";
 import { requireAuth } from "../middleware/require-auth";
 import type { Bindings, Variables } from "../types";
 
-async function findActiveRefinement(db: Variables["db"], brandKitId: string) {
+async function findActiveRefinement(
+  db: Variables["db"],
+  brandKitId: string,
+  userId: string,
+) {
+  await recoverStaleBrandKitRefinement(db, { brandKitId, userId });
   return db.query.brandKitRefinements.findFirst({
     where: and(
       eq(brandKitRefinements.brandKitId, brandKitId),
@@ -226,7 +232,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
       if (activeRevision.id !== edit.baseRevisionId) {
         throw new RevisionConflictError();
       }
-      if (await findActiveRefinement(db, brandKitId)) {
+      if (await findActiveRefinement(db, brandKitId, user.id)) {
         throw new RefinementInProgressError();
       }
 
@@ -353,28 +359,32 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         throw new BadRequestError("No active revision to refine");
       }
 
-      if (await findActiveRefinement(db, id)) {
+      if (await findActiveRefinement(db, id, user.id)) {
         throw new RefinementInProgressError();
       }
 
-      if (data.targetItemId) {
-        const results = activeRevision.results as Record<string, unknown>;
-
-        if (data.sectionId === "business-card") {
-          const bc = results.businessCard as Record<string, string> | undefined;
-          if (!bc)
+      const results = activeRevision.results as Record<string, unknown>;
+      if (data.sectionId === "business-card") {
+        const businessCard = results.businessCard as
+          | Record<string, string>
+          | undefined;
+        if (!businessCard) {
+          throw new BadRequestError(
+            "Business card does not exist in active revision",
+          );
+        }
+        const requiredSides = data.targetItemId
+          ? [data.targetItemId]
+          : ["front", "back"];
+        for (const side of requiredSides) {
+          if (!businessCard[`${side}Url`]) {
             throw new BadRequestError(
-              "Business card does not exist in active revision",
+              `Business card ${side} does not exist in active revision`,
             );
-          if (data.targetItemId === "front" && !bc.frontUrl)
-            throw new BadRequestError(
-              "Business card front does not exist in active revision",
-            );
-          if (data.targetItemId === "back" && !bc.backUrl)
-            throw new BadRequestError(
-              "Business card back does not exist in active revision",
-            );
-        } else if (data.sectionId === "brand-graphics") {
+          }
+        }
+      } else if (data.targetItemId) {
+        if (data.sectionId === "brand-graphics") {
           const bg = results.brandGraphics as
             | Record<string, string>
             | undefined;
@@ -485,6 +495,12 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
     const brandKitId = c.req.param("id");
     const refinementId = c.req.param("refinementId");
 
+    await recoverStaleBrandKitRefinement(db, {
+      brandKitId,
+      userId: user.id,
+      refinementId,
+    });
+
     const refinement = await db
       .select({
         id: brandKitRefinements.id,
@@ -537,7 +553,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         )
         .where(eq(brandKitRevisions.brandKitId, id))
         .orderBy(brandKitRevisions.revisionNumber),
-      findActiveRefinement(db, id),
+      findActiveRefinement(db, id, user.id),
     ]);
 
     return c.json({ brandKit, revisions, activeRefinement });
@@ -557,7 +573,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .from(brandKits)
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
       if (!brandKit) throw new NotFoundError("Brand kit");
-      if (await findActiveRefinement(db, id)) {
+      if (await findActiveRefinement(db, id, user.id)) {
         throw new RefinementInProgressError();
       }
 
@@ -661,7 +677,7 @@ const brandKitsRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
         .from(brandKits)
         .where(and(eq(brandKits.id, id), eq(brandKits.userId, user.id)));
       if (!brandKit) throw new NotFoundError("Brand kit");
-      if (await findActiveRefinement(db, id)) {
+      if (await findActiveRefinement(db, id, user.id)) {
         throw new RefinementInProgressError();
       }
 

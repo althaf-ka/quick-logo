@@ -28,6 +28,7 @@ import {
   withRetryableGeneration,
   type GenerationRetryOptions,
 } from "../../core/pipeline-helpers";
+import { fetchImageWithLimit } from "../../core/bounded-image-fetch";
 import { PipelineError } from "../../core/errors";
 import {
   createSocialBannerCopyFallback,
@@ -279,7 +280,17 @@ async function generateAndUploadResult(
     retryOptions,
   );
   if (!result.success || !result.imageData) {
-    throw new Error(result.error ?? "Asset generation failed");
+    const providerMessage = result.error ?? "Asset generation failed";
+    const isInvalidInput =
+      /input (?:was invalid|validation failed)|ModelError.*E006/i.test(
+        providerMessage,
+      );
+    throw new PipelineError(
+      isInvalidInput
+        ? "The image model could not process the current artwork. Please try again after regenerating the affected asset."
+        : providerMessage,
+      result.isRetryable ?? true,
+    );
   }
 
   const imageData = pngBinding
@@ -322,6 +333,7 @@ async function generateAssetWithTimeout({
   uploadPath,
   timeoutMs,
   label,
+  failFastOnNonRetryable = false,
 }: {
   provider: AIProvider;
   params: GenerationParams;
@@ -329,13 +341,33 @@ async function generateAssetWithTimeout({
   uploadPath: string;
   timeoutMs: number;
   label: string;
+  failFastOnNonRetryable?: boolean;
 }): Promise<string | undefined> {
-  return runAssetOrNull(
-    (signal) =>
-      generateAndUpload(provider, params, storage, uploadPath, signal),
+  let nonRetryableFailure: PipelineError | undefined;
+  const url = await runAssetOrNull(
+    async (signal) => {
+      try {
+        return await generateAndUpload(
+          provider,
+          params,
+          storage,
+          uploadPath,
+          signal,
+        );
+      } catch (error) {
+        if (error instanceof PipelineError && !error.retryable) {
+          nonRetryableFailure = error;
+        }
+        throw error;
+      }
+    },
     timeoutMs,
     label,
   );
+  if (failFastOnNonRetryable && nonRetryableFailure) {
+    throw nonRetryableFailure;
+  }
+  return url;
 }
 
 export async function generateLogoVariations({
@@ -1043,6 +1075,78 @@ export async function generateBrandGraphics({
   return { ...urls, failed, total };
 }
 
+function extractEmbeddedBusinessCardRaster(
+  svgBytes: Uint8Array,
+): Uint8Array | undefined {
+  const svg = new TextDecoder().decode(svgBytes);
+  const match = svg.match(
+    /<image\b[^>]*\bhref=(["'])data:image\/(?:png|jpe?g|webp);base64,([^"']+)\1/i,
+  );
+  if (!match?.[2]) return undefined;
+
+  try {
+    const binary = atob(match[2].replace(/\s/g, ""));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  } catch {
+    return undefined;
+  }
+}
+
+async function prepareBusinessCardReference({
+  env,
+  storage,
+  brandKitId,
+  assetRoot,
+  referenceKey,
+  sourceUrl,
+}: {
+  env: Env;
+  storage: StorageProvider;
+  brandKitId: string;
+  assetRoot: string;
+  referenceKey: "logo" | "front" | "back";
+  sourceUrl: string;
+}): Promise<string> {
+  try {
+    const source = await fetchImageWithLimit(sourceUrl);
+    const isSvg =
+      source.mimeType.includes("svg") || /\.svg(?:$|[?#])/i.test(sourceUrl);
+    const rasterSource = isSvg
+      ? (extractEmbeddedBusinessCardRaster(source.bytes) ?? source.bytes)
+      : source.bytes;
+    const png = await ensurePng(env.IMAGES, rasterSource);
+    const uploaded = await storage.upload(
+      `${assetRoot}/references/${referenceKey}.png`,
+      png,
+      { overwrite: true, contentType: "image/png" },
+    );
+    return uploaded.url;
+  } catch (error) {
+    logger.error("Failed to prepare business-card model reference", error, {
+      brandKitId,
+      referenceKey,
+    });
+    const message = error instanceof Error ? error.message : "";
+    const statusMatch = message.match(/\((\d{3})\)|status (\d{3})/i);
+    const status = Number(statusMatch?.[1] ?? statusMatch?.[2]);
+    const isClearlyInvalid =
+      /expected an image|exceeds the maximum|has no body|unexpected format|unsupported/i.test(
+        message,
+      );
+    const retryable = Number.isFinite(status)
+      ? status === 429 || status >= 500
+      : !isClearlyInvalid;
+    throw new PipelineError(
+      "We couldn't prepare the current Business Card artwork for refinement. Please regenerate the card and try again.",
+      retryable,
+    );
+  }
+}
+
 export async function generateBusinessCardAssets({
   ai,
   env,
@@ -1057,6 +1161,8 @@ export async function generateBusinessCardAssets({
   headingFont,
   bodyFont,
   existingFrontUrl,
+  existingBackUrl,
+  assetVersionId,
 }: {
   ai: Ai;
   env: Env;
@@ -1071,7 +1177,23 @@ export async function generateBusinessCardAssets({
   headingFont?: string;
   bodyFont?: string;
   existingFrontUrl?: string;
-}): Promise<{ frontUrl?: string; backUrl?: string } & AssetSectionTally> {
+  existingBackUrl?: string;
+  assetVersionId?: string;
+}): Promise<
+  {
+    frontUrl?: string;
+    backUrl?: string;
+    frontSourceUrl?: string;
+    backSourceUrl?: string;
+  } & AssetSectionTally
+> {
+  if (targetItemId && targetItemId !== "front" && targetItemId !== "back") {
+    throw new PipelineError(
+      `Unsupported business-card refinement target: ${targetItemId}`,
+      false,
+    );
+  }
+
   const mapping = getModelMapping(DEFAULT_BRAND_KIT_MODEL_ID);
   const provider = createProvider(mapping, { ai, env });
 
@@ -1079,11 +1201,59 @@ export async function generateBusinessCardAssets({
 
   let frontUrl: string | undefined;
   let backUrl: string | undefined;
+  let frontSourceUrl: string | undefined;
+  let backSourceUrl: string | undefined;
   let failed = 0;
   let total = 0;
   const brief = businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF;
   const normalizedContext =
     context || normalizeBrandContext(brandName, { colors: [] });
+  const businessCardAssetRoot = assetVersionId
+    ? `${ASSET_ROOT}/${brandKitId}/refinements/${assetVersionId}`
+    : `${ASSET_ROOT}/${brandKitId}`;
+  const usableExistingFrontUrl =
+    existingFrontUrl && !existingFrontUrl.includes("placehold.co")
+      ? existingFrontUrl
+      : undefined;
+  const usableExistingBackUrl =
+    existingBackUrl && !existingBackUrl.includes("placehold.co")
+      ? existingBackUrl
+      : undefined;
+  let modelLogoUrl = sourceLogoUrl;
+  let modelFrontUrl = usableExistingFrontUrl;
+  let modelBackUrl = usableExistingBackUrl;
+  if (assetVersionId) {
+    [modelLogoUrl, modelFrontUrl, modelBackUrl] = await Promise.all([
+      prepareBusinessCardReference({
+        env,
+        storage,
+        brandKitId,
+        assetRoot: businessCardAssetRoot,
+        referenceKey: "logo",
+        sourceUrl: sourceLogoUrl,
+      }),
+      usableExistingFrontUrl
+        ? prepareBusinessCardReference({
+            env,
+            storage,
+            brandKitId,
+            assetRoot: businessCardAssetRoot,
+            referenceKey: "front",
+            sourceUrl: usableExistingFrontUrl,
+          })
+        : Promise.resolve(undefined),
+      usableExistingBackUrl
+        ? prepareBusinessCardReference({
+            env,
+            storage,
+            brandKitId,
+            assetRoot: businessCardAssetRoot,
+            referenceKey: "back",
+            sourceUrl: usableExistingBackUrl,
+          })
+        : Promise.resolve(undefined),
+    ]);
+  }
 
   if (!targetItemId || targetItemId === "front") {
     total++;
@@ -1092,7 +1262,7 @@ export async function generateBusinessCardAssets({
       params: buildBusinessCardGenerationParams({
         variation: "front",
         brandName,
-        sourceLogoUrl,
+        sourceLogoUrl: modelLogoUrl,
         backendModel: mapping.backendModel,
         defaultParams: cardDefaultParams,
         refinementPrompt,
@@ -1100,13 +1270,17 @@ export async function generateBusinessCardAssets({
         businessCardBrief: brief,
         headingFont,
         bodyFont,
+        currentSideUrl: modelFrontUrl,
+        companionReferenceUrl: modelBackUrl,
       }),
       storage,
-      uploadPath: `${ASSET_ROOT}/${brandKitId}/business-card-front`,
+      uploadPath: `${businessCardAssetRoot}/business-card-front`,
       timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
       label: "asset-generator",
+      failFastOnNonRetryable: Boolean(assetVersionId),
     });
     if (url) {
+      frontSourceUrl = url;
       try {
         frontUrl = await finalizeBusinessCardAsset({
           storage,
@@ -1115,6 +1289,7 @@ export async function generateBusinessCardAssets({
           brief,
           context: normalizedContext,
           side: "front",
+          assetVersionId,
         });
       } catch (error) {
         logger.error("Failed to finalize business-card front", error, {
@@ -1125,6 +1300,14 @@ export async function generateBusinessCardAssets({
     } else failed++;
   }
 
+  if (!targetItemId && !frontUrl) {
+    return {
+      frontSourceUrl,
+      failed,
+      total,
+    };
+  }
+
   if (!targetItemId || targetItemId === "back") {
     total++;
     const generatedBackUrl = await generateAssetWithTimeout({
@@ -1132,7 +1315,7 @@ export async function generateBusinessCardAssets({
       params: buildBusinessCardGenerationParams({
         variation: "back",
         brandName,
-        sourceLogoUrl,
+        sourceLogoUrl: modelLogoUrl,
         backendModel: mapping.backendModel,
         defaultParams: cardDefaultParams,
         refinementPrompt,
@@ -1140,18 +1323,17 @@ export async function generateBusinessCardAssets({
         businessCardBrief: brief,
         headingFont,
         bodyFont,
-        companionReferenceUrl:
-          frontUrl ||
-          (existingFrontUrl && !existingFrontUrl.includes("placehold.co")
-            ? existingFrontUrl
-            : undefined),
+        currentSideUrl: modelBackUrl,
+        companionReferenceUrl: frontSourceUrl || modelFrontUrl,
       }),
       storage,
-      uploadPath: `${ASSET_ROOT}/${brandKitId}/business-card-back`,
+      uploadPath: `${businessCardAssetRoot}/business-card-back`,
       timeoutMs: LOGO_VARIATION_TIMEOUT_MS,
       label: "asset-generator",
+      failFastOnNonRetryable: Boolean(assetVersionId),
     });
     if (generatedBackUrl) {
+      backSourceUrl = generatedBackUrl;
       try {
         backUrl = await finalizeBusinessCardAsset({
           storage,
@@ -1160,6 +1342,7 @@ export async function generateBusinessCardAssets({
           brief,
           context: normalizedContext,
           side: "back",
+          assetVersionId,
         });
       } catch (error) {
         logger.error("Failed to finalize business-card back", error, {
@@ -1169,5 +1352,12 @@ export async function generateBusinessCardAssets({
       }
     } else failed++;
   }
-  return { frontUrl, backUrl, failed, total };
+  return {
+    frontUrl,
+    backUrl,
+    frontSourceUrl,
+    backSourceUrl,
+    failed,
+    total,
+  };
 }

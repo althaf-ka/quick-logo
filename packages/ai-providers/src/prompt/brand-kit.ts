@@ -58,6 +58,13 @@ export const BUSINESS_CARD_PROMPTS = {
     const strategy = buildBusinessCardContentStrategy(context, brief);
     let hierarchy =
       "Figure 1 is the approved logo. Reproduce it exactly once; do not redraw, restyle, misspell, or replace it.\n";
+    if (options?.hasCurrentSideReference && options.hasCompanionReference) {
+      hierarchy =
+        "Figure 1 is the current approved business-card front and is the primary edit source. Figure 2 is the approved back and defines the companion side that must remain visually coordinated. Figure 3 is the approved logo. Preserve the current front's composition and recognizable design language except where the user's refinement explicitly requests a change. Reproduce the approved logo exactly once; do not redraw, restyle, misspell, or replace it.\n";
+    } else if (options?.hasCurrentSideReference) {
+      hierarchy =
+        "Figure 1 is the current approved business-card front and is the primary edit source. Figure 2 is the approved logo. Preserve the current front's composition and recognizable design language except where the user's refinement explicitly requests a change. Reproduce the approved logo exactly once; do not redraw, restyle, misspell, or replace it.\n";
+    }
     if (strategy.tagline)
       hierarchy += `Include tagline: "${strategy.tagline}" below the logo.\n`;
     if (strategy.frontDetails.length > 0) {
@@ -100,9 +107,18 @@ export const BUSINESS_CARD_PROMPTS = {
       ? "Reserve one clean, visually quiet square QR zone in the lower-right corner, approximately 30% of the card height with generous clear space. Do not draw a QR code, barcode, placeholder squares, scan icon, or text inside this zone; the exact scannable QR will be overlaid afterward. Keep every generated text element outside this zone."
       : "Do not draw a QR code or barcode.";
 
-    const references = options?.hasCompanionReference
-      ? "Figure 1 is the approved business-card front and is the visual source of truth. Figure 2 is the approved logo. Preserve the front's palette, material language, lighting, graphic motif, typography character, margins, and finish without copying its layout literally."
-      : "Figure 1 is the approved logo. Use it as the visual source of truth and create a coordinated back in the same brand system.";
+    let references =
+      "Figure 1 is the approved logo. Use it as the visual source of truth and create a coordinated back in the same brand system.";
+    if (options?.hasCurrentSideReference && options.hasCompanionReference) {
+      references =
+        "Figure 1 is the current approved business-card back and is the primary edit source. Figure 2 is the approved front and defines the coordinated card system. Figure 3 is the approved logo. Preserve the current back's composition and recognizable design language except where the user's refinement explicitly requests a change, while keeping it visually coordinated with the front.";
+    } else if (options?.hasCurrentSideReference) {
+      references =
+        "Figure 1 is the current approved business-card back and is the primary edit source. Figure 2 is the approved logo. Preserve the current back's composition and recognizable design language except where the user's refinement explicitly requests a change.";
+    } else if (options?.hasCompanionReference) {
+      references =
+        "Figure 1 is the approved business-card front and is the visual source of truth. Figure 2 is the approved logo. Preserve the front's palette, material language, lighting, graphic motif, typography character, margins, and finish without copying its layout literally.";
+    }
 
     return `You are a senior identity designer. ${references} Create one premium standalone ${brief.orientation} ${brief.format.toUpperCase()} business-card back. The entire image is the full-bleed card surface, never a photographed card, perspective mockup, presentation scene, hand, desk, border, crop guide, or floating object.\n\nBACK CONTENT\n${hierarchy}\nTYPOGRAPHY\nUse ${options?.headingFont || "the front's display typography"} and ${options?.bodyFont || "the front's supporting typography"}. Render every quoted string once, spelled exactly as supplied. Do not invent labels, claims, numbers, URLs, or decorative writing.\n\nQR SAFE ZONE\n${qrInstruction}\n\nDESIGN DIRECTION\n${brief.notes?.trim() || "Continue the approved front with a restrained, ownable composition, clear hierarchy, tactile depth, and deliberate negative space."}${buildBrandDesignContext(context)}${cardCropInstruction(brief)}${RELIABILITY_WARNING}`;
   },
@@ -112,6 +128,7 @@ interface BusinessCardPromptOptions {
   brief?: BusinessCardBrief;
   headingFont?: string;
   bodyFont?: string;
+  hasCurrentSideReference?: boolean;
   hasCompanionReference?: boolean;
 }
 
@@ -493,6 +510,7 @@ export interface BuildBusinessCardParamsInput {
   businessCardBrief?: BusinessCardBrief;
   headingFont?: string;
   bodyFont?: string;
+  currentSideUrl?: string;
   companionReferenceUrl?: string;
 }
 
@@ -507,6 +525,7 @@ export function buildBusinessCardGenerationParams({
   businessCardBrief,
   headingFont,
   bodyFont,
+  currentSideUrl,
   companionReferenceUrl,
 }: BuildBusinessCardParamsInput & {
   refinementPrompt?: string;
@@ -520,9 +539,10 @@ export function buildBusinessCardGenerationParams({
       brief,
       headingFont,
       bodyFont,
+      hasCurrentSideReference: Boolean(currentSideUrl),
       hasCompanionReference: Boolean(companionReferenceUrl),
     }),
-    referenceStrength: variation === "front" ? 70 : 80,
+    referenceStrength: currentSideUrl ? 90 : variation === "front" ? 70 : 80,
     ...(isPortrait
       ? {
           width: LANDSCAPE_DIMENSIONS.height,
@@ -534,6 +554,7 @@ export function buildBusinessCardGenerationParams({
     refinementPrompt,
   });
   params.referenceImages = [
+    ...(currentSideUrl ? [currentSideUrl] : []),
     ...(companionReferenceUrl ? [companionReferenceUrl] : []),
     sourceLogoUrl,
   ];

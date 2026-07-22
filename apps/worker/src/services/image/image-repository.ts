@@ -6,7 +6,9 @@ import {
   images,
   projects,
   users,
+  and,
   eq,
+  or,
   sql,
 } from "@quicklogo/db";
 
@@ -229,4 +231,22 @@ export async function refundBrandKitRefinementCredits(
     .where(eq(brandKitRefinements.id, params.refinementId));
 
   return refunded;
+}
+
+export async function touchBrandKitRefinement(
+  db: Database,
+  refinementId: string,
+): Promise<void> {
+  await db
+    .update(brandKitRefinements)
+    .set({ updatedAt: new Date() })
+    .where(
+      and(
+        eq(brandKitRefinements.id, refinementId),
+        or(
+          eq(brandKitRefinements.status, "queued"),
+          eq(brandKitRefinements.status, "processing"),
+        ),
+      ),
+    );
 }

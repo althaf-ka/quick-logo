@@ -14,7 +14,7 @@ export function getSectionLabel(
       break;
     case "businessCard":
     case "business-card":
-      label = "Business Cards";
+      label = "Business Card";
       break;
     case "favicon":
       label = "Favicons";
@@ -41,6 +41,16 @@ export function getSectionLabel(
   }
 
   if (targetItemId) {
+    if (sectionId === "businessCard" || sectionId === "business-card") {
+      const businessCardTargetLabels: Record<string, string> = {
+        front: "Front Side",
+        back: "Back Side",
+      };
+      const businessCardTargetLabel = businessCardTargetLabels[targetItemId];
+      if (businessCardTargetLabel) {
+        return `${label} · ${businessCardTargetLabel}`;
+      }
+    }
     if (sectionId === "socialMedia" || sectionId === "social-media") {
       const socialTargetLabels: Record<string, string> = {
         "instagram-profile": "Profile Picture",

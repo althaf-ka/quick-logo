@@ -8,6 +8,8 @@ import type { BusinessCardBrief } from "@quicklogo/shared";
 export interface BusinessCardData {
   frontUrl: string;
   backUrl?: string;
+  frontSourceUrl?: string;
+  backSourceUrl?: string;
   version?: number;
   brief?: BusinessCardBrief;
 }
@@ -25,9 +27,13 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
     onRefine,
   } = useBrandKitSection();
   const isFrontTargeted =
-    targetSectionId === "business-card" && targetItemId === "front";
+    targetSectionId === "business-card" &&
+    (!targetItemId || targetItemId === "front");
   const isBackTargeted =
-    targetSectionId === "business-card" && targetItemId === "back";
+    targetSectionId === "business-card" &&
+    (!targetItemId || targetItemId === "back");
+  const isRefiningBothSides =
+    refiningSectionId === "business-card" && !targetItemId;
   const landscapeRatio = card.brief?.format === "eu" ? 85 / 55 : 3.5 / 2;
   const previewRatio =
     card.brief?.orientation === "portrait"
@@ -42,81 +48,78 @@ export function BusinessCardSection({ card }: BusinessCardSectionProps) {
       <SectionHeader
         title="Business Card"
         sectionId="business-card"
-        refineLabel="Refine All Cards"
+        refineLabel="Refine Design"
       />
-      <SectionContent sectionId="business-card">
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
+        <AssetCard
+          title="Front"
+          subtitle={formatLabel}
+          isTargeted={isFrontTargeted}
+          isPlaceholder={
+            card.frontUrl.includes("placehold.co") || Boolean(refiningSectionId)
+          }
+          onToggleRefine={() =>
+            isFrontTargeted
+              ? cancelRefine?.()
+              : onRefine?.("business-card", "front")
+          }
+        >
+          <div
+            style={{ aspectRatio: previewRatio }}
+            className={cn(
+              "bg-muted/10 relative flex w-full items-center justify-center overflow-hidden transition-all",
+              isFrontTargeted && "ring-primary z-10 ring-4",
+            )}
+          >
+            <SectionContent
+              sectionId="business-card"
+              targetItemId={isRefiningBothSides ? undefined : "front"}
+              className="pointer-events-none absolute inset-0 z-30"
+            />
+            <ZoomableImage
+              src={card.frontUrl}
+              alt="Business Card — Front"
+              className="h-full w-full cursor-pointer object-cover transition-transform duration-300"
+            />
+          </div>
+        </AssetCard>
+
+        {card.backUrl ? (
           <AssetCard
-            title="Front"
+            title="Back"
             subtitle={formatLabel}
-            isTargeted={isFrontTargeted}
+            isTargeted={isBackTargeted}
             isPlaceholder={
-              card.frontUrl.includes("placehold.co") ||
+              card.backUrl?.includes("placehold.co") ||
               Boolean(refiningSectionId)
             }
             onToggleRefine={() =>
-              isFrontTargeted
+              isBackTargeted
                 ? cancelRefine?.()
-                : onRefine?.("business-card", "front")
+                : onRefine?.("business-card", "back")
             }
           >
             <div
               style={{ aspectRatio: previewRatio }}
               className={cn(
                 "bg-muted/10 relative flex w-full items-center justify-center overflow-hidden transition-all",
-                isFrontTargeted && "ring-primary z-10 ring-4",
+                isBackTargeted && "ring-primary z-10 ring-4",
               )}
             >
               <SectionContent
                 sectionId="business-card"
-                targetItemId="front"
+                targetItemId={isRefiningBothSides ? undefined : "back"}
                 className="pointer-events-none absolute inset-0 z-30"
               />
               <ZoomableImage
-                src={card.frontUrl}
-                alt="Business Card — Front"
+                src={card.backUrl}
+                alt="Business Card — Back"
                 className="h-full w-full cursor-pointer object-cover transition-transform duration-300"
               />
             </div>
           </AssetCard>
-
-          {card.backUrl ? (
-            <AssetCard
-              title="Back"
-              subtitle={formatLabel}
-              isTargeted={isBackTargeted}
-              isPlaceholder={
-                card.backUrl?.includes("placehold.co") ||
-                Boolean(refiningSectionId)
-              }
-              onToggleRefine={() =>
-                isBackTargeted
-                  ? cancelRefine?.()
-                  : onRefine?.("business-card", "back")
-              }
-            >
-              <div
-                style={{ aspectRatio: previewRatio }}
-                className={cn(
-                  "bg-muted/10 relative flex w-full items-center justify-center overflow-hidden transition-all",
-                  isBackTargeted && "ring-primary z-10 ring-4",
-                )}
-              >
-                <SectionContent
-                  sectionId="business-card"
-                  targetItemId="back"
-                  className="pointer-events-none absolute inset-0 z-30"
-                />
-                <ZoomableImage
-                  src={card.backUrl}
-                  alt="Business Card — Back"
-                  className="h-full w-full cursor-pointer object-cover transition-transform duration-300"
-                />
-              </div>
-            </AssetCard>
-          ) : null}
-        </div>
-      </SectionContent>
+        ) : null}
+      </div>
     </div>
   );
 }

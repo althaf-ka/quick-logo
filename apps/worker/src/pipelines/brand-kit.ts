@@ -540,6 +540,8 @@ export class BrandKitPipeline {
           backUrl:
             businessCardUrls?.backUrl ??
             "https://placehold.co/1536x1024/FFF/000?text=Back",
+          frontSourceUrl: businessCardUrls?.frontSourceUrl,
+          backSourceUrl: businessCardUrls?.backSourceUrl,
         };
       }
       if (deliverables?.favicon) {
@@ -642,7 +644,17 @@ export class BrandKitPipeline {
         return;
       }
 
-      await this.repository.markRefinementProcessing(brandKitId, refinementId);
+      const acquired = await this.repository.markRefinementProcessing(
+        brandKitId,
+        refinementId,
+      );
+      if (!acquired) {
+        this.logger.info("Refinement operation became terminal before start", {
+          brandKitId,
+          refinementId,
+        });
+        return;
+      }
 
       const currentBrandKit = await this.repository.getBrandKit(brandKitId);
       if (!currentBrandKit) {

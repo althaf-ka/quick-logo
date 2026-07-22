@@ -6,6 +6,7 @@ import {
   images,
   eq,
   and,
+  or,
   sql,
 } from "@quicklogo/db";
 import { getSectionLabel } from "@quicklogo/shared";
@@ -83,17 +84,23 @@ export class BrandKitRepository {
   async markRefinementProcessing(
     brandKitId: string,
     refinementId: string,
-  ): Promise<void> {
-    await this.db
+  ): Promise<boolean> {
+    const updated = await this.db
       .update(brandKitRefinements)
       .set({ status: "processing", updatedAt: new Date() })
       .where(
         and(
           eq(brandKitRefinements.id, refinementId),
           eq(brandKitRefinements.brandKitId, brandKitId),
-          eq(brandKitRefinements.status, "queued"),
+          or(
+            eq(brandKitRefinements.status, "queued"),
+            eq(brandKitRefinements.status, "processing"),
+          ),
         ),
-      );
+      )
+      .returning({ id: brandKitRefinements.id });
+
+    return updated.length > 0;
   }
 
   async getSocialMasterCheckpoint(

@@ -3,6 +3,7 @@ import {
   failBrandKitGenerationAndRefundCredits,
   failImageAndRefundCredits,
   refundBrandKitRefinementCredits,
+  touchBrandKitRefinement,
 } from "./services/image/image-repository";
 import type { GenerateImageMessage, QueueMessage } from "@quicklogo/shared";
 import { ImageKitProvider } from "@quicklogo/storage";
@@ -89,7 +90,7 @@ export default {
                 refinementId: message.body.refinementId,
                 userId: message.body.userId,
                 creditsUsed: message.body.creditsUsed,
-                errorMessage: "This refinement could not be completed.",
+                errorMessage,
               });
             } else if (isRuntimeImageMessage(message.body)) {
               const imageId = extractImageId(message.body);
@@ -124,6 +125,18 @@ export default {
           },
           error,
         );
+
+        if (message.body.type === "brand-kit-refine") {
+          try {
+            await touchBrandKitRefinement(db, message.body.refinementId);
+          } catch (heartbeatError) {
+            logger.warn(
+              "Failed to refresh refinement retry heartbeat.",
+              { refinementId: message.body.refinementId },
+              heartbeatError,
+            );
+          }
+        }
 
         // Give rate-limited or temporarily unavailable image providers time to
         // recover: 30s, 60s, 120s, 240s, then 480s before the DLQ.

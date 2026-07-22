@@ -81,6 +81,7 @@ export async function finalizeBusinessCardAsset({
   brief,
   context,
   side,
+  assetVersionId,
 }: {
   storage: StorageProvider;
   brandKitId: string;
@@ -88,6 +89,7 @@ export async function finalizeBusinessCardAsset({
   brief: BusinessCardBrief;
   context: ValidatedBrandContext;
   side: "front" | "back";
+  assetVersionId?: string;
 }): Promise<string> {
   const shouldAddQr = side === "back" && brief.includeQr;
   const qrValue = shouldAddQr
@@ -128,8 +130,11 @@ export async function finalizeBusinessCardAsset({
   const composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <image href="${backgroundDataUrl}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>${qrLayer}
 </svg>`;
+  const assetRoot = assetVersionId
+    ? `${ASSET_ROOT}/${brandKitId}/refinements/${assetVersionId}`
+    : `${ASSET_ROOT}/${brandKitId}`;
   const uploaded = await storage.upload(
-    `${ASSET_ROOT}/${brandKitId}/business-card-${side}-print.svg`,
+    `${assetRoot}/business-card-${side}-print.svg`,
     new TextEncoder().encode(composite),
     { contentType: "image/svg+xml", overwrite: true },
   );

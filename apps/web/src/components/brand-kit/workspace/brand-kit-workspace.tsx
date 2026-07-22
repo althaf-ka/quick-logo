@@ -30,6 +30,38 @@ interface BrandKitWorkspaceProps {
   brandKitId?: string;
 }
 
+function getRefinementTargetContext(
+  sectionId: string | null,
+  targetItemId: string | null,
+) {
+  if (!sectionId) return undefined;
+  if (sectionId === "social-media" && !targetItemId) {
+    return "Social Media Kit · All Covers";
+  }
+  if (sectionId === "business-card" && !targetItemId) {
+    return "Business Card";
+  }
+  return getSectionLabel(sectionId, targetItemId);
+}
+
+function getRefinementTargetDescription(
+  sectionId: string | null,
+  targetItemId: string | null,
+) {
+  if (sectionId === "social-media") {
+    return targetItemId
+      ? "Only this asset will change. Other social assets will remain unchanged."
+      : "X, LinkedIn, Facebook, and YouTube covers will change. Your profile picture will remain unchanged.";
+  }
+  if (sectionId === "business-card") {
+    if (!targetItemId) {
+      return "Front and back will be refined as one coordinated design. Stored details, print format, and QR destination will be preserved.";
+    }
+    return `Only the ${targetItemId} side will change. The other side will remain unchanged, and stored card details will be preserved.`;
+  }
+  return undefined;
+}
+
 export function BrandKitWorkspace({
   imageId,
   brandKitId,
@@ -222,20 +254,14 @@ export function BrandKitWorkspace({
                   isLoading={bk.isGenerating || !!bk.refiningSectionId}
                   placeholder="Describe the visual changes you want…"
                   credits={bk.totalCredits}
-                  targetContext={
-                    bk.targetSection === "social-media" && !bk.targetItemId
-                      ? "Social Media Kit · All Covers"
-                      : bk.targetSection
-                        ? getSectionLabel(bk.targetSection, bk.targetItemId)
-                        : undefined
-                  }
-                  targetDescription={
-                    bk.targetSection === "social-media"
-                      ? bk.targetItemId
-                        ? "Only this asset will change. Other social assets will remain unchanged."
-                        : "X, LinkedIn, Facebook, and YouTube covers will change. Your profile picture will remain unchanged."
-                      : undefined
-                  }
+                  targetContext={getRefinementTargetContext(
+                    bk.targetSection,
+                    bk.targetItemId,
+                  )}
+                  targetDescription={getRefinementTargetDescription(
+                    bk.targetSection,
+                    bk.targetItemId,
+                  )}
                   onClearTarget={() => bk.setTargetSection(null)}
                   showConfigTrigger={isCompact}
                   onConfigTrigger={() => {

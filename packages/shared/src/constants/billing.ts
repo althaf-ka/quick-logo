@@ -18,6 +18,7 @@ export interface PricingTier {
 export const BRAND_KIT_BASE_COST = 5;
 export const BRAND_KIT_REFINEMENT_COST = 2;
 export const SOCIAL_KIT_FULL_REFINEMENT_COST = 3;
+export const BUSINESS_CARD_FULL_REFINEMENT_COST = 4;
 
 export type BrandKitPaidSection =
   | "logoVariations"
@@ -65,6 +66,9 @@ export function computeBrandKitRefinementCost(
 ): number {
   if (sectionId === "social-media" && !targetItemId) {
     return SOCIAL_KIT_FULL_REFINEMENT_COST;
+  }
+  if (sectionId === "business-card" && !targetItemId) {
+    return BUSINESS_CARD_FULL_REFINEMENT_COST;
   }
   return BRAND_KIT_REFINEMENT_COST;
 }

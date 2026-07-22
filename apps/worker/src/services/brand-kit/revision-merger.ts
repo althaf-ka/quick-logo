@@ -245,35 +245,64 @@ export async function mergeRevisionResults({
   } else if (sectionId === "business-card") {
     const actualLogoUrl =
       currentBrandKit?.customLogoUrl || newMergedJSON.logoVariations?.[0]?.url;
-    if (actualLogoUrl) {
-      const businessCardUrls = await generateBusinessCardAssets({
-        ai,
-        env,
-        storage,
-        brandKitId,
-        brandName:
-          currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
-        sourceLogoUrl: actualLogoUrl,
-        refinementPrompt,
-        context: brandAssetContext,
-        targetItemId,
-        businessCardBrief:
-          currentBrandKit?.businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF,
-        headingFont: newMergedJSON.typography?.heading?.family,
-        bodyFont: newMergedJSON.typography?.body?.family,
-        existingFrontUrl: newMergedJSON.businessCard?.frontUrl,
-      });
-      newMergedJSON.businessCard = {
-        ...newMergedJSON.businessCard,
-        version: BUSINESS_CARD_PIPELINE_VERSION,
-        brief:
-          currentBrandKit?.businessCardBrief || DEFAULT_BUSINESS_CARD_BRIEF,
-        frontUrl:
-          businessCardUrls.frontUrl ?? newMergedJSON.businessCard?.frontUrl,
-        backUrl:
-          businessCardUrls.backUrl ?? newMergedJSON.businessCard?.backUrl,
-      };
+    if (!actualLogoUrl) {
+      throw new PipelineError(
+        "Business card refinement requires an approved logo",
+        false,
+      );
     }
+
+    const businessCardBrief =
+      currentBrandKit?.businessCardBrief ||
+      newMergedJSON.businessCard?.brief ||
+      DEFAULT_BUSINESS_CARD_BRIEF;
+
+    const businessCardUrls = await generateBusinessCardAssets({
+      ai,
+      env,
+      storage,
+      brandKitId,
+      brandName:
+        currentBrandKit?.brandName || newMergedJSON.brandName || "Brand",
+      sourceLogoUrl: actualLogoUrl,
+      refinementPrompt,
+      context: brandAssetContext,
+      targetItemId,
+      businessCardBrief,
+      headingFont: newMergedJSON.typography?.heading?.family,
+      bodyFont: newMergedJSON.typography?.body?.family,
+      existingFrontUrl:
+        newMergedJSON.businessCard?.frontSourceUrl ??
+        newMergedJSON.businessCard?.frontUrl,
+      existingBackUrl:
+        newMergedJSON.businessCard?.backSourceUrl ??
+        newMergedJSON.businessCard?.backUrl,
+      assetVersionId: refinementId,
+    });
+
+    // A paid refinement must never create a no-op or partially updated card
+    // revision. Let the tracked operation retry or refund atomically instead.
+    if (businessCardUrls.failed > 0) {
+      throw new PipelineError(
+        `Failed to refine ${businessCardUrls.failed} of ${businessCardUrls.total} business card sides`,
+        true,
+      );
+    }
+
+    newMergedJSON.businessCard = {
+      ...newMergedJSON.businessCard,
+      version: BUSINESS_CARD_PIPELINE_VERSION,
+      brief: businessCardBrief,
+      frontUrl:
+        businessCardUrls.frontUrl ?? newMergedJSON.businessCard?.frontUrl,
+      backUrl: businessCardUrls.backUrl ?? newMergedJSON.businessCard?.backUrl,
+      frontSourceUrl:
+        businessCardUrls.frontSourceUrl ??
+        newMergedJSON.businessCard?.frontSourceUrl,
+      backSourceUrl:
+        businessCardUrls.backSourceUrl ??
+        newMergedJSON.businessCard?.backSourceUrl,
+    };
   } else if (
     sectionId === "typography" &&
     refinementPrompt === "__AI_SUGGEST_TYPOGRAPHY__"
