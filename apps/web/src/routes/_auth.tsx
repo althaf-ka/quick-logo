@@ -1,4 +1,5 @@
 import { AUTH_KEYS } from "@/hooks/use-auth";
+import logo from "@quicklogo/assets/brand/logo-transparent.png";
 import { XLogoIcon } from "@phosphor-icons/react";
 import { InstagramLogoIcon } from "@phosphor-icons/react/dist/ssr";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
@@ -28,9 +29,11 @@ function AuthLayout() {
       <div className="flex w-full flex-1 flex-col items-center justify-center">
         <div className="animate-in fade-in zoom-in-95 w-full max-w-[400px] duration-500">
           <div className="mb-8 text-center">
-            <h1 className="text-foreground text-2xl font-bold tracking-tight">
-              QuickLogo
-            </h1>
+            <img
+              src={logo}
+              alt="QuickLogo"
+              className="mx-auto size-52 object-contain"
+            />
           </div>
 
           <Outlet />

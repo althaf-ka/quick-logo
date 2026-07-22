@@ -1,0 +1,10 @@
+{
+  "name": "@quicklogo/assets",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./brand/logo.jpg": "./src/brand/logo.jpg",
+    "./brand/logo-transparent.png": "./src/brand/logo-transparent.png",
+    "./favicon.ico": "./public/favicon.ico"
+  }
+}

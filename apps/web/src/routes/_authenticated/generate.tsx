@@ -5,8 +5,12 @@ import { GenerationDisplay } from "@/components/generate/generation-display";
 import { GenerationSidebar } from "@/components/generate/generation-sidebar";
 import { MobileControlsSheet } from "@/components/generate/mobile-controls-sheet";
 import { PromptInput } from "@/components/global/prompt-input";
+import { z } from "zod";
 
 export const Route = createFileRoute("/_authenticated/generate")({
+  validateSearch: z.object({
+    prompt: z.string().max(600).optional().catch(undefined),
+  }),
   component: GeneratePage,
   head: () => ({
     meta: [
@@ -21,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/generate")({
 
 function GeneratePage() {
   const isMobile = useIsMobile();
+  const { prompt: initialPrompt } = Route.useSearch();
   const {
     prompt,
     setPrompt,
@@ -36,7 +41,7 @@ function GeneratePage() {
     isGenerating,
     mobileConfigOpen,
     setMobileConfigOpen,
-  } = useGenerateForm();
+  } = useGenerateForm(initialPrompt);
 
   return (
     <div className="flex h-full">

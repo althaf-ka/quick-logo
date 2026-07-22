@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { FolderIcon, MagicWandIcon, SwatchesIcon } from "@phosphor-icons/react";
 import {
   SidebarGroup,
@@ -9,7 +9,15 @@ import {
 } from "@quicklogo/ui/components/sidebar";
 
 export function NavMain() {
-  const matchRoute = useMatchRoute();
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const isGenerateActive = pathname === "/generate";
+  const isProjectsActive =
+    pathname === "/projects" ||
+    pathname.startsWith("/projects/") ||
+    pathname.startsWith("/edit/") ||
+    pathname.startsWith("/canvas/");
+  const isBrandKitActive =
+    pathname === "/brand-kit" || pathname.startsWith("/brand-kit/");
 
   return (
     <SidebarGroup>
@@ -20,7 +28,7 @@ export function NavMain() {
         <SidebarMenuItem>
           <SidebarMenuButton
             tooltip="Generate Logo"
-            isActive={!!matchRoute({ to: "/generate" })}
+            isActive={isGenerateActive}
             className="text-muted-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-sidebar-accent group/generate h-9 rounded-none transition-all duration-150 active:scale-[0.98]"
             render={<Link to="/generate" />}
           >
@@ -35,7 +43,7 @@ export function NavMain() {
         <SidebarMenuItem>
           <SidebarMenuButton
             tooltip="My Projects"
-            isActive={!!matchRoute({ to: "/projects" })}
+            isActive={isProjectsActive}
             className="text-muted-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-sidebar-accent group/projects h-9 rounded-none transition-all duration-150 active:scale-[0.98]"
             render={<Link to="/projects" />}
           >
@@ -49,7 +57,7 @@ export function NavMain() {
         <SidebarMenuItem>
           <SidebarMenuButton
             tooltip="Brand Kit"
-            isActive={!!matchRoute({ to: "/brand-kit" })}
+            isActive={isBrandKitActive}
             className="text-muted-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-sidebar-accent group/brandkit h-9 rounded-none transition-all duration-150 active:scale-[0.98]"
             render={<Link to="/brand-kit" />}
           >

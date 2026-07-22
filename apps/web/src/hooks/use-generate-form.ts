@@ -14,11 +14,11 @@ import { AUTH_KEYS, useAuth } from "@/hooks/use-auth";
 import { useBatchStatus } from "./use-batch-status";
 import { parseApiError, ApiError, ERROR_CODES } from "@/lib/api-error";
 
-export function useGenerateForm() {
+export function useGenerateForm(initialPrompt = "") {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(() => initialPrompt);
   const [config, setConfig] = useState<GenerateConfig>(DEFAULT_CONFIG);
   const [status, setStatus] = useState<GenerationStatus>("idle");
   const [results, setResults] = useState<GeneratedLogo[]>([]);

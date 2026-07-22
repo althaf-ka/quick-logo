@@ -1,4 +1,5 @@
 import { AUTH_KEYS } from "@/hooks/use-auth";
+import logo from "@quicklogo/assets/brand/logo-transparent.png";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_auth")({
@@ -32,9 +33,14 @@ function AuthLayout() {
       <div className="flex w-full flex-1 flex-col items-center justify-center">
         <div className="animate-in fade-in zoom-in-95 w-full max-w-100 duration-500">
           <div className="bg-background mb-8 text-center">
-            <h1 className="text-foreground text-2xl font-bold tracking-tight">
-              QuickLogo Admin
-            </h1>
+            <img
+              src={logo}
+              alt="QuickLogo"
+              className="mx-auto size-52 object-contain"
+            />
+            <p className="text-muted-foreground mt-3 text-xs font-bold tracking-[0.2em] uppercase">
+              Admin
+            </p>
           </div>
           <Outlet />
         </div>

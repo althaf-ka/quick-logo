@@ -23,7 +23,7 @@
     "@quicklogo/typescript-config": "workspace:*",
     "@tailwindcss/cli": "^4.1.5",
     "@tailwindcss/postcss": "^4.1.18",
-    "@types/react": "^19.1.0",
+    "@types/react": "^19.2.17",
     "eslint": "^9.39.1",
     "tailwindcss": "^4.1.16",
     "typescript": "5.9.2"

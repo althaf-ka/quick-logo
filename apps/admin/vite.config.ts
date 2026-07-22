@@ -6,6 +6,7 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
+  publicDir: path.resolve(__dirname, "../../packages/assets/public"),
   plugins: [
     tanstackRouter({
       target: "react",
