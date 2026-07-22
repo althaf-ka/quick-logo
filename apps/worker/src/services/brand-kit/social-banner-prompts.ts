@@ -162,7 +162,7 @@ export function buildSocialReframePrompt({
   refinementPrompt?: string;
 }): string {
   return `GOAL
-Figure 1 is the approved complete YouTube master. Reframe that exact finished campaign artwork for one ${spec.platform} banner. This is an image edit, not a new design.
+Figure 1 is the current approved ${spec.platform} banner. Apply the requested visual refinement to that exact asset. This is an image edit of the selected banner, not a new unrelated design.
 
 TARGET
 Platform delivery requirement: ${spec.dimensions} pixels, ${spec.aspectRatio} aspect ratio.

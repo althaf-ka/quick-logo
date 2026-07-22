@@ -41,6 +41,17 @@ export function getSectionLabel(
   }
 
   if (targetItemId) {
+    if (sectionId === "socialMedia" || sectionId === "social-media") {
+      const socialTargetLabels: Record<string, string> = {
+        "instagram-profile": "Profile Picture",
+        "twitter-header": "X Cover",
+        "linkedin-header": "LinkedIn Cover",
+        "facebook-header": "Facebook Cover",
+        "youtube-channel-art": "YouTube Cover",
+      };
+      const socialTargetLabel = socialTargetLabels[targetItemId];
+      if (socialTargetLabel) return `${label} · ${socialTargetLabel}`;
+    }
     const formattedTarget = targetItemId
       .split("-")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

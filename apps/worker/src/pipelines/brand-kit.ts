@@ -663,6 +663,7 @@ export class BrandKitPipeline {
         env: this.env,
         storage: this.storage,
         brandKitId,
+        refinementId,
         sectionId,
         refinementPrompt,
         targetItemId,

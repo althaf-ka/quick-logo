@@ -27,19 +27,51 @@ interface SocialMediaSectionProps {
 function PlatformIcon({ platform }: { platform: string }) {
   switch (platform.toLowerCase()) {
     case "instagram":
-      return <InstagramLogoIcon className="size-3.5 text-pink-500" />;
+      return (
+        <InstagramLogoIcon
+          aria-hidden="true"
+          className="size-3.5 text-pink-500"
+        />
+      );
     case "twitter":
     case "x":
-      return <XLogoIcon className="text-foreground size-3.5" />;
+      return (
+        <XLogoIcon aria-hidden="true" className="text-foreground size-3.5" />
+      );
     case "linkedin":
-      return <LinkedinLogoIcon className="size-3.5 text-blue-600" />;
+      return (
+        <LinkedinLogoIcon
+          aria-hidden="true"
+          className="size-3.5 text-blue-600"
+        />
+      );
     case "facebook":
-      return <FacebookLogoIcon className="size-3.5 text-blue-500" />;
+      return (
+        <FacebookLogoIcon
+          aria-hidden="true"
+          className="size-3.5 text-blue-500"
+        />
+      );
     case "youtube":
-      return <YoutubeLogoIcon className="size-3.5 text-red-500" />;
+      return (
+        <YoutubeLogoIcon aria-hidden="true" className="size-3.5 text-red-500" />
+      );
     default:
-      return <GlobeIcon className="text-muted-foreground size-3.5" />;
+      return (
+        <GlobeIcon
+          aria-hidden="true"
+          className="text-muted-foreground size-3.5"
+        />
+      );
   }
+}
+
+function getAssetTitle(asset: SocialMediaAsset): string {
+  if (asset.type === "Profile") return "Profile Picture";
+  if (["twitter", "x"].includes(asset.platform.toLowerCase())) {
+    return "X Cover";
+  }
+  return `${asset.platform} Cover`;
 }
 
 function getRatioLabel(asset: SocialMediaAsset): string {
@@ -78,7 +110,8 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
 
   const isTargeted = (itemId: string) =>
     targetSectionId === "social-media" &&
-    (!targetItemId || targetItemId === itemId);
+    (targetItemId === itemId ||
+      (!targetItemId && itemId !== "instagram-profile"));
 
   const handleToggleRefine = (itemId: string) => {
     if (!itemId) return;
@@ -103,94 +136,98 @@ export function SocialMediaSection({ assets }: SocialMediaSectionProps) {
       <SectionHeader
         title="Social Media Kit"
         sectionId="social-media"
-        hideRefine={true}
+        refineLabel="Refine All Covers"
       />
-      <SectionContent sectionId="social-media">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {displayAssets.map((asset, i) => {
-            const isProfile = asset.type === "Profile";
-            // Place the very first banner next to the profile to fill the row perfectly
-            const isFirstBanner = !isProfile && i === 1;
-            const isPlaceholder = asset.url.includes("placehold.co");
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {displayAssets.map((asset, i) => {
+          const isProfile = asset.type === "Profile";
+          // Place the very first banner next to the profile to fill the row perfectly
+          const isFirstBanner = !isProfile && i === 1;
+          const isPlaceholder = asset.url.includes("placehold.co");
 
-            const itemId = getTargetItemId(asset);
-            const isAssetTargeted = isTargeted(itemId);
+          const itemId = getTargetItemId(asset);
+          const isAssetTargeted = isTargeted(itemId);
 
-            const colSpan = isProfile
-              ? "col-span-1"
-              : isFirstBanner
-                ? "col-span-1 sm:col-span-2"
-                : "col-span-1 sm:col-span-3";
+          const colSpan = isProfile
+            ? "col-span-1"
+            : isFirstBanner
+              ? "col-span-1 sm:col-span-2"
+              : "col-span-1 sm:col-span-3";
 
-            return (
-              <AssetCard
-                key={i}
-                className={colSpan}
-                title={
-                  isProfile
-                    ? "Profile Picture"
-                    : `${asset.platform} ${asset.type}`
-                }
-                subtitle={getRatioLabel(asset)}
-                icon={<PlatformIcon platform={asset.platform} />}
-                isTargeted={isAssetTargeted}
-                isPlaceholder={isPlaceholder || Boolean(refiningSectionId)}
-                onToggleRefine={
-                  itemId ? () => handleToggleRefine(itemId) : undefined
-                }
+          return (
+            <AssetCard
+              key={i}
+              className={colSpan}
+              title={getAssetTitle(asset)}
+              subtitle={getRatioLabel(asset)}
+              icon={<PlatformIcon platform={asset.platform} />}
+              isTargeted={isAssetTargeted}
+              isPlaceholder={isPlaceholder || Boolean(refiningSectionId)}
+              onToggleRefine={
+                itemId ? () => handleToggleRefine(itemId) : undefined
+              }
+            >
+              <div
+                className={cn(
+                  "bg-muted/10 relative flex w-full flex-1 items-center justify-center overflow-hidden transition-all",
+                  isProfile && "p-4 sm:p-6", // Give profile some breathing room so outline doesn't hug the edges
+                )}
               >
                 <div
                   className={cn(
-                    "bg-muted/10 relative flex w-full flex-1 items-center justify-center overflow-hidden transition-all",
-                    isProfile && "p-4 sm:p-6", // Give profile some breathing room so outline doesn't hug the edges
+                    "relative w-full overflow-hidden transition-all",
+                    isProfile
+                      ? "mx-auto aspect-square max-w-[200px] rounded-full"
+                      : isFirstBanner
+                        ? "aspect-[21/9] sm:absolute sm:inset-0 sm:aspect-auto"
+                        : "aspect-[21/9] sm:aspect-[4/1]",
+                    isAssetTargeted && "ring-primary z-10 ring-4",
                   )}
                 >
-                  <div
-                    className={cn(
-                      "relative w-full overflow-hidden transition-all",
+                  <SectionContent
+                    sectionId="social-media"
+                    targetItemId={
+                      !isProfile &&
+                      refiningSectionId === "social-media" &&
+                      !targetItemId
+                        ? undefined
+                        : itemId
+                    }
+                    className="pointer-events-none absolute inset-0 z-30"
+                  />
+                  <ZoomableImage
+                    src={asset.url}
+                    alt={
                       isProfile
-                        ? "mx-auto aspect-square max-w-[200px] rounded-full"
-                        : isFirstBanner
-                          ? "aspect-[21/9] sm:absolute sm:inset-0 sm:aspect-auto"
-                          : "aspect-[21/9] sm:aspect-[4/1]",
-                      isAssetTargeted && "ring-primary z-10 ring-4",
+                        ? "Profile Picture"
+                        : `${asset.platform} ${asset.type}`
+                    }
+                    className={cn(
+                      "absolute inset-0 z-10 h-full w-full cursor-pointer object-cover object-center transition-transform duration-300",
+                      isPlaceholder && "opacity-40 grayscale filter",
                     )}
-                  >
-                    <SectionContent
-                      sectionId="social-media"
-                      className="pointer-events-none absolute inset-0 z-30"
-                    />
-                    <ZoomableImage
-                      src={asset.url}
-                      alt={
-                        isProfile
-                          ? "Profile Picture"
-                          : `${asset.platform} ${asset.type}`
-                      }
-                      className={cn(
-                        "absolute inset-0 z-10 h-full w-full cursor-pointer object-cover object-center transition-transform duration-300",
-                        isPlaceholder && "opacity-40 grayscale filter",
-                      )}
-                    />
-                    {isPlaceholder && (
-                      <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
-                        <WarningCircleIcon className="size-5 animate-pulse text-amber-500" />
-                        <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
-                          Asset Unavailable
-                        </p>
-                        <p className="text-muted-foreground max-w-[180px] font-mono text-[8px]">
-                          This asset did not finish generating. Regenerate the
-                          social media kit to try again.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  />
+                  {isPlaceholder && (
+                    <div className="bg-background/80 absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 p-4 text-center backdrop-blur-sm">
+                      <WarningCircleIcon
+                        aria-hidden="true"
+                        className="size-5 animate-pulse text-amber-500"
+                      />
+                      <p className="font-mono text-[10px] font-bold tracking-wider text-amber-500 uppercase">
+                        Asset Unavailable
+                      </p>
+                      <p className="text-muted-foreground max-w-[180px] font-mono text-[8px]">
+                        This asset did not finish generating. Regenerate the
+                        social media kit to try again.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </AssetCard>
-            );
-          })}
-        </div>
-      </SectionContent>
+              </div>
+            </AssetCard>
+          );
+        })}
+      </div>
     </div>
   );
 }

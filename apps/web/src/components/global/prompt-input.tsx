@@ -15,6 +15,7 @@ import {
   XIcon,
   CrosshairIcon,
   WarningCircleIcon,
+  InfoIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { IndustryPicker } from "./industry-picker";
@@ -48,6 +49,8 @@ interface PromptInputProps {
   allowEmptySubmit?: boolean;
   /** Shows a targeting context badge above the input. Only used by brand-kit. */
   targetContext?: string;
+  /** Explains the exact refinement scope before credits are spent. */
+  targetDescription?: string;
   /** Called when user dismisses the targeting badge. */
   onClearTarget?: () => void;
   submitDisabled?: boolean;
@@ -80,6 +83,7 @@ export function PromptInput({
   contextPrompt,
   modelContext = "generate",
   targetContext,
+  targetDescription,
   onClearTarget,
   allowEmptySubmit = false,
   submitDisabled = false,
@@ -173,14 +177,42 @@ export function PromptInput({
             </div>
           ) : targetContext ? (
             <div className="bg-primary/5 border-border/20 flex items-center gap-2 border-b px-3 py-1.5">
-              <CrosshairIcon weight="bold" className="text-primary size-3" />
-              <span className="text-primary font-mono text-[10px] font-bold tracking-wider uppercase">
-                Refining: {targetContext}
-              </span>
+              <CrosshairIcon
+                aria-hidden="true"
+                weight="bold"
+                className="text-primary size-3"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-primary block font-mono text-[10px] font-bold tracking-wider uppercase">
+                    Refining: {targetContext}
+                  </span>
+                  {targetDescription ? (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label="About this refinement scope"
+                            className="text-primary/60 hover:text-primary focus-visible:ring-primary flex size-5 shrink-0 items-center justify-center transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                          />
+                        }
+                      >
+                        <InfoIcon aria-hidden="true" className="size-3" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-64">
+                        {targetDescription}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              </div>
               {onClearTarget ? (
                 <button
+                  type="button"
+                  aria-label="Cancel refinement selection"
                   onClick={onClearTarget}
-                  className="text-muted-foreground/50 hover:text-foreground ml-auto cursor-pointer transition-colors"
+                  className="text-muted-foreground/50 hover:text-foreground focus-visible:ring-primary ml-auto cursor-pointer transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <XIcon weight="bold" className="size-3" />
                 </button>
@@ -231,6 +263,11 @@ export function PromptInput({
             placeholder={placeholder}
             rows={rows}
             disabled={isLoading}
+            aria-label={
+              targetContext
+                ? `Refinement instructions for ${targetContext}`
+                : "Prompt"
+            }
             className={cn(
               "scrollbar-subtle text-foreground placeholder:text-muted-foreground/50 block w-full resize-none bg-transparent text-sm [transition:height_150ms_ease] focus:outline-none disabled:opacity-50",
               isCompact ? "px-3 py-2" : "px-3 pt-3 pb-1",
@@ -324,6 +361,9 @@ export function PromptInput({
                 </div>
               ) : null}
               <Button
+                aria-label={
+                  targetContext ? "Submit refinement" : "Submit prompt"
+                }
                 onClick={handleSubmit}
                 disabled={!canSubmit}
                 size="icon-sm"

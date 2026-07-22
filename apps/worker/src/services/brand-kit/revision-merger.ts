@@ -30,6 +30,7 @@ import {
   buildSocialMediaAssetList,
   SOCIAL_MEDIA_PIPELINE_VERSION,
   BUSINESS_CARD_PIPELINE_VERSION,
+  type SocialMediaAsset,
 } from "./asset-generator";
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -44,6 +45,7 @@ export async function mergeRevisionResults({
   env,
   storage,
   brandKitId,
+  refinementId,
   sectionId,
   refinementPrompt,
   targetItemId,
@@ -54,6 +56,7 @@ export async function mergeRevisionResults({
   env: Env;
   storage: StorageProvider;
   brandKitId: string;
+  refinementId: string;
   sectionId: string;
   refinementPrompt: string;
   targetItemId?: string;
@@ -132,6 +135,7 @@ export async function mergeRevisionResults({
         newMergedJSON.socialMediaKit?.masterBackgroundUrl,
       existingApprovedCopy: newMergedJSON.socialMediaKit?.approvedCopy,
       productImageUrls: currentBrandKit?.productImageUrls,
+      assetVersionId: refinementId,
     });
 
     // Refinement is atomic from the user's perspective. Never charge for and
@@ -189,7 +193,19 @@ export async function mergeRevisionResults({
         };
       }
     } else {
-      newMergedJSON.socialMedia = buildSocialMediaAssetList(socialMediaUrls);
+      const existingSocialAssets = Array.isArray(newMergedJSON.socialMedia)
+        ? (newMergedJSON.socialMedia as SocialMediaAsset[])
+        : [];
+      const existingProfile = existingSocialAssets.find(
+        (asset) => getSocialAssetTargetId(asset) === "instagram-profile",
+      );
+      newMergedJSON.socialMedia = buildSocialMediaAssetList(
+        socialMediaUrls,
+      ).map((asset) =>
+        getSocialAssetTargetId(asset) === "instagram-profile" && existingProfile
+          ? existingProfile
+          : asset,
+      );
       newMergedJSON.socialMediaKit = {
         version: SOCIAL_MEDIA_PIPELINE_VERSION,
         brief: currentBrandKit?.socialMediaBrief,

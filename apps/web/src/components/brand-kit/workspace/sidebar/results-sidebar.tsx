@@ -5,9 +5,15 @@ import {
   CircleDashedIcon,
   ClockCounterClockwiseIcon,
   CircleIcon,
+  InfoIcon,
 } from "@phosphor-icons/react";
+import { getSectionLabel, type BrandKitRevisionType } from "@quicklogo/shared";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@quicklogo/ui/components/tooltip";
 import { cn } from "@quicklogo/ui/lib/utils";
-import type { BrandKitRevisionType } from "@quicklogo/shared";
 import type { NormalizedBrandKit } from "@/types/brand-kit";
 import { staggerContainer, staggerItem } from "@/lib/motion/variants";
 import type { BrandKitResultsData } from "@/components/brand-kit/results/brand-kit-results";
@@ -33,6 +39,26 @@ function getRevisionColor(revisionType: BrandKitRevisionType) {
     case "full_restore":
       return "text-amber-400";
   }
+}
+
+function getRevisionDisplayLabel(
+  revision: NormalizedBrandKit["revisions"][number],
+) {
+  if (
+    revision.revisionType === "refinement" &&
+    (revision.sectionId === "socialMedia" ||
+      revision.sectionId === "social-media") &&
+    revision.targetItemId
+  ) {
+    const targetLabel = getSectionLabel(
+      revision.sectionId,
+      revision.targetItemId,
+    ).split(" · ")[1];
+
+    if (targetLabel) return `${targetLabel} refined`;
+  }
+
+  return revision.label;
 }
 
 export function ResultsSidebar({
@@ -209,93 +235,128 @@ export function ResultsSidebar({
         <div className="space-y-1.5">
           {reversedRevisions.map((rev) => {
             const isCurrent = rev.isActive;
+            const restoreDisabled =
+              Boolean(refiningSectionId) || !onRestoreRevision;
+            const formattedDate = new Date(rev.createdAt).toLocaleString(
+              undefined,
+              {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              },
+            );
+
             return (
-              <button
-                type="button"
+              <article
                 key={rev.id}
-                onClick={() => {
-                  onRestoreRevision?.(rev.id);
-                }}
-                disabled={
-                  isCurrent || Boolean(refiningSectionId) || !onRestoreRevision
-                }
-                title={
-                  !isCurrent && refiningSectionId
-                    ? "Wait for the active refinement to finish before restoring"
-                    : undefined
-                }
                 className={cn(
-                  "group relative flex w-full items-center gap-2.5 border px-2.5 py-2 text-left transition-all duration-300",
+                  "relative border border-white/[0.06] bg-white/[0.01] px-3 py-2.5 transition-colors",
                   isCurrent
-                    ? "border-primary/30 bg-primary/[0.03] cursor-default shadow-[inset_2px_0_0_rgba(var(--primary),0.5)]"
-                    : refiningSectionId
-                      ? "cursor-not-allowed border-white/[0.06] bg-white/[0.01] opacity-50"
-                      : "cursor-pointer border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03]",
+                    ? "border-l-primary bg-primary/[0.03] border-l-2"
+                    : restoreDisabled
+                      ? "opacity-50"
+                      : "hover:border-white/[0.12] hover:bg-white/[0.025]",
                 )}
               >
-                <div className="flex items-center gap-1.5">
+                {!isCurrent ? (
+                  <button
+                    type="button"
+                    aria-label={`Restore version ${rev.revisionNumber}: ${getRevisionDisplayLabel(rev)}`}
+                    disabled={restoreDisabled}
+                    onClick={() => {
+                      onRestoreRevision?.(rev.id);
+                    }}
+                    title={
+                      refiningSectionId
+                        ? "Wait for the active refinement to finish before restoring"
+                        : `Restore version ${rev.revisionNumber}`
+                    }
+                    className="focus-visible:ring-ring/50 absolute inset-0 z-0 cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-inset disabled:cursor-not-allowed"
+                  />
+                ) : null}
+
+                <div className="pointer-events-none relative z-10 flex items-start gap-2.5">
                   <CircleIcon
+                    aria-hidden="true"
                     weight="fill"
                     className={cn(
-                      "size-1.5 transition-colors",
+                      "mt-1.5 size-1.5 shrink-0",
                       isCurrent
-                        ? "text-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                        ? "text-primary"
                         : getRevisionColor(rev.revisionType),
                     )}
                   />
-                  <ClockCounterClockwiseIcon
-                    className={cn(
-                      "size-3 transition-colors",
-                      isCurrent
-                        ? "text-primary/50"
-                        : "text-muted-foreground/30 group-hover:text-muted-foreground",
-                    )}
-                  />
-                </div>
-                <div className="flex min-w-0 flex-col gap-px">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "font-mono text-[9px] font-bold tracking-wider uppercase transition-colors",
-                        isCurrent ? "text-primary" : "text-foreground/90",
-                      )}
-                    >
-                      V{rev.revisionNumber}
-                    </span>
-                    {isCurrent ? (
-                      <span className="bg-primary/15 text-primary rounded-[2px] px-1 py-[1px] font-mono text-[7px] font-black tracking-widest uppercase">
-                        Current
-                      </span>
-                    ) : null}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "font-mono text-[9px] font-bold tracking-wider uppercase",
+                            isCurrent ? "text-primary" : "text-foreground/90",
+                          )}
+                        >
+                          V{rev.revisionNumber}
+                        </span>
+                        {isCurrent ? (
+                          <span className="bg-primary/10 text-primary px-1.5 py-0.5 font-mono text-[7px] font-bold tracking-wider uppercase">
+                            Current
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="text-muted-foreground/45 flex shrink-0 items-center gap-1.5">
+                        {!isCurrent ? (
+                          <ClockCounterClockwiseIcon
+                            aria-hidden="true"
+                            className="size-3"
+                          />
+                        ) : null}
+                        <time
+                          dateTime={rev.createdAt}
+                          className="font-mono text-[8px] tabular-nums"
+                        >
+                          {formattedDate}
+                        </time>
+                      </div>
+                    </div>
+
+                    <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                      <p className="text-foreground/70 min-w-0 flex-1 truncate font-mono text-[9px]">
+                        {getRevisionDisplayLabel(rev)}
+                      </p>
+                      {rev.refinementPrompt ? (
+                        <span className="pointer-events-auto">
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <button
+                                  type="button"
+                                  aria-label={`View refinement prompt for version ${rev.revisionNumber}`}
+                                  className="text-muted-foreground/45 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex size-5 shrink-0 cursor-help items-center justify-center border border-transparent transition-colors outline-none focus-visible:ring-1"
+                                />
+                              }
+                            >
+                              <InfoIcon aria-hidden="true" className="size-3" />
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="left"
+                              align="start"
+                              className="max-w-72"
+                            >
+                              <span className="block font-mono text-[9px] font-bold tracking-wider uppercase opacity-70">
+                                Refinement prompt
+                              </span>
+                              <p className="mt-1 text-xs leading-relaxed break-words">
+                                {rev.refinementPrompt}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <span className="text-foreground/70 truncate font-mono text-[8px]">
-                    {rev.label}
-                  </span>
-                  {rev.refinementPrompt ? (
-                    <span
-                      className="text-muted-foreground/50 truncate font-mono text-[8px]"
-                      title={rev.refinementPrompt}
-                    >
-                      “{rev.refinementPrompt}”
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      "truncate font-mono text-[8px] transition-colors",
-                      isCurrent
-                        ? "text-primary/60"
-                        : "text-muted-foreground/50",
-                    )}
-                  >
-                    {new Date(rev.createdAt).toLocaleString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </span>
                 </div>
-              </button>
+              </article>
             );
           })}
           {reversedRevisions.length === 0 ? (

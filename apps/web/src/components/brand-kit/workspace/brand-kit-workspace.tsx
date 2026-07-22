@@ -220,11 +220,20 @@ export function BrandKitWorkspace({
                   onChange={bk.setPrompt}
                   onSubmit={bk.handleGenerate}
                   isLoading={bk.isGenerating || !!bk.refiningSectionId}
-                  placeholder="What changes would you like to make?"
+                  placeholder="Describe the visual changes you want…"
                   credits={bk.totalCredits}
                   targetContext={
-                    bk.targetSection
-                      ? getSectionLabel(bk.targetSection, bk.targetItemId)
+                    bk.targetSection === "social-media" && !bk.targetItemId
+                      ? "Social Media Kit · All Covers"
+                      : bk.targetSection
+                        ? getSectionLabel(bk.targetSection, bk.targetItemId)
+                        : undefined
+                  }
+                  targetDescription={
+                    bk.targetSection === "social-media"
+                      ? bk.targetItemId
+                        ? "Only this asset will change. Other social assets will remain unchanged."
+                        : "X, LinkedIn, Facebook, and YouTube covers will change. Your profile picture will remain unchanged."
                       : undefined
                   }
                   onClearTarget={() => bk.setTargetSection(null)}

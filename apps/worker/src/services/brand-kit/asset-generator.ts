@@ -425,6 +425,7 @@ export async function generateSocialMediaAssets({
   existingApprovedCopy,
   productImageUrls,
   onMasterGenerated,
+  assetVersionId,
 }: {
   ai: Ai;
   env: Env;
@@ -443,6 +444,8 @@ export async function generateSocialMediaAssets({
   existingMasterBannerUrl?: string;
   existingApprovedCopy?: VerifiedSocialCopy;
   productImageUrls?: string[];
+  /** Keeps refinement retries idempotent without overwriting prior revisions. */
+  assetVersionId?: string;
   onMasterGenerated?: (
     url: string,
     approvedCopy: VerifiedSocialCopy,
@@ -472,6 +475,9 @@ export async function generateSocialMediaAssets({
     }
     return createProvider(mapping, { ai, env });
   };
+  const socialAssetRoot = assetVersionId
+    ? `${ASSET_ROOT}/${brandKitId}/refinements/${assetVersionId}`
+    : `${ASSET_ROOT}/${brandKitId}`;
 
   // The social profile is the already-generated icon-only brand mark. It does
   // not need a creative brief, master artwork, or another image-model call.
@@ -497,11 +503,11 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
           height: 1024,
           providerOptions: {
             ...(profileMapping.defaultParams.providerOptions || {}),
-            quality: env.SOCIAL_BANNER_QUALITY || "low",
+            quality: "low",
           },
         },
         storage,
-        uploadPath: `${ASSET_ROOT}/${brandKitId}/social-profile-refined`,
+        uploadPath: `${socialAssetRoot}/social-profile-refined`,
         timeoutMs: SOCIAL_MEDIA_GENERATION_TIMEOUT_MS,
         label: "social-media:instagram-profile-refinement",
       });
@@ -540,9 +546,13 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     existingMasterBannerUrl && !existingMasterBannerUrl.includes("placehold.co")
       ? existingMasterBannerUrl
       : undefined;
-  if (targetItemId && !usableExistingMaster) {
+  const usableExistingTarget =
+    existingTargetAssetUrl && !existingTargetAssetUrl.includes("placehold.co")
+      ? existingTargetAssetUrl
+      : undefined;
+  if (targetItemId && !usableExistingTarget) {
     throw new PipelineError(
-      "Cannot refine this social asset because its saved master banner is unavailable",
+      "Cannot refine this social asset because its current image is unavailable",
       false,
     );
   }
@@ -563,6 +573,12 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
           normalizedContext,
           targetItemId ? undefined : refinementPrompt,
         );
+  if (!targetItemId && refinementPrompt?.trim()) {
+    approvedCopy = {
+      ...approvedCopy,
+      additionalInstructions: refinementPrompt.trim().slice(0, 700),
+    };
+  }
   const correctedRefinementPrompt =
     targetItemId && refinementPrompt?.trim()
       ? (
@@ -685,10 +701,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
             providerOptions: {
               ...defaultProviderOptions,
               ...(mapping.backendModel === REPLICATE_MODELS.GPT_IMAGE_2 && {
-                quality:
-                  env.SOCIAL_BANNER_QUALITY ||
-                  defaultProviderOptions.quality ||
-                  "low",
+                quality: "low",
               }),
             },
             ...(referenceImages?.length
@@ -700,7 +713,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
             signal,
           },
           storage,
-          `${ASSET_ROOT}/${brandKitId}/${storageKey}`,
+          `${socialAssetRoot}/${storageKey}`,
           signal,
           env.IMAGES,
           retryOptions,
@@ -712,7 +725,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
 
   let masterBannerUrl = usableExistingMaster;
   const shouldGenerateMaster =
-    !masterBannerUrl || (!targetItemId && Boolean(refinementPrompt?.trim()));
+    !targetItemId && (!masterBannerUrl || Boolean(refinementPrompt?.trim()));
   if (shouldGenerateMaster) {
     const logoReferenceUrl = brief.includeLogo ? sourceLogoUrl : undefined;
     const reservedReferenceSlots =
@@ -787,14 +800,14 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     normalizedSocialNetworks: Object.keys(normalizedContext.socials),
   });
 
-  if (!masterBannerUrl) {
+  if (!selectedSpec && !masterBannerUrl) {
     throw new PipelineError(
       "Social media kit incomplete: YouTube master generation failed",
       false,
     );
   }
 
-  let exportSourceUrl = masterBannerUrl;
+  let exportSourceUrl = selectedSpec ? usableExistingTarget : masterBannerUrl;
   if (selectedSpec && correctedRefinementPrompt?.trim()) {
     const revisedSource = await generateBanner({
       provider: reframeProvider,
@@ -809,7 +822,9 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
         bodyFont,
         refinementPrompt: correctedRefinementPrompt,
       }),
-      referenceImages: [masterBannerUrl],
+      referenceImages: usableExistingTarget
+        ? [usableExistingTarget]
+        : undefined,
       storageKey: `${selectedSpec.storageKey}-refined-source`,
       label: `social-media:${selectedSpec.platform}:refinement`,
     });
@@ -817,6 +832,12 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
       return { masterBannerUrl, approvedCopy, failed: 1, total: 1 };
     }
     exportSourceUrl = revisedSource.url;
+  }
+  if (!exportSourceUrl) {
+    throw new PipelineError(
+      "Social media refinement source is unavailable",
+      false,
+    );
   }
 
   const sourceImageData = await runAssetOrNull(
@@ -888,7 +909,7 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
             );
           }
           const uploaded = await storage.upload(
-            `${ASSET_ROOT}/${brandKitId}/${spec.storageKey}.png`,
+            `${socialAssetRoot}/${spec.storageKey}.png`,
             imageData,
             { overwrite: true, contentType: "image/png" },
           );
@@ -910,30 +931,33 @@ Preserve the recognizable approved brand mark, its proportions, and its identity
     });
   }
 
-  const generated: Partial<SocialMediaAssetUrls> = targetItemId
-    ? {}
-    : {
-        socialProfileUrl: iconOnlyLogoUrl || sourceLogoUrl,
-      };
+  const generated: Partial<SocialMediaAssetUrls> =
+    targetItemId || assetVersionId
+      ? {}
+      : {
+          socialProfileUrl: iconOnlyLogoUrl || sourceLogoUrl,
+        };
   for (const result of exportResults) {
     if (result.url) generated[result.spec.outputKey] = result.url;
   }
 
-  if (
-    generated.youtubeBannerUrl &&
-    (!targetItemId || selectedSpec?.platform === "youtube")
-  ) {
+  if (generated.youtubeBannerUrl && !targetItemId) {
     masterBannerUrl = generated.youtubeBannerUrl;
   }
 
   const failedExports = exportResults.filter((result) => !result.url).length;
-  const failedProfile = targetItemId || generated.socialProfileUrl ? 0 : 1;
+  const failedProfile =
+    targetItemId || assetVersionId || generated.socialProfileUrl ? 0 : 1;
   return {
     ...generated,
     masterBannerUrl,
     approvedCopy,
     failed: failedExports + failedProfile,
-    total: targetItemId ? 1 : SOCIAL_MEDIA_ASSET_COUNT,
+    total: targetItemId
+      ? 1
+      : assetVersionId
+        ? SOCIAL_ASSET_SPECS.length
+        : SOCIAL_MEDIA_ASSET_COUNT,
   };
 }
 
