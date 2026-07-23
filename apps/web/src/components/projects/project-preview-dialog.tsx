@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@quicklogo/ui/components/alert-dialog";
 import { toast } from "@quicklogo/ui/components/sonner";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { cn } from "@quicklogo/ui/lib/utils";
 import { parseApiError } from "@/lib/api-error";
 

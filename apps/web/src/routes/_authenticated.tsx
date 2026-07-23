@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
     const session = await context.queryClient.ensureQueryData({
       queryKey: AUTH_KEYS.session,
       queryFn: async () => {
-        const { authClient } = await import("@/lib/auth");
+        const { authClient } = await import("@/lib/auth-client");
         const result = await authClient.getSession();
         return result.data;
       },

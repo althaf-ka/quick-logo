@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_auth")({
     const session = await context.queryClient.ensureQueryData({
       queryKey: AUTH_KEYS.session,
       queryFn: async () => {
-        const { authClient } = await import("@/lib/auth");
+        const { authClient } = await import("@/lib/auth-client");
         const result = await authClient.getSession();
         return result.data;
       },
@@ -25,22 +25,20 @@ export const Route = createFileRoute("/_auth")({
 
 function AuthLayout() {
   return (
-    <div className="bg-background text-foreground flex min-h-screen flex-col items-center justify-between">
-      <div className="flex w-full flex-1 flex-col items-center justify-center">
-        <div className="animate-in fade-in zoom-in-95 w-full max-w-[400px] duration-500">
-          <div className="mb-8 text-center">
-            <img
-              src={logo}
-              alt="QuickLogo"
-              className="mx-auto size-52 object-contain"
-            />
-          </div>
+    <div className="bg-background text-foreground relative min-h-screen">
+      <main className="flex min-h-screen w-full items-center justify-center px-4 py-28 sm:py-32">
+        <div className="animate-in fade-in zoom-in-95 relative w-full max-w-[400px] translate-y-6 duration-500 sm:translate-y-8">
+          <img
+            src={logo}
+            alt="QuickLogo"
+            className="absolute bottom-full left-1/2 -mb-2 size-28 -translate-x-1/2 object-contain sm:size-32"
+          />
 
           <Outlet />
         </div>
-      </div>
+      </main>
 
-      <footer className="py-8">
+      <footer className="absolute bottom-0 left-1/2 -translate-x-1/2 py-4 sm:py-8">
         <div className="text-muted-foreground flex items-center gap-6 opacity-50 transition-opacity hover:opacity-100">
           <a href="#" target="_blank" className="hover:text-foreground">
             <XLogoIcon className="h-4 w-4" />

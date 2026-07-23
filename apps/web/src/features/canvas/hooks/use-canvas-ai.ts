@@ -3,7 +3,7 @@ import * as fabric from "fabric";
 import { useCanvasStore } from "../store/canvas-store";
 import { useCanvasExport } from "./use-canvas-export";
 import { uploadFileToImageKit } from "@/lib/imagekit";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AUTH_KEYS } from "@/hooks/use-auth";

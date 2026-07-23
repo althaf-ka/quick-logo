@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { EditApiRequest } from "@quicklogo/shared";
 import type { InferResponseType } from "@quicklogo/api-client";

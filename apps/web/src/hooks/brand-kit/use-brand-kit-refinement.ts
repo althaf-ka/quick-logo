@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { AUTH_KEYS } from "@/hooks/use-auth";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type { NormalizedBrandKit } from "../../types/brand-kit";

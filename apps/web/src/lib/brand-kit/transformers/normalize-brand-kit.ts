@@ -6,7 +6,7 @@ import type {
 import { mapDeliverables } from "./map-deliverables";
 
 import type { InferResponseType } from "@quicklogo/api-client";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import {
   brandKitDeliverablesSchema,
   isBrandKitRefinementSection,

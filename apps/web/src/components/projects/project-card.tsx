@@ -7,7 +7,7 @@ import {
   ArrowRightIcon,
 } from "@phosphor-icons/react";
 import type { InferResponseType } from "@quicklogo/api-client";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { formatGenerationError } from "@/lib/format-error";
 
 export type ProjectItem = InferResponseType<

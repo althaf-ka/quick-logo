@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth";
+import { authClient } from "@/lib/auth-client";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { useRouter } from "@tanstack/react-router";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import type { InferResponseType } from "@quicklogo/api-client";
 
 export const AUTH_KEYS = {

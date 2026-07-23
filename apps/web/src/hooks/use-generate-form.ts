@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { toast } from "@quicklogo/ui/components/sonner";
 import type {
   GenerateConfig,

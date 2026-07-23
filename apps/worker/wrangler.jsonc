@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "quicklogo-db",
-      "database_id": "20f887cb-35bc-45e6-a65a-1335facefa7e",
+      "database_id": "c5b772a4-d893-4167-add3-c45c2b0df44b",
       "migrations_dir": "../../packages/db/migrations",
     },
   ],

@@ -1,7 +1,7 @@
 import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { parseApiError } from "@/lib/api-error";
 import { EditorLoadingState } from "@/features/canvas/components/editor-loading-state";
 

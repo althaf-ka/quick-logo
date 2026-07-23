@@ -6,7 +6,7 @@ import {
   PageEmptyState,
   PageErrorState,
 } from "@/components/global/page-states";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectPreviewDialog } from "@/components/projects/project-preview-dialog";
 import { downloadImage } from "@/lib/download";

@@ -8,7 +8,11 @@ const workspaceRoot = path.resolve(
 );
 
 const nextConfig: NextConfig = {
+  output: "export",
   reactStrictMode: true,
+  images: {
+    unoptimized: true,
+  },
   transpilePackages: ["@quicklogo/ui"],
   turbopack: {
     root: workspaceRoot,

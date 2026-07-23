@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { useBrandKitSession } from "./use-brand-kit-session";
 import { useBrandKitGeneration } from "./use-brand-kit-generation";

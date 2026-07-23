@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import * as fabric from "fabric";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { uploadFileToImageKit } from "@/lib/imagekit";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { parseApiError } from "@/lib/api-error";
 import { FABRIC_CUSTOM_PROPERTIES } from "../utils/fabric-properties";

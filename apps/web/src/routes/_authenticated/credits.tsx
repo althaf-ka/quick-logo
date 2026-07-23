@@ -24,7 +24,7 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 import { useAuth, AUTH_KEYS } from "@/hooks/use-auth";
 import { parseApiError } from "@/lib/api-error";
 import { InView } from "react-intersection-observer";

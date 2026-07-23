@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { InferResponseType } from "@quicklogo/api-client";
-import { api } from "@/lib/api";
+import { api } from "@/lib/api-client";
 
 export type BrandKitItem = InferResponseType<
   typeof api.brandKits.index.$get,
