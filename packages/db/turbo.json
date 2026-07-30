@@ -1,0 +1,12 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "lint": {
+      "env": [
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CLOUDFLARE_DATABASE_ID",
+        "CLOUDFLARE_D1_TOKEN"
+      ]
+    }
+  }
+}

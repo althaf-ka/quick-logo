@@ -1,4 +1,4 @@
-import { AUTH_KEYS } from "@/hooks/use-auth";
+import { AUTH_KEYS, fetchSession } from "@/hooks/use-auth";
 import logo from "@quicklogo/assets/brand/logo-transparent.png";
 import { XLogoIcon } from "@phosphor-icons/react";
 import { InstagramLogoIcon } from "@phosphor-icons/react/dist/ssr";
@@ -8,11 +8,7 @@ export const Route = createFileRoute("/_auth")({
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData({
       queryKey: AUTH_KEYS.session,
-      queryFn: async () => {
-        const { authClient } = await import("@/lib/auth-client");
-        const result = await authClient.getSession();
-        return result.data;
-      },
+      queryFn: fetchSession,
     });
 
     if (session) {

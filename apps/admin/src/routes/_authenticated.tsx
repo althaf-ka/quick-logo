@@ -1,4 +1,4 @@
-import { AUTH_KEYS } from "@/hooks/use-auth";
+import { AUTH_KEYS, fetchSession } from "@/hooks/use-auth";
 import {
   createFileRoute,
   Outlet,
@@ -18,21 +18,10 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
     const session = await context.queryClient.ensureQueryData({
       queryKey: AUTH_KEYS.session,
-      queryFn: async () => {
-        const { authClient } = await import("@/lib/auth");
-        const result = await authClient.getSession();
-        return result.data;
-      },
-    });
-
-    console.log("[_authenticated.tsx] beforeLoad", {
-      pathname: location.pathname,
-      hasSession: !!session,
-      role: session?.user?.role,
+      queryFn: fetchSession,
     });
 
     if (!session) {
-      console.log("[_authenticated.tsx] REDIRECTING to /login");
       throw redirect({
         to: "/login",
         search: {
@@ -42,7 +31,6 @@ export const Route = createFileRoute("/_authenticated")({
     }
 
     if (session.user.role !== "admin") {
-      console.log("[_authenticated.tsx] REDIRECTING to /access-denied");
       throw redirect({
         to: "/access-denied",
       });

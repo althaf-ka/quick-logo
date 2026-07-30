@@ -270,7 +270,9 @@ export const brandKitDeterministicEditSchema = z.discriminatedUnion("action", [
       .trim()
       .min(1, "Font family is required")
       .max(100, "Font family must be 100 characters or fewer")
+      // Control characters are intentionally rejected at the validation boundary.
       .regex(
+        // eslint-disable-next-line no-control-regex
         /^[^\u0000-\u001f\u007f]+$/,
         "Font family contains unsupported characters",
       ),

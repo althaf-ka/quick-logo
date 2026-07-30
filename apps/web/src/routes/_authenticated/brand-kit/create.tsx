@@ -1,13 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { z } from "zod";
 import { BrandKitWorkspace } from "@/components/brand-kit/workspace/brand-kit-workspace";
-
-const searchSchema = z.object({
-  imageId: z.string().optional(),
-});
+import { readSearchString } from "@/lib/search-params";
 
 export const Route = createFileRoute("/_authenticated/brand-kit/create")({
-  validateSearch: searchSchema,
+  validateSearch: (search): { imageId?: string } => ({
+    imageId: readSearchString(search.imageId),
+  }),
   component: BrandKitCreateRoute,
   head: () => ({
     meta: [

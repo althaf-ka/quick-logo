@@ -14,6 +14,11 @@ export type CurrentUser = InferResponseType<
   200
 >;
 
+export async function fetchSession() {
+  const result = await authClient.getSession();
+  return result.data;
+}
+
 function isCurrentUser(value: unknown): value is CurrentUser {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Record<string, unknown>;
@@ -28,10 +33,7 @@ function isCurrentUser(value: unknown): value is CurrentUser {
 export function useSession() {
   return useQuery({
     queryKey: AUTH_KEYS.session,
-    queryFn: async () => {
-      const result = await authClient.getSession();
-      return result.data;
-    },
+    queryFn: fetchSession,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });

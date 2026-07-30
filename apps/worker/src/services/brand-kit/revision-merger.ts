@@ -19,9 +19,12 @@ import {
 } from "../../core/ai-response-parser";
 import {
   brandKitColorPaletteResponseSchema,
-  brandGuidelinesRefinementResponseSchema,
   brandKitGlobalRefinementResponseSchema,
   DEFAULT_BUSINESS_CARD_BRIEF,
+  type BrandGuidelinesContent,
+  type BusinessCardBrief,
+  type SocialMediaBrief,
+  type StructuredBrandContext,
 } from "@quicklogo/shared";
 import {
   generateSocialMediaAssets,
@@ -32,6 +35,7 @@ import {
   BUSINESS_CARD_PIPELINE_VERSION,
   type SocialMediaAsset,
 } from "./asset-generator";
+import type { VerifiedSocialCopy } from "./social-banner-copy";
 import { generateBrandPresentationImage } from "./brand-presentation-generator";
 import { generateBrandGuidelinesRefinement } from "./brand-guidelines-refinement";
 import type { StorageProvider } from "@quicklogo/storage";
@@ -40,6 +44,65 @@ import { createLogger } from "@quicklogo/server-telemetry";
 import { PipelineError } from "../../core/errors";
 
 const logger = createLogger("worker");
+
+interface CurrentBrandKit extends StructuredBrandContext {
+  brandName?: string;
+  customLogoUrl?: string;
+  extractedColors?: string[];
+  productImageUrls?: string[];
+  prompt?: string;
+  typographyStyle?: string;
+}
+
+type MutableBrandGuidelines = Partial<Omit<BrandGuidelinesContent, "voice">> & {
+  voice?: Partial<NonNullable<BrandGuidelinesContent["voice"]>>;
+};
+
+interface RevisionResults extends Record<string, unknown> {
+  brandName?: string;
+  brandGraphics?: {
+    backdropPostUrl?: string;
+    backdropStoryUrl?: string;
+  };
+  brandedBackdrops?: {
+    feedUrl?: string;
+    storyUrl?: string;
+  };
+  brandGuidelines?: MutableBrandGuidelines;
+  brandPresentation?: {
+    tagline?: string;
+    description?: string;
+    presentationUrl?: string;
+  };
+  businessCard?: {
+    brief?: BusinessCardBrief;
+    frontUrl?: string;
+    backUrl?: string;
+    frontSourceUrl?: string;
+    backSourceUrl?: string;
+    version?: number;
+  };
+  colorPalette?: Array<{ hex?: unknown }>;
+  logoUrl?: string;
+  logoVariations?: Array<{ id?: string; url?: string }>;
+  socialMedia?: SocialMediaAsset[];
+  socialMediaKit?: {
+    version?: number;
+    brief?: SocialMediaBrief;
+    masterBackgroundUrl?: string;
+    approvedCopy?: VerifiedSocialCopy;
+  };
+  typography?: ReturnType<typeof normalizeTypographyOutput>;
+}
+
+function assertJsonObject<T extends object>(
+  value: unknown,
+  label: string,
+): asserts value is T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new PipelineError(`${label} must be a JSON object`, false);
+  }
+}
 
 export async function mergeRevisionResults({
   ai,
@@ -61,10 +124,16 @@ export async function mergeRevisionResults({
   sectionId: string;
   refinementPrompt: string;
   targetItemId?: string;
-  currentBrandKit: any;
-  activeRevisionResults: any;
+  currentBrandKit: unknown;
+  activeRevisionResults: unknown;
 }) {
-  let newMergedJSON = { ...activeRevisionResults };
+  assertJsonObject<CurrentBrandKit>(currentBrandKit, "Brand kit");
+  assertJsonObject<RevisionResults>(
+    activeRevisionResults,
+    "Active revision results",
+  );
+
+  const newMergedJSON = { ...activeRevisionResults };
   const activePalette = Array.isArray(newMergedJSON.colorPalette)
     ? newMergedJSON.colorPalette
         .map((color: { hex?: unknown }) => color.hex)
@@ -107,7 +176,7 @@ export async function mergeRevisionResults({
     if (Array.isArray(newMergedJSON.socialMedia)) {
       if (targetItemId) {
         const targetAsset = newMergedJSON.socialMedia.find(
-          (asset: any) => getSocialAssetTargetId(asset) === targetItemId,
+          (asset) => getSocialAssetTargetId(asset) === targetItemId,
         );
         existingTargetAssetUrl = targetAsset?.url;
       }
@@ -123,7 +192,7 @@ export async function mergeRevisionResults({
       sourceLogoUrl: actualLogoUrl,
       iconOnlyLogoUrl:
         newMergedJSON.logoVariations?.find(
-          (variation: any) => variation.id === "icon",
+          (variation) => variation.id === "icon",
         )?.url ?? actualLogoUrl,
       headingFont: newMergedJSON.typography?.heading?.family,
       bodyFont: newMergedJSON.typography?.body?.family,
@@ -149,40 +218,38 @@ export async function mergeRevisionResults({
     }
 
     if (targetItemId && Array.isArray(newMergedJSON.socialMedia)) {
-      newMergedJSON.socialMedia = newMergedJSON.socialMedia.map(
-        (asset: any) => {
-          if (getSocialAssetTargetId(asset) === targetItemId) {
-            let newUrl = asset.url;
-            if (
-              targetItemId.endsWith("-profile") &&
-              socialMediaUrls.socialProfileUrl
-            )
-              newUrl = socialMediaUrls.socialProfileUrl;
-            else if (
-              targetItemId === "twitter-header" &&
-              socialMediaUrls.twitterBannerUrl
-            )
-              newUrl = socialMediaUrls.twitterBannerUrl;
-            else if (
-              targetItemId === "linkedin-header" &&
-              socialMediaUrls.linkedinBannerUrl
-            )
-              newUrl = socialMediaUrls.linkedinBannerUrl;
-            else if (
-              targetItemId === "facebook-header" &&
-              socialMediaUrls.facebookBannerUrl
-            )
-              newUrl = socialMediaUrls.facebookBannerUrl;
-            else if (
-              targetItemId === "youtube-channel-art" &&
-              socialMediaUrls.youtubeBannerUrl
-            )
-              newUrl = socialMediaUrls.youtubeBannerUrl;
-            return { ...asset, url: newUrl };
-          }
-          return asset;
-        },
-      );
+      newMergedJSON.socialMedia = newMergedJSON.socialMedia.map((asset) => {
+        if (getSocialAssetTargetId(asset) === targetItemId) {
+          let newUrl = asset.url;
+          if (
+            targetItemId.endsWith("-profile") &&
+            socialMediaUrls.socialProfileUrl
+          )
+            newUrl = socialMediaUrls.socialProfileUrl;
+          else if (
+            targetItemId === "twitter-header" &&
+            socialMediaUrls.twitterBannerUrl
+          )
+            newUrl = socialMediaUrls.twitterBannerUrl;
+          else if (
+            targetItemId === "linkedin-header" &&
+            socialMediaUrls.linkedinBannerUrl
+          )
+            newUrl = socialMediaUrls.linkedinBannerUrl;
+          else if (
+            targetItemId === "facebook-header" &&
+            socialMediaUrls.facebookBannerUrl
+          )
+            newUrl = socialMediaUrls.facebookBannerUrl;
+          else if (
+            targetItemId === "youtube-channel-art" &&
+            socialMediaUrls.youtubeBannerUrl
+          )
+            newUrl = socialMediaUrls.youtubeBannerUrl;
+          return { ...asset, url: newUrl };
+        }
+        return asset;
+      });
       if (socialMediaUrls.approvedCopy) {
         newMergedJSON.socialMediaKit = {
           ...newMergedJSON.socialMediaKit,
@@ -226,10 +293,12 @@ export async function mergeRevisionResults({
       );
     }
 
-    const existing =
-      newMergedJSON.brandGraphics ?? newMergedJSON.brandedBackdrops;
-    const postUrl = existing?.backdropPostUrl ?? existing?.feedUrl;
-    const storyUrl = existing?.backdropStoryUrl ?? existing?.storyUrl;
+    const postUrl =
+      newMergedJSON.brandGraphics?.backdropPostUrl ??
+      newMergedJSON.brandedBackdrops?.feedUrl;
+    const storyUrl =
+      newMergedJSON.brandGraphics?.backdropStoryUrl ??
+      newMergedJSON.brandedBackdrops?.storyUrl;
     const existingPostUrl =
       typeof postUrl === "string" && !postUrl.includes("placehold.co")
         ? postUrl

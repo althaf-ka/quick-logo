@@ -152,7 +152,7 @@ function normalizeLine(value: unknown, maxLength: number): string {
   const complete = candidate
     .slice(0, Math.max(cutoff, 1))
     .trim()
-    .replace(/[,:;\-]+$/, "");
+    .replace(/[-,:;]+$/, "");
   return /[.!?]$/.test(complete) ? complete : `${complete}.`;
 }
 

@@ -3,11 +3,11 @@ import { GoogleIcon } from "@/components/icons/google-icon";
 import { Button } from "@quicklogo/ui/components/button";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useGoogleLogin } from "@/hooks/use-auth";
-import z from "zod";
 import { Spinner } from "@quicklogo/ui/components/spinner";
 import { toast } from "@quicklogo/ui/components/sonner";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { readSearchString } from "@/lib/search-params";
 
 export const Route = createFileRoute("/_auth/login")({
   head: () => ({
@@ -17,10 +17,16 @@ export const Route = createFileRoute("/_auth/login")({
     ],
   }),
 
-  validateSearch: z.object({
-    redirect: z.string().optional().catch(""),
-    error: z.string().optional().catch(""),
-    error_description: z.string().optional().catch(""),
+  validateSearch: (
+    search,
+  ): {
+    redirect?: string;
+    error?: string;
+    error_description?: string;
+  } => ({
+    redirect: readSearchString(search.redirect) ?? "",
+    error: readSearchString(search.error) ?? "",
+    error_description: readSearchString(search.error_description) ?? "",
   }),
 
   component: LoginPage,

@@ -30,23 +30,30 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
     async (state: string) => {
       if (!canvas || !state) return Promise.resolve();
       isHistoryChanging.current = true;
-      (canvas as any).__isHistoryChanging = true;
+      canvas.__isHistoryChanging = true;
 
-      const artboard = canvas.getObjects().find((o) => o.id === "__artboard__");
-      const jsonToLoad = JSON.parse(state);
+      try {
+        const artboard = canvas
+          .getObjects()
+          .find((o) => o.id === "__artboard__");
+        const jsonToLoad = JSON.parse(state);
 
-      if (artboard) {
-        jsonToLoad.objects.unshift(artboard.toObject(FABRIC_CUSTOM_PROPERTIES));
+        if (artboard) {
+          jsonToLoad.objects.unshift(
+            artboard.toObject(FABRIC_CUSTOM_PROPERTIES),
+          );
+        }
+
+        await canvas.loadFromJSON(jsonToLoad);
+
+        // CRITICAL: Restore custom properties stripped by loadFromJSON
+        restoreCustomProperties(canvas, jsonToLoad);
+
+        canvas.requestRenderAll();
+      } finally {
+        isHistoryChanging.current = false;
+        canvas.__isHistoryChanging = false;
       }
-
-      await canvas.loadFromJSON(jsonToLoad);
-
-      // CRITICAL: Restore custom properties stripped by loadFromJSON
-      restoreCustomProperties(canvas, jsonToLoad);
-
-      canvas.requestRenderAll();
-      isHistoryChanging.current = false;
-      (canvas as any).__isHistoryChanging = false;
       syncStore();
     },
     [canvas, syncStore],
@@ -126,7 +133,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
 
       const prev = undoStack.current[undoStack.current.length - 1];
       if (prev) {
-        load(prev);
+        void load(prev);
       }
     };
 
@@ -137,7 +144,7 @@ export function useCanvasHistory(canvas: fabric.Canvas | null) {
       if (!next) return;
 
       undoStack.current.push(next);
-      load(next);
+      void load(next);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {

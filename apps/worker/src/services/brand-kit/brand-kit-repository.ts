@@ -221,7 +221,7 @@ export class BrandKitRepository {
 
   async saveInitialGeneration(
     brandKitId: string,
-    results: Record<string, any>,
+    results: Record<string, unknown>,
     opts?: { errorMessage?: string | null; refundedAt?: Date },
   ) {
     // Idempotent: on a queue retry we must not create a second active revision.
@@ -285,7 +285,7 @@ export class BrandKitRepository {
     targetItemId: string | null | undefined,
     refinementId: string,
     sourceRevisionId: string,
-    results: Record<string, any>,
+    results: Record<string, unknown>,
   ) {
     const triggerType = `refine_${sectionId}:${refinementId}`;
     const existing = await this.getRevisionByTrigger(brandKitId, triggerType);

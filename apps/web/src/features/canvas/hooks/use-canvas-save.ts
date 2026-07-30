@@ -69,7 +69,6 @@ export function useCanvasSave({
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
       saveTimeoutRef.current = setTimeout(() => {
-        // @ts-expect-error __isHistoryChanging is a custom property attached during undo/redo
         if (canvas.__isHistoryChanging) return;
 
         const json = canvas.toObject(FABRIC_CUSTOM_PROPERTIES);

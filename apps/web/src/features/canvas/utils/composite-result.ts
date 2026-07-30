@@ -97,7 +97,7 @@ async function applyFrontendMaskComposite(
       }
     };
 
-    const handleError = (_e: string | Event) =>
+    const handleError = () =>
       reject(new Error("Failed to load images for compositing"));
 
     origImg.onload = checkDone;

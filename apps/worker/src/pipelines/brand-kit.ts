@@ -283,7 +283,7 @@ export class BrandKitPipeline {
         };
       }
 
-      const finalResultsJSON: Record<string, any> = {
+      const finalResultsJSON: Record<string, unknown> = {
         brandName,
         logoUrl: fallbackLogoUrl,
         productImages: productImageUrls || [],

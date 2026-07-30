@@ -84,6 +84,9 @@ importers:
       react-intersection-observer:
         specifier: ^10.0.3
         version: 10.0.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       tailwindcss:
         specifier: ^4.1.16
         version: 4.1.18
@@ -319,9 +322,6 @@ importers:
         specifier: ^5.0.14
         version: 5.0.14(@types/react@19.2.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
     devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20260702.1
-        version: 4.20260702.1
       '@quicklogo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
@@ -377,9 +377,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260301.1
         version: 4.20260301.1
+      '@quicklogo/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
       '@types/qrcode':
         specifier: ^1.5.6
         version: 1.5.6
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -433,6 +439,9 @@ importers:
       '@quicklogo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -448,9 +457,15 @@ importers:
         specifier: ^1.4.18
         version: 1.4.18(drizzle-kit@0.31.9)(drizzle-orm@0.45.1(@cloudflare/workers-types@5.20260728.1)(@libsql/client@0.17.0)(kysely@0.28.11))(next@16.2.11(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
+      '@quicklogo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
       '@quicklogo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -473,6 +488,9 @@ importers:
       '@libsql/client':
         specifier: ^0.17.0
         version: 0.17.0
+      '@quicklogo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
       '@quicklogo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
@@ -482,6 +500,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.9
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -575,12 +596,18 @@ importers:
         specifier: ^7.3.0
         version: 7.3.0
     devDependencies:
+      '@quicklogo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
       '@quicklogo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.11
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

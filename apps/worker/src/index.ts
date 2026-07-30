@@ -36,7 +36,7 @@ export default {
     const logger = createLogger("worker", { db });
 
     if (batch.queue === "image-generation-dlq") {
-      return processDlqBatch(batch, db, env);
+      return processDlqBatch(batch, db);
     }
 
     const storage = new ImageKitProvider(env.IMAGEKIT_PRIVATE_KEY);

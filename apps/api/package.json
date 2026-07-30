@@ -12,7 +12,7 @@
     "db:migrate:local": "wrangler d1 migrations apply quicklogo-db --local --config wrangler.jsonc",
     "db:migrate:prod": "wrangler d1 migrations apply quicklogo-db --remote --config wrangler.jsonc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "@dodopayments/hono": "^0.2.5",

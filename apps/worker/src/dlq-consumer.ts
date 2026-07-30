@@ -1,7 +1,6 @@
 import { createLogger } from "@quicklogo/server-telemetry";
 import type { Database } from "@quicklogo/db";
 import type { QueueMessage } from "@quicklogo/shared";
-import type { Env } from "./types";
 import {
   failBrandKitGenerationAndRefundCredits,
   failImageAndRefundCredits,
@@ -19,7 +18,6 @@ function getRuntimeMessageType(
 export async function processDlqBatch(
   batch: MessageBatch<QueueMessage>,
   db: Database,
-  _env: Env,
 ) {
   const logger = createLogger("worker", { db });
 

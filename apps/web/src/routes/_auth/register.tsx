@@ -3,12 +3,12 @@ import { Button } from "@quicklogo/ui/components/button";
 import { FeatureCarousel } from "@/components/auth/feature-carousel";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { useGoogleLogin } from "@/hooks/use-auth";
-import z from "zod";
 import { Spinner } from "@quicklogo/ui/components/spinner";
+import { readSearchString } from "@/lib/search-params";
 
 export const Route = createFileRoute("/_auth/register")({
-  validateSearch: z.object({
-    redirect: z.string().optional().catch(""),
+  validateSearch: (search): { redirect?: string } => ({
+    redirect: readSearchString(search.redirect) ?? "",
   }),
 
   component: RegisterPage,

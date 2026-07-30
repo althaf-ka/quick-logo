@@ -1,4 +1,4 @@
-import { AUTH_KEYS } from "@/hooks/use-auth";
+import { AUTH_KEYS, fetchSession } from "@/hooks/use-auth";
 import {
   createFileRoute,
   Outlet,
@@ -18,11 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
     const session = await context.queryClient.ensureQueryData({
       queryKey: AUTH_KEYS.session,
-      queryFn: async () => {
-        const { authClient } = await import("@/lib/auth-client");
-        const result = await authClient.getSession();
-        return result.data;
-      },
+      queryFn: fetchSession,
     });
 
     if (!session) {
