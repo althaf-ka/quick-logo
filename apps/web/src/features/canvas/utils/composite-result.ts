@@ -112,186 +112,160 @@ async function applyFrontendMaskComposite(
   });
 }
 
+interface CompositeOptions {
+  regionBounds?: { left: number; top: number; width: number; height: number };
+  artboardBounds?: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  generationGroupId?: string;
+  generatedFromObjectId?: string | null;
+  maskDataUrl?: string;
+  originalImageUrl?: string;
+}
+
+function loadFabricImage(url: string): Promise<fabric.FabricImage> {
+  return fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" });
+}
+
+function hasValidDimensions(image: fabric.FabricImage): boolean {
+  return (
+    typeof image.width === "number" &&
+    image.width > 0 &&
+    typeof image.height === "number" &&
+    image.height > 0
+  );
+}
+
 export async function compositeAIResult(
   canvas: fabric.Canvas,
   resultImageUrl: string,
   mode: CanvasMode,
-  options: {
-    regionBounds?: { left: number; top: number; width: number; height: number };
-    artboardBounds?: {
-      left: number;
-      top: number;
-      width: number;
-      height: number;
-    };
-    generationGroupId?: string;
-    generatedFromObjectId?: string | null;
-    maskDataUrl?: string;
-    originalImageUrl?: string;
-  },
+  options: CompositeOptions,
 ): Promise<fabric.FabricImage> {
-  return new Promise((resolve, reject) => {
-    const fabricAny = fabric as Record<string, unknown>;
-    const FabricImageClass = (fabricAny.FabricImage ||
-      fabricAny.Image) as typeof fabric.FabricImage;
+  const resultImage = await loadFabricImage(resultImageUrl);
+  if (!hasValidDimensions(resultImage)) {
+    throw new Error(
+      "AI result image has invalid dimensions — the image may have failed to load",
+    );
+  }
 
-    FabricImageClass.fromURL(resultImageUrl, { crossOrigin: "anonymous" })
-      .then((img: fabric.FabricImage) => {
-        // Validate that the loaded image has real dimensions
-        if (!img.width || !img.height || img.width <= 0 || img.height <= 0) {
-          return reject(
-            new Error(
-              "AI result image has invalid dimensions — the image may have failed to load",
-            ),
-          );
+  let finalImageUrl = resultImageUrl;
+  if (mode === "inpaint" && options.maskDataUrl && options.originalImageUrl) {
+    try {
+      finalImageUrl = await applyFrontendMaskComposite(
+        options.originalImageUrl,
+        resultImageUrl,
+        options.maskDataUrl,
+      );
+    } catch (error) {
+      console.error(
+        "Frontend mask compositing failed, falling back to raw generated image",
+        error,
+      );
+    }
+  }
+
+  const compositedImage = await loadFabricImage(finalImageUrl);
+  if (!hasValidDimensions(compositedImage)) {
+    throw new Error("Composited image lacks dimensions");
+  }
+
+  const regionSelector = canvas
+    .getObjects()
+    .find((object) => object.id === "__ai_region__");
+
+  switch (mode) {
+    case "img2img": {
+      const { regionBounds } = options;
+      if (!regionBounds) {
+        throw new Error("Region bounds required for img2img");
+      }
+
+      compositedImage.set({
+        left: regionBounds.left,
+        top: regionBounds.top,
+        scaleX: regionBounds.width / compositedImage.width,
+        scaleY: regionBounds.height / compositedImage.height,
+        name: "AI Result — Img2Img",
+        selectable: true,
+        generationGroupId: options.generationGroupId,
+        generatedFromObjectId: options.generatedFromObjectId,
+      });
+
+      if (options.generatedFromObjectId) {
+        const originalObject = canvas
+          .getObjects()
+          .find((object) => object.id === options.generatedFromObjectId);
+
+        if (originalObject) {
+          const propertiesToCopy: Record<string, unknown> = {
+            lockMovementX: originalObject.lockMovementX,
+            lockMovementY: originalObject.lockMovementY,
+            lockRotation: originalObject.lockRotation,
+            lockScalingX: originalObject.lockScalingX,
+            lockScalingY: originalObject.lockScalingY,
+            hasControls: originalObject.hasControls,
+          };
+
+          for (const property of FABRIC_CUSTOM_PROPERTIES) {
+            const value = Reflect.get(originalObject, property);
+            if (value !== undefined) {
+              propertiesToCopy[property] = value;
+            }
+          }
+
+          if (!propertiesToCopy.name) {
+            propertiesToCopy.name = resultImage.name;
+          }
+
+          compositedImage.set(propertiesToCopy);
+          canvas.remove(originalObject);
         }
+      }
 
-        const proceedWithComposite = (finalImgUrl: string) => {
-          FabricImageClass.fromURL(finalImgUrl, { crossOrigin: "anonymous" })
-            .then((compositedImg: fabric.FabricImage) => {
-              // Ensure we have valid dimensions on the composited image
-              if (!compositedImg.width || !compositedImg.height)
-                return reject(new Error("Composited image lacks dimensions"));
+      if (regionSelector) {
+        canvas.remove(regionSelector);
+      }
+      break;
+    }
 
-              // Find existing AI region selector to remove it
-              const regionSelector = canvas
-                .getObjects()
-                .find((o) => o.id === "__ai_region__");
+    case "inpaint": {
+      const { artboardBounds } = options;
+      if (!artboardBounds) {
+        throw new Error("Artboard bounds required for inpaint");
+      }
 
-              switch (mode) {
-                case "img2img": {
-                  if (!options.regionBounds) {
-                    return reject(
-                      new Error("Region bounds required for img2img"),
-                    );
-                  }
+      const oldBackground = canvas
+        .getObjects()
+        .find((object) => object.id === "obj_initial_image");
+      if (oldBackground) {
+        canvas.remove(oldBackground);
+      }
 
-                  // Scale to fit the region
-                  const scaleX =
-                    options.regionBounds.width / compositedImg.width;
-                  const scaleY =
-                    options.regionBounds.height / compositedImg.height;
+      compositedImage.set({
+        id: "obj_initial_image",
+        left: artboardBounds.left,
+        top: artboardBounds.top,
+        scaleX: artboardBounds.width / compositedImage.width,
+        scaleY: artboardBounds.height / compositedImage.height,
+        name: "AI Result — Inpaint",
+        selectable: true,
+        generationGroupId: options.generationGroupId,
+        generatedFromObjectId: options.generatedFromObjectId,
+      });
+      break;
+    }
 
-                  compositedImg.set({
-                    left: options.regionBounds.left,
-                    top: options.regionBounds.top,
-                    scaleX,
-                    scaleY,
-                    name: "AI Result — Img2Img",
-                    selectable: true,
-                    generationGroupId: options.generationGroupId,
-                    generatedFromObjectId: options.generatedFromObjectId,
-                  });
+    case "edit":
+      break;
+  }
 
-                  // Remove the original targeted image since it's being upgraded/replaced
-                  if (options.generatedFromObjectId) {
-                    const originalObj = canvas
-                      .getObjects()
-                      .find((o) => o.id === options.generatedFromObjectId);
-                    if (originalObj) {
-                      const propsToCopy: Record<string, unknown> = {
-                        lockMovementX: originalObj.lockMovementX,
-                        lockMovementY: originalObj.lockMovementY,
-                        lockRotation: originalObj.lockRotation,
-                        lockScalingX: originalObj.lockScalingX,
-                        lockScalingY: originalObj.lockScalingY,
-                        hasControls: originalObj.hasControls,
-                      };
+  canvas.add(compositedImage);
+  canvas.setActiveObject(compositedImage);
+  canvas.requestRenderAll();
 
-                      FABRIC_CUSTOM_PROPERTIES.forEach((prop) => {
-                        const val = (
-                          originalObj as unknown as Record<string, unknown>
-                        )[prop];
-                        if (val !== undefined) {
-                          propsToCopy[prop] = val;
-                        }
-                      });
-
-                      // Fallback for name if it was somehow stripped
-                      if (!propsToCopy.name) {
-                        propsToCopy.name = img.name;
-                      }
-
-                      compositedImg.set(propsToCopy);
-                      canvas.remove(originalObj);
-                    }
-                  }
-
-                  if (regionSelector) {
-                    canvas.remove(regionSelector);
-                  }
-                  break;
-                }
-
-                case "inpaint": {
-                  if (!options.artboardBounds) {
-                    return reject(
-                      new Error("Artboard bounds required for inpaint"),
-                    );
-                  }
-
-                  const scaleX =
-                    options.artboardBounds.width / compositedImg.width;
-                  const scaleY =
-                    options.artboardBounds.height / compositedImg.height;
-
-                  // Remove the old background image BEFORE assigning the same ID
-                  // to the new image — prevents the find() from matching the new object
-                  const oldBg = canvas
-                    .getObjects()
-                    .find((o) => o.id === "obj_initial_image");
-                  if (oldBg) {
-                    canvas.remove(oldBg);
-                  }
-
-                  compositedImg.set({
-                    id: "obj_initial_image", // Mark as the new main image
-                    left: options.artboardBounds.left,
-                    top: options.artboardBounds.top,
-                    scaleX,
-                    scaleY,
-                    name: "AI Result — Inpaint",
-                    selectable: true,
-                    generationGroupId: options.generationGroupId,
-                    generatedFromObjectId: options.generatedFromObjectId,
-                  });
-
-                  break;
-                }
-              }
-
-              canvas.add(compositedImg);
-              canvas.setActiveObject(compositedImg);
-              canvas.requestRenderAll();
-              // Since we modified the canvas, fire object:added so useCanvasHistory picks it up
-              // (canvas.add already fires object:added internally, so no manual fire is strictly necessary)
-              resolve(compositedImg);
-            })
-            .catch(reject);
-        }; // end proceedWithComposite
-
-        if (
-          mode === "inpaint" &&
-          options.maskDataUrl &&
-          options.originalImageUrl
-        ) {
-          applyFrontendMaskComposite(
-            options.originalImageUrl,
-            resultImageUrl,
-            options.maskDataUrl,
-          )
-            .then((blendedUrl: string) => proceedWithComposite(blendedUrl))
-            .catch((err: Error) => {
-              console.error(
-                "Frontend mask compositing failed, falling back to raw generated image",
-                err,
-              );
-              proceedWithComposite(resultImageUrl);
-            });
-        } else {
-          proceedWithComposite(resultImageUrl);
-        }
-      })
-      .catch(reject);
-  });
+  return compositedImage;
 }

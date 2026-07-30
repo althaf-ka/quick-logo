@@ -99,14 +99,11 @@ export function useMaskBrush(
     };
 
     maskCanvas.on("path:created", handleMaskUpdated);
-    // Custom event for programmatic triggers (e.g., undo) — not in Fabric's CanvasEvents type
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (maskCanvas as any).on("mask:updated", handleMaskUpdated);
+    maskCanvas.on("mask:updated", handleMaskUpdated);
 
     return () => {
       maskCanvas.off("path:created", handleMaskUpdated);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (maskCanvas as any).off("mask:updated", handleMaskUpdated);
+      maskCanvas.off("mask:updated", handleMaskUpdated);
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [maskCanvas, mainCanvas, setMaskData, artboardWidth, artboardHeight]);

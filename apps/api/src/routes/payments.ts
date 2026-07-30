@@ -426,6 +426,12 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
             return;
           }
 
+          const paymentId =
+            "payment_id" in payload.data &&
+            typeof payload.data.payment_id === "string"
+              ? payload.data.payment_id
+              : null;
+
           await db.batch([
             db
               .update(users)
@@ -437,9 +443,7 @@ const payments = new Hono<{ Bindings: Bindings; Variables: Variables }>()
               .update(transactions)
               .set({
                 status: "completed",
-                dodoPaymentId: (
-                  payload.data as unknown as Record<string, unknown>
-                ).payment_id as string | null,
+                dodoPaymentId: paymentId,
               })
               .where(
                 and(

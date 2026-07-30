@@ -30,7 +30,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260702.1",
+    "@cloudflare/workers-types": "^5.20260728.1",
     "@quicklogo/eslint-config": "workspace:*",
     "@types/node": "^25.3.5",
     "eslint": "^9.39.1",

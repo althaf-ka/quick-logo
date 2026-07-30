@@ -11,10 +11,7 @@ export function compressCanvasState(jsonStr: string): string {
     let binary = "";
     const chunkSize = 0x8000;
     for (let i = 0; i < compressed.length; i += chunkSize) {
-      binary += String.fromCharCode.apply(
-        null,
-        compressed.subarray(i, i + chunkSize) as unknown as number[],
-      );
+      binary += String.fromCharCode(...compressed.subarray(i, i + chunkSize));
     }
     return btoa(binary);
   } catch (error) {

@@ -6,8 +6,13 @@ import type {
 } from "../../../types/brand-kit";
 import type { BrandKitDeliverables } from "@quicklogo/shared";
 
-type GenerateResults = {
+export type GenerateResults = {
   logoVariations?: unknown[];
+  colorPalette?: Array<{ hex: string }>;
+  typography?: {
+    heading?: { family?: string };
+    body?: { family?: string };
+  };
   socialMedia?: Array<{
     platform: string;
     type: string;

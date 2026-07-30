@@ -88,12 +88,9 @@ export function useBrandProfileForm({
   const getContactError = useCallback(
     (field: keyof ContactData) => {
       if (contactValidation.success) return undefined;
-      const error = contactValidation.error.format();
-      const typedError = error as unknown as Record<
-        string,
-        { _errors?: string[] } | undefined
-      >;
-      return typedError[field as string]?._errors?.[0];
+      return contactValidation.error.issues.find(
+        (issue) => issue.path[0] === field,
+      )?.message;
     },
     [contactValidation],
   );

@@ -3,7 +3,7 @@ import type {
   DeliverablesConfig,
   TypographyPreference,
 } from "../../../types/brand-kit";
-import { mapDeliverables } from "./map-deliverables";
+import { mapDeliverables, type GenerateResults } from "./map-deliverables";
 
 import type { InferResponseType } from "@quicklogo/api-client";
 import { api } from "@/lib/api-client";
@@ -26,8 +26,7 @@ export function normalizeBrandKit(
   // Find active revision or use fallback
   const activeRevision =
     revisions.find((r) => r.isActive) || revisions[revisions.length - 1];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results = (activeRevision?.results || {}) as Record<string, any>;
+  const results = (activeRevision?.results || {}) as GenerateResults;
 
   // Extract typography preferences
   const typographyPreference: TypographyPreference = {
@@ -54,9 +53,7 @@ export function normalizeBrandKit(
     brandName: brandKit.brandName || "",
     logoUrl: brandKit.customLogoUrl || results.logoUrl || undefined,
     extractedColors: results.colorPalette
-      ? (results.colorPalette as Record<string, string>[]).map((color) =>
-          color.hex.toUpperCase(),
-        )
+      ? results.colorPalette.map((color) => color.hex.toUpperCase())
       : ((brandKit.extractedColors as string[]) ?? []),
     typographyPreference,
     deliverables,
@@ -87,8 +84,8 @@ export function normalizeBrandKit(
     additionalContext: brandKit.additionalContext || undefined,
     socials: (brandKit.socials as Record<string, string>) || undefined,
     contact: (brandKit.contact as Record<string, string>) || undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    guidelines: (brandKit.guidelines as Record<string, any>) || undefined,
+    guidelines:
+      (brandKit.guidelines as NormalizedBrandKit["guidelines"]) || undefined,
     socialMediaBrief:
       (brandKit.socialMediaBrief as SocialMediaBrief | null) || undefined,
     businessCardBrief:

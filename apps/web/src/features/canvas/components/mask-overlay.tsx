@@ -75,8 +75,7 @@ export function MaskOverlay({ mainCanvas }: MaskOverlayProps) {
         maskCanvas.requestRenderAll();
 
         // Fire custom event to trigger mask re-export
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (maskCanvas as any).fire("mask:updated");
+        maskCanvas.fire("mask:updated");
       }
     };
 

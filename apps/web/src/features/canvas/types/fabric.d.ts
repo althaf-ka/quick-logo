@@ -1,6 +1,10 @@
 import "fabric";
 
 declare module "fabric" {
+  export interface CanvasEvents {
+    "mask:updated": never;
+  }
+
   export interface Canvas {
     __isHistoryChanging?: boolean;
   }

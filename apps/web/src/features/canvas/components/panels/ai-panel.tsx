@@ -346,7 +346,7 @@ export function AiPanel({
               </label>
               <ModelSelector
                 variant="default"
-                models={currentModels as unknown as ModelOption[]}
+                models={currentModels}
                 value={aiModel}
                 onChange={setAiModel}
                 context={

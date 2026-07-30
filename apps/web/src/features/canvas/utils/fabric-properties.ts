@@ -22,7 +22,7 @@ export type CustomFabricObject = fabric.Object & {
 
 export function restoreCustomProperties(
   canvas: fabric.Canvas,
-  jsonToLoad: { objects?: Record<string, unknown>[] }
+  jsonToLoad: { objects?: Record<string, unknown>[] },
 ) {
   const loadedObjects = canvas.getObjects();
   const jsonObjects = jsonToLoad.objects || [];
@@ -34,7 +34,7 @@ export function restoreCustomProperties(
     const customObj = obj as CustomFabricObject;
     FABRIC_CUSTOM_PROPERTIES.forEach((prop) => {
       if (src[prop] !== undefined) {
-        (customObj as unknown as Record<string, unknown>)[prop] = src[prop];
+        Reflect.set(customObj, prop, src[prop]);
       }
     });
   });

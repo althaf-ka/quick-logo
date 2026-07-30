@@ -15,11 +15,11 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260301.1",
+    "@cloudflare/workers-types": "^5.20260728.1",
     "@quicklogo/eslint-config": "workspace:*",
     "@types/qrcode": "^1.5.6",
     "eslint": "^9.39.1",
     "typescript": "^6.0.3",
-    "wrangler": "^4.66.0"
+    "wrangler": "^4.112.0"
   }
 }

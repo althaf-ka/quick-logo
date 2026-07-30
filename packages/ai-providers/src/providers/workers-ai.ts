@@ -99,7 +99,6 @@ export class WorkersAIProvider implements AIProvider {
     const envelope = new Response(form);
 
     return this.ai.run(params.backendModel as Parameters<Ai["run"]>[0], {
-      // @ts-expect-error — multipart not yet typed in workers-types
       multipart: {
         body: envelope.body!,
         contentType: envelope.headers.get("content-type")!,
