@@ -30,11 +30,11 @@
     "replicate": "^1.4.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260728.1",
+    "@cloudflare/workers-types": "catalog:",
     "@quicklogo/eslint-config": "workspace:*",
     "@quicklogo/typescript-config": "workspace:*",
     "@types/node": "^25.3.3",
-    "eslint": "^9.39.1",
-    "typescript": "~5.9.3"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }

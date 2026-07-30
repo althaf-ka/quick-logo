@@ -10,14 +10,13 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20260301.1",
     "@imagekit/nodejs": "^7.3.0"
   },
   "devDependencies": {
     "@quicklogo/eslint-config": "workspace:*",
     "@quicklogo/typescript-config": "workspace:*",
     "@types/node": "^22.0.0",
-    "eslint": "^9.39.1",
-    "typescript": "^6.0.3"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }

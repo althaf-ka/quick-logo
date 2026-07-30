@@ -10,24 +10,24 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@phosphor-icons/react": "^2.1.10",
+    "@phosphor-icons/react": "catalog:",
     "@quicklogo/assets": "workspace:*",
     "@quicklogo/shared": "workspace:*",
     "@quicklogo/ui": "workspace:*",
     "lenis": "1.3.17",
     "next": "16.2.11",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@quicklogo/eslint-config": "workspace:*",
     "@quicklogo/typescript-config": "workspace:*",
-    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/postcss": "catalog:",
     "@types/node": "^24.10.1",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.1",
-    "tailwindcss": "^4.1.16",
-    "typescript": "~5.9.3"
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
   }
 }

@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@quicklogo/eslint-config": "workspace:*",
     "@quicklogo/typescript-config": "workspace:*",
-    "typescript": "^5.5.0"
+    "typescript": "catalog:"
   }
 }

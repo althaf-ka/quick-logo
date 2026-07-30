@@ -27,7 +27,7 @@
   "devDependencies": {
     "@quicklogo/eslint-config": "workspace:*",
     "@quicklogo/typescript-config": "workspace:*",
-    "eslint": "^9.39.1",
-    "typescript": "^6.0.3"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }
